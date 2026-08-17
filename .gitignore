@@ -18,3 +18,4 @@ package.json
 package-lock.json
 bunfig.toml
 .yarnrc
+.yarnrc.yml
