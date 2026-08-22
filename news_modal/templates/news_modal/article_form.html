@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        {% if article %}
+            ویرایش خبر
+        {% else %}
+            ایجاد خبر
+        {% endif %}
+        | سفینه نیوز
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
+    >
+
+    {# فایل‌های CSS و JavaScript ویجت تقویم شمسی #}
+    {{ form.media }}
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange: #ff9d45;
+            --orange-dark: #e97816;
+            --orange-light: #fff4e8;
+            --text: #202124;
+            --muted: #777;
+            --border: #eadfd5;
+            --danger: #dc2626;
+        }
+
+        html {
+            direction: rtl;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #fffdfb;
+            color: var(--text);
+            font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .page {
+            width: min(900px, calc(100% - 32px));
+            margin: 35px auto 60px;
+        }
+
+        .top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .title-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .title-icon {
+            width: 45px;
+            height: 45px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            background: linear-gradient(145deg, #ffb66c, #ff8d2e);
+            color: #fff;
+            font-size: 18px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 25px;
+            font-weight: 900;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 13px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            color: #666;
+            font-size: 13px;
+            font-weight: bold;
+            transition: 0.2s ease;
+        }
+
+        .back-link:hover {
+            border-color: var(--orange);
+            background: var(--orange-light);
+            color: var(--orange-dark);
+        }
+
+        .form-card {
+            padding: 28px;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 8px 25px rgba(255, 157, 69, 0.1);
+        }
+
+        .form-row {
+            margin-bottom: 20px;
+        }
+
+        .form-row label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4d4036;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .form-row input,
+        .form-row select,
+        .form-row textarea {
+            width: 100%;
+            padding: 11px 13px;
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            outline: none;
+            background: #fff;
+            color: var(--text);
+            font-size: 13px;
+            transition: 0.2s ease;
+        }
+
+        .form-row textarea {
+            min-height: 150px;
+            resize: vertical;
+            line-height: 2;
+        }
+
+        .form-row input:focus,
+        .form-row select:focus,
+        .form-row textarea:focus {
+            border-color: var(--orange);
+            box-shadow: 0 0 0 3px rgba(255, 157, 69, 0.13);
+        }
+
+        /* ظاهر مناسب فیلد تقویم شمسی */
+        .form-row input.vDateField,
+        .form-row input.vDateTimeField,
+        .form-row input.hasDatepicker {
+            direction: ltr;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .form-row input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            accent-color: var(--orange-dark);
+            cursor: pointer;
+        }
+
+        .help-text {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .errors {
+            margin: 6px 0 0;
+            padding: 0;
+            color: var(--danger);
+            list-style: none;
+            font-size: 12px;
+        }
+
+        .non-field-errors {
+            margin-bottom: 18px;
+            padding: 12px 14px;
+            border-right: 4px solid var(--danger);
+            border-radius: 8px;
+            background: #fff1f1;
+            color: var(--danger);
+            font-size: 13px;
+        }
+
+        /* دکمه‌های فرم */
+        .actions {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #f1e5dc;
+        }
+
+        .actions .button {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 42px;
+            padding: 10px 18px;
+            border: 0;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s ease;
+        }
+
+        .submit-button {
+            background: linear-gradient(145deg, #ffb56c, #f58d2f);
+            color: #fff;
+        }
+
+        .submit-button:hover {
+            background: linear-gradient(145deg, #ffa452, #f47c16);
+        }
+
+        .cancel-button {
+            background: #f1ece8;
+            color: #66584e;
+        }
+
+        .cancel-button:hover {
+            background: #e8dfd8;
+        }
+
+        /* استایل پنجره تقویم شمسی */
+        .ui-datepicker,
+        .ui-timepicker-div,
+        .ui-datepicker-buttonpane {
+            font-family: "Vazirmatn", Tahoma, Arial, sans-serif !important;
+        }
+
+        .ui-datepicker {
+            z-index: 9999 !important;
+        }
+
+        @media (max-width: 600px) {
+            .page {
+                width: min(100% - 22px, 500px);
+                margin-top: 22px;
+            }
+
+            .top {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .form-card {
+                padding: 20px;
+            }
+
+            .actions {
+                align-items: stretch;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .actions .button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="page">
+
+        <div class="top">
+            <div class="title-box">
+                <span class="title-icon">
+                    <i class="fa-solid fa-newspaper"></i>
+                </span>
+
+                <h1>
+                    {% if article %}
+                        ویرایش خبر
+                    {% else %}
+                        ایجاد خبر جدید
+                    {% endif %}
+                </h1>
+            </div>
+
+            <a
+                class="back-link"
+                href="{% url 'news_modal:article_list' %}"
+            >
+                <i class="fa-solid fa-arrow-right"></i>
+                بازگشت به اخبار
+            </a>
+        </div>
+
+        <section class="form-card">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="non-field-errors">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                {% for field in form %}
+                    <div class="form-row">
+                        {{ field.label_tag }}
+
+                        {{ field }}
+
+                        {% if field.help_text %}
+                            <small class="help-text">
+                                {{ field.help_text }}
+                            </small>
+                        {% endif %}
+
+                        {% if field.errors %}
+                            <ul class="errors">
+                                {% for error in field.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                <div class="actions">
+                    <button
+                        class="button submit-button"
+                        type="submit"
+                    >
+                        <i class="fa-solid fa-floppy-disk"></i>
+
+                        {% if article %}
+                            ذخیره تغییرات
+                        {% else %}
+                            ایجاد خبر
+                        {% endif %}
+                    </button>
+
+                    <a
+                        class="button cancel-button"
+                        href="{% url 'news_modal:article_list' %}"
+                    >
+                        <i class="fa-solid fa-xmark"></i>
+                        انصراف
+                    </a>
+                </div>
+            </form>
+        </section>
+
+    </main>
+</body>
+</html>
