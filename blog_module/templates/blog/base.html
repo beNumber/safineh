@@ -1,0 +1,409 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}وبلاگ{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: "#f3faf4",
+              100: "#d8f3dc",
+              300: "#95d5b2",
+              500: "#2d6a4f",
+              700: "#1b4332",
+              900: "#081c15"
+            }
+          },
+          fontFamily: { sans: ["Vazirmatn", "Tahoma", "sans-serif"] }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: #f3faf6;
+      isolation: isolate;
+    }
+
+    html.dark body {
+      background: #081c15;
+    }
+
+    main {
+      background: transparent;
+    }
+
+    .site-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    header,
+    main,
+    footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    .post-card,
+    .post-hero,
+    .glass-cat,
+    .glass-cat-panel,
+    .post-cover,
+    .post-body-glass,
+    .post-media-frame {
+      position: relative;
+      z-index: 2;
+      isolation: isolate;
+    }
+
+    .post-media-stack {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 1.5rem;
+      margin: 0 0 1.75rem;
+    }
+
+    .post-media-frame {
+      flex: 1 1 calc(50% - 0.75rem);
+      max-width: 30rem;
+      margin: 0;
+      line-height: 0;
+      overflow: hidden;
+      border-radius: 1.25rem;
+      background: transparent;
+    }
+
+    .post-media-frame:only-child {
+      flex: 1 1 100%;
+      max-width: 52rem;
+    }
+
+    .post-media {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 24rem;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 1.25rem;
+      overflow: hidden;
+      clip-path: inset(0 round 1.25rem);
+    }
+
+    .post-media-frame:only-child .post-media {
+      max-height: 34rem;
+    }
+
+    .post-cover,
+    .post-body-glass {
+      --glass-alpha: 0.22;
+      --glass-blur: 22px;
+      background: rgb(45 106 79 / var(--glass-alpha));
+      backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+      border: 1px solid rgb(255 255 255 / 0.35);
+      border-radius: 1.25rem;
+      padding: 1.25rem 1.5rem;
+    }
+
+    html.dark .post-cover,
+    html.dark .post-body-glass {
+      background: rgb(8 28 21 / 0.50);
+      border-color: rgb(255 255 255 / 0.12);
+    }
+
+    .post-cover {
+      margin-bottom: 1.5rem;
+    }
+
+    .post-body-glass {
+      margin-top: 0.25rem;
+      line-height: 1.9;
+    }
+
+    .orb {
+      display: block;
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(140px);
+      opacity: 0.28;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .orb-1 {
+      width: 34rem;
+      height: 34rem;
+      top: -10rem;
+      right: -8rem;
+      background: #008c2f;
+      animation: orb-zig 26s ease-in-out infinite;
+    }
+
+    .orb-2 {
+      width: 30rem;
+      height: 30rem;
+      bottom: -8rem;
+      left: -7rem;
+      background: #00a489;
+      animation: orb-drift 32s ease-in-out infinite;
+    }
+
+    .orb-3 {
+      width: 26rem;
+      height: 26rem;
+      top: 35%;
+      left: 30%;
+      background: #00fb8a;
+      animation: orb-cross 22s ease-in-out infinite;
+    }
+
+    html.dark .orb {
+      opacity: 0.2;
+    }
+
+    html.dark .orb-1 { background: #2d6a4f; }
+    html.dark .orb-2 { background: #1b4332; }
+    html.dark .orb-3 { background: #40916c; }
+
+    @keyframes orb-zig {
+      0%   { transform: translate(0, 0); }
+      15%  { transform: translate(-28vw, 18vh); }
+      30%  { transform: translate(12vw, 36vh); }
+      45%  { transform: translate(-22vw, 8vh); }
+      60%  { transform: translate(26vw, 42vh); }
+      75%  { transform: translate(-10vw, 22vh); }
+      100% { transform: translate(0, 0); }
+    }
+
+    @keyframes orb-drift {
+      0%   { transform: translate(0, 0); }
+      20%  { transform: translate(30vw, -16vh); }
+      40%  { transform: translate(8vw, -38vh); }
+      60%  { transform: translate(-24vw, -12vh); }
+      80%  { transform: translate(18vw, -28vh); }
+      100% { transform: translate(0, 0); }
+    }
+
+    @keyframes orb-cross {
+      0%   { transform: translate(0, 0); }
+      25%  { transform: translate(22vw, -20vh); }
+      50%  { transform: translate(-26vw, 18vh); }
+      75%  { transform: translate(16vw, 28vh); }
+      100% { transform: translate(0, 0); }
+    }
+
+    .post-hero {
+      background: linear-gradient(to left, #d8f3dc, #ffffff);
+    }
+
+    html.dark .post-hero {
+      background: linear-gradient(to left, #1b4332, #081c15);
+    }
+
+    .post-card {
+      background: #bbf4c3;
+    }
+
+    html.dark .post-card {
+      background: #182e25;
+    }
+
+    details.cat-menu > summary { list-style: none; }
+    details.cat-menu > summary::-webkit-details-marker { display: none; }
+
+    .glass-cat,
+    .glass-modal {
+      --glass-alpha: 0.22;
+      --glass-blur: 22px;
+      background: rgb(45 106 79 / var(--glass-alpha));
+      backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+      border: 1px solid rgb(255 255 255 / 0.35);
+    }
+
+    html.dark .glass-modal {
+      background: rgb(8 28 21 / 0.50);
+      border-color: rgb(255 255 255 / 0.12);
+    }
+
+    .glass-cat-panel {
+      --glass-alpha: 0.22;
+      --glass-blur: 22px;
+      background: rgb(45 106 79 / var(--glass-alpha));
+      backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+      border: 1px solid rgb(255 255 255 / 0.35);
+    }
+
+    html.dark .glass-cat,
+    html.dark .glass-cat-panel {
+      background: rgb(8 28 21 / 0.42);
+      border-color: rgb(255 255 255 / 0.12);
+    }
+  </style>
+  <script>
+    if (localStorage.getItem("theme") === "dark") {
+      document.documentElement.classList.add("dark");
+    }
+  </script>
+</head>
+<body class="min-h-screen font-sans text-brand-900 dark:text-brand-50">
+  <div class="site-bg" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
+
+  <header class="sticky top-0 z-50 border-b border-brand-100 bg-white/90 dark:border-brand-700 dark:bg-brand-900/90">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+
+      <div class="flex items-center gap-3">
+        <a href="{% url 'blog:post_list' %}" class="flex items-center gap-2 font-extrabold text-brand-700 dark:text-brand-100">
+          <i class="fa-solid fa-leaf"></i>
+          <span>سفینه</span>
+        </a>
+
+        <details class="cat-menu relative">
+          <summary class="glass-cat cursor-pointer rounded-full px-4 py-2 text-sm text-brand-900 dark:text-brand-50">
+            دسته‌بندی‌ها
+            <i class="fa-solid fa-chevron-down mr-1 text-xs"></i>
+          </summary>
+          <div class="glass-cat-panel absolute right-0 z-50 mt-2 min-w-52 overflow-hidden rounded-2xl p-2 shadow-xl">
+            <a href="{% url 'blog:post_list' %}" class="block rounded-xl px-3 py-2 text-sm hover:bg-white/40 dark:hover:bg-white/10">
+              همه مطالب
+            </a>
+            {% for c in categories %}
+              <a href="{% url 'blog:category_posts' c.slug %}" class="block rounded-xl px-3 py-2 text-sm hover:bg-white/40 dark:hover:bg-white/10">
+                {{ c.name }}
+              </a>
+            {% empty %}
+              <span class="block px-3 py-2 text-sm opacity-70">دسته‌ای ثبت نشده</span>
+            {% endfor %}
+          </div>
+        </details>
+      </div>
+
+      <nav class="hidden items-center gap-5 text-sm md:flex">
+        <a href="{% url 'blog:post_list' %}">خانه</a>
+        <button type="button" onclick="openModal()">درباره</button>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <div class="relative">
+          <button id="search-toggle" type="button" aria-label="جستجو"
+                  class="grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white text-brand-700 dark:border-brand-700 dark:bg-brand-700 dark:text-brand-50">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+          <form id="search-form" action="{% url 'blog:post_search' %}" method="get"
+                class="absolute left-0 top-full z-50 mt-2 hidden w-72">
+            <input type="search" name="q" value="{{ query|default:'' }}" required
+                   placeholder="جستجوی پست یا تگ..."
+                   class="w-full rounded-2xl border border-brand-100 bg-white px-4 py-2 text-sm shadow-md outline-none dark:border-brand-700 dark:bg-brand-900">
+          </form>
+        </div>
+
+        <button id="themeBtn" type="button"
+                class="grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white text-brand-700 dark:border-brand-700 dark:bg-brand-700 dark:text-brand-50">
+          <i class="fa-solid fa-moon dark:hidden"></i>
+          <i class="fa-solid fa-sun hidden dark:inline"></i>
+        </button>
+
+        <button type="button"
+                class="grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white md:hidden dark:border-brand-700 dark:bg-brand-700"
+                onclick="document.getElementById('mobileNav').classList.toggle('hidden')">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="mobileNav" class="hidden space-y-2 border-t border-brand-100 px-4 py-3 md:hidden dark:border-brand-700">
+      <a class="block" href="{% url 'blog:post_list' %}">خانه</a>
+      <button type="button" onclick="openModal()">درباره</button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-8">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="mt-16 border-t border-brand-100 px-4 py-8 dark:border-brand-700">
+    <div class="mx-auto max-w-6xl text-center text-sm leading-7 text-brand-700 dark:text-brand-100">
+      <p class="font-bold">وبلاگ موسسه سفینه النجاه</p>
+      <p>تمامی حقوق مادی و معنوی این وبلاگ متعلق به موسسه سفینه النجاه است.</p>
+      <p>هرگونه کپی، بازنشر یا استفاده از مطالب، بدون اجازه کتبی موسسه ممنوع است.</p>
+      <p class="mt-2 opacity-80">© ۱۴۰۵ موسسه سفینه النجاه. کلیه حقوق محفوظ است.</p>
+    </div>
+  </footer>
+
+  <div id="aboutModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-brand-900/25 backdrop-blur-md" onclick="closeModal()"></div>
+    <div class="glass-modal relative z-10 w-full max-w-md rounded-2xl p-6 shadow-xl text-brand-900 dark:text-brand-50">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-lg font-bold"><i class="fa-solid fa-circle-info text-brand-500"></i> درباره وبلاگ</h2>
+        <button type="button" onclick="closeModal()" class="text-xl">&times;</button>
+      </div>
+      <p class="leading-7">وبلاگ سایت xyz موسسه سفینه النجاه.</p>
+      <button type="button" onclick="closeModal()" class="mt-5 w-full rounded-xl bg-brand-500 py-2 text-white">باشه</button>
+    </div>
+  </div>
+
+  <script>
+    const searchToggle = document.getElementById("search-toggle");
+    const searchForm = document.getElementById("search-form");
+    const themeBtn = document.getElementById("themeBtn");
+
+    if (searchToggle && searchForm) {
+      searchToggle.addEventListener("click", function (e) {
+        e.stopPropagation();
+        searchForm.classList.toggle("hidden");
+        const input = searchForm.querySelector("input");
+        if (!searchForm.classList.contains("hidden") && input) input.focus();
+      });
+
+      document.addEventListener("click", function (e) {
+        if (!searchForm.contains(e.target) && !searchToggle.contains(e.target)) {
+          searchForm.classList.add("hidden");
+        }
+      });
+    }
+
+    if (themeBtn) {
+      themeBtn.addEventListener("click", function () {
+        const dark = document.documentElement.classList.toggle("dark");
+        localStorage.setItem("theme", dark ? "dark" : "light");
+      });
+    }
+
+    function openModal() {
+      const m = document.getElementById("aboutModal");
+      if (!m) return;
+      m.classList.remove("hidden");
+      m.classList.add("flex");
+    }
+
+    function closeModal() {
+      const m = document.getElementById("aboutModal");
+      if (!m) return;
+      m.classList.add("hidden");
+      m.classList.remove("flex");
+    }
+  </script>
+</body>
+</html>
