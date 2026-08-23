@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "dashboard_module",
     "landing_module",
     "ticketing_module",
-    "news_modal.apps.NewsModalConfig",
+    "news_module",
 ]
 
 

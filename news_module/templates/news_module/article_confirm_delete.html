@@ -1,0 +1,538 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>حذف خبر | سفینه نیوز</title>
+
+    <!-- Font Awesome -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <!-- Vazirmatn Font -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
+    >
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --orange: #ff9d45;
+            --orange-dark: #f47f18;
+            --orange-light: #fff4e8;
+            --orange-soft: #fff9f3;
+            --white: #ffffff;
+            --text: #202124;
+            --muted: #858585;
+            --border: #eee5dc;
+
+            --red: #e45656;
+            --red-dark: #c93636;
+            --red-light: #fff0f0;
+
+            --shadow: 0 8px 25px rgba(255, 157, 69, 0.10);
+            --shadow-hover: 0 14px 32px rgba(255, 157, 69, 0.18);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #fffdfb;
+            color: var(--text);
+            font-family: "Vazirmatn", Tahoma, Arial, sans-serif;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        /* نوار بالای سایت */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 12px 0;
+            background: rgba(255, 255, 255, 0.88);
+            border-bottom: 1px solid rgba(255, 157, 69, 0.16);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .topbar::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(
+                90deg,
+                #ffb56b,
+                #ff9238,
+                #ffd7b0,
+                #ff9238,
+                #ffb56b
+            );
+        }
+
+        .topbar-inner {
+            width: min(1280px, calc(100% - 32px));
+            min-height: 64px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .brand {
+            min-width: 185px;
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .brand-icon {
+            position: relative;
+            width: 43px;
+            height: 43px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            background: linear-gradient(145deg, #ffb66c, #ff8d2e);
+            color: var(--white);
+            font-size: 19px;
+            box-shadow:
+                0 8px 18px rgba(255, 141, 46, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.45);
+        }
+
+        .brand-icon::after {
+            content: "";
+            position: absolute;
+            width: 9px;
+            height: 9px;
+            top: -4px;
+            left: -4px;
+            border-radius: 50%;
+            background: #ffd7ad;
+            box-shadow: 0 0 0 5px rgba(255, 181, 107, 0.12);
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .brand-title {
+            font-size: 19px;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            color: #a27b5b;
+            font-size: 10px;
+        }
+
+        .main-nav {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .nav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 12px;
+            border-radius: 11px;
+            color: #777;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link i {
+            color: #f49a4a;
+            font-size: 13px;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: #fff3e6;
+            color: #e87817;
+        }
+
+        /* محتوای اصلی */
+        .container {
+            width: min(780px, calc(100% - 32px));
+            margin: 42px auto 70px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--white);
+            color: #666;
+            font-size: 13px;
+            font-weight: bold;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s ease;
+        }
+
+        .back-link i {
+            color: var(--orange-dark);
+        }
+
+        .back-link:hover {
+            border-color: var(--orange);
+            background: var(--orange-light);
+            color: var(--orange-dark);
+            transform: translateY(-2px);
+        }
+
+        .delete-card {
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            background: var(--white);
+            box-shadow: var(--shadow);
+        }
+
+        .card-top {
+            position: relative;
+            padding: 34px 30px 30px;
+            text-align: center;
+            background:
+                radial-gradient(
+                    circle at 50% 0%,
+                    rgba(255, 157, 69, 0.12),
+                    transparent 48%
+                ),
+                #fffaf6;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .warning-icon {
+            width: 76px;
+            height: 76px;
+            margin: 0 auto 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 24px;
+            background: var(--red-light);
+            color: var(--red);
+            font-size: 32px;
+            box-shadow:
+                0 8px 20px rgba(228, 86, 86, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .card-top h1 {
+            margin: 0 0 10px;
+            color: var(--text);
+            font-size: clamp(22px, 4vw, 30px);
+            font-weight: 900;
+        }
+
+        .card-top p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 2;
+        }
+
+        .card-content {
+            padding: 28px 30px 30px;
+        }
+
+        .article-preview {
+            margin-bottom: 25px;
+            padding: 18px 20px;
+            border-right: 4px solid var(--orange);
+            border-radius: 14px;
+            background: var(--orange-light);
+        }
+
+        .preview-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: var(--orange-dark);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .preview-label i {
+            font-size: 14px;
+        }
+
+        .article-title {
+            margin: 0;
+            color: var(--text);
+            font-size: 17px;
+            font-weight: 900;
+            line-height: 1.9;
+        }
+
+        .danger-notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 26px;
+            padding: 13px 15px;
+            border: 1px solid #f5cccc;
+            border-radius: 12px;
+            background: #fff7f7;
+            color: #9d4040;
+            font-size: 12px;
+            line-height: 1.9;
+        }
+
+        .danger-notice i {
+            margin-top: 4px;
+            color: var(--red);
+        }
+
+        .actions {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 46px;
+            padding: 10px 20px;
+            border: 0;
+            border-radius: 13px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.22s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+        }
+
+        .cancel-button {
+            border: 1px solid var(--border);
+            background: var(--white);
+            color: #666;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        .cancel-button:hover {
+            border-color: var(--orange);
+            background: var(--orange-light);
+            color: var(--orange-dark);
+        }
+
+        .delete-button {
+            color: var(--white);
+            background: linear-gradient(145deg, #ef7777, #d93636);
+            box-shadow: 0 7px 16px rgba(217, 54, 54, 0.20);
+        }
+
+        .delete-button:hover {
+            background: linear-gradient(145deg, #e85f5f, #bd2929);
+            box-shadow: 0 10px 22px rgba(217, 54, 54, 0.28);
+        }
+
+        /* حالت موبایل */
+        @media (max-width: 850px) {
+            .main-nav {
+                display: none;
+            }
+
+            .topbar-inner {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .topbar-inner {
+                width: calc(100% - 22px);
+            }
+
+            .container {
+                width: calc(100% - 22px);
+                margin-top: 25px;
+            }
+
+            .card-top {
+                padding: 28px 20px 24px;
+            }
+
+            .card-content {
+                padding: 22px 18px 24px;
+            }
+
+            .actions {
+                flex-direction: column-reverse;
+                align-items: stretch;
+            }
+
+            .button {
+                width: 100%;
+            }
+
+            .brand {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+
+            <a
+                class="brand"
+                href="{% url 'news_module:article_list' %}"
+            >
+                <span class="brand-icon">
+                    <i class="fa-solid fa-newspaper"></i>
+                </span>
+
+                <span class="brand-text">
+                    <span class="brand-title">سفینه</span>
+                    <span class="brand-subtitle">
+                        رسانه‌ای برای تازه‌ترین خبرها
+                    </span>
+                </span>
+            </a>
+
+            <nav class="main-nav">
+                <a
+                    class="nav-link"
+                    href="{% url 'news_module:article_list' %}"
+                >
+                    <i class="fa-solid fa-house"></i>
+                    خانه
+                </a>
+
+                <a
+                    class="nav-link"
+                    href="{% url 'news_module:article_list' %}"
+                >
+                    <i class="fa-solid fa-bolt"></i>
+                    آخرین اخبار
+                </a>
+
+                {% if user.is_staff %}
+                    <a
+                        class="nav-link"
+                        href="{% url 'news_module:article_create' %}"
+                    >
+                        <i class="fa-solid fa-plus"></i>
+                        خبر جدید
+                    </a>
+                {% endif %}
+            </nav>
+
+        </div>
+    </header>
+
+    <main class="container">
+
+        <a
+            class="back-link"
+            href="{% url 'news_module:article_detail' article.slug %}"
+        >
+            <i class="fa-solid fa-arrow-right"></i>
+            بازگشت به خبر
+        </a>
+
+        <section class="delete-card">
+
+            <div class="card-top">
+                <div class="warning-icon">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+
+                <h1>حذف خبر</h1>
+
+                <p>
+                    آیا از حذف این خبر مطمئن هستید؟
+                </p>
+            </div>
+
+            <div class="card-content">
+
+                <div class="article-preview">
+                    <div class="preview-label">
+                        <i class="fa-regular fa-newspaper"></i>
+                        خبر انتخاب‌شده
+                    </div>
+
+                    <h2 class="article-title">
+                        {{ article.title }}
+                    </h2>
+                </div>
+
+                <div class="danger-notice">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+
+                    <span>
+                        این عملیات غیرقابل بازگشت است و پس از تأیید،
+                        خبر برای همیشه حذف خواهد شد.
+                    </span>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="actions">
+                        <a
+                            class="button cancel-button"
+                            href="{% url 'news_module:article_detail' article.slug %}"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                            انصراف
+                        </a>
+
+                        <button
+                            class="button delete-button"
+                            type="submit"
+                        >
+                            <i class="fa-solid fa-trash-can"></i>
+                            بله، حذف شود
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>
