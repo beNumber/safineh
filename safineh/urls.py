@@ -13,7 +13,9 @@ urlpatterns = [
         include("news_module.urls"),
     ),
     path('dashboard/',include('dashboard_module.urls')),
-    path('', include("landing_module.urls"))
+    path('auth/',include('auth_module.urls')),
+    path('', include("landing_module.urls")),
+
 ]
 
 if settings.DEBUG:

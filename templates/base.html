@@ -107,9 +107,9 @@
         .sidebar-link.active {
             color: #1d4ed8;
             background: linear-gradient(
-                90deg,
-                rgba(219, 234, 254, .95),
-                rgba(239, 246, 255, .45)
+                    90deg,
+                    rgba(219, 234, 254, .95),
+                    rgba(239, 246, 255, .45)
             );
         }
 
@@ -141,10 +141,9 @@
         }
 
         .brand-pattern {
-            background:
-                radial-gradient(circle at 15% 20%, rgba(255,255,255,.18) 0 2px, transparent 3px),
-                radial-gradient(circle at 80% 60%, rgba(255,255,255,.12) 0 2px, transparent 3px),
-                linear-gradient(135deg, #172554 0%, #1d4ed8 100%);
+            background: radial-gradient(circle at 15% 20%, rgba(255, 255, 255, .18) 0 2px, transparent 3px),
+            radial-gradient(circle at 80% 60%, rgba(255, 255, 255, .12) 0 2px, transparent 3px),
+            linear-gradient(135deg, #172554 0%, #1d4ed8 100%);
             background-size: 26px 26px, 32px 32px, auto;
         }
 
@@ -194,14 +193,14 @@
 
     <!-- Mobile Overlay -->
     <div
-        id="sidebar-overlay"
-        class="mobile-overlay fixed inset-0 z-40 hidden bg-slate-950/50 backdrop-blur-sm lg:hidden">
+            id="sidebar-overlay"
+            class="mobile-overlay fixed inset-0 z-40 hidden bg-slate-950/50 backdrop-blur-sm lg:hidden">
     </div>
 
     <!-- Sidebar -->
     <aside
-        id="sidebar"
-        class="app-sidebar fixed inset-y-0 right-0 z-50 flex flex-col overflow-hidden border-l border-slate-200 bg-white">
+            id="sidebar"
+            class="app-sidebar fixed inset-y-0 right-0 z-50 flex flex-col overflow-hidden border-l border-slate-200 bg-white">
 
         <!-- Brand -->
         <div class="brand-pattern relative px-5 py-5 text-white">
@@ -220,9 +219,9 @@
                 </div>
 
                 <button
-                    id="sidebar-close"
-                    type="button"
-                    class="mr-auto flex h-9 w-9 items-center justify-center rounded-xl text-blue-100 transition hover:bg-white/15 hover:text-white lg:hidden">
+                        id="sidebar-close"
+                        type="button"
+                        class="mr-auto flex h-9 w-9 items-center justify-center rounded-xl text-blue-100 transition hover:bg-white/15 hover:text-white lg:hidden">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
@@ -282,6 +281,21 @@
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-blog"></i>
                     </span>
+                    <span>مجله آموزشی</span>
+                </a>
+                <a href="{% url 'news_module:article_list' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-newspaper"></i>
+    </span>
+                    <span>اخبار و اطلاعیه‌ها</span>
+                </a>
+
+                <a href="{% url 'blog:post_list' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-blog"></i>
+    </span>
                     <span>مجله آموزشی</span>
                 </a>
 
@@ -383,11 +397,13 @@
                     </a>
 
                     <a href=""
-                       class="sidebar-link flex items-center gap-3 rounded-xl px-3-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate="sidebar-icon text-slate-400">
-                            <i class="fa-solid fa-sliders"></i>
-                        </span>
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-sliders"></i>
+    </span>
                         <span>تنظیمات سامانه</span>
                     </a>
+
                 </div>
             {% endif %}
 
@@ -395,7 +411,7 @@
 
         <!-- Sidebar Footer -->
         <div class="border-t border-slate-100 p-4">
-            <a href=""
+            <a href="{% url 'auth_module:logout' %}"
                class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600">
                 <span class="sidebar-icon text-slate-400">
                     <i class="fa-solid fa-right-from-bracket"></i>
@@ -416,9 +432,9 @@
                 <div class="flex min-w-0 items-center gap-3">
 
                     <button
-                        id="sidebar-toggle"
-                        type="button"
-                        class="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 lg:hidden">
+                            id="sidebar-toggle"
+                            type="button"
+                            class="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 lg:hidden">
                         <i class="fa-solid fa-bars text-lg"></i>
                     </button>
 
@@ -442,9 +458,9 @@
                     <div class="hidden items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:flex">
                         <i class="fa-solid fa-magnifying-glass text-sm text-slate-400"></i>
                         <input
-                            type="text"
-                            placeholder="جستجو..."
-                            class="mr-2 w-32 border-0 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48">
+                                type="text"
+                                placeholder="جستجو..."
+                                class="mr-2 w-32 border-0 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48">
                     </div>
 
                     <!-- Date -->
@@ -455,8 +471,8 @@
 
                     <!-- Notifications -->
                     <button
-                        type="button"
-                        class="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
+                            type="button"
+                            class="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
                         <i class="fa-regular fa-bell text-lg"></i>
                         <span class="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500"></span>
                     </button>
@@ -464,9 +480,9 @@
                     <!-- Profile -->
                     <div class="relative">
                         <button
-                            id="profile-toggle"
-                            type="button"
-                            class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 transition hover:border-blue-200 hover:bg-blue-50">
+                                id="profile-toggle"
+                                type="button"
+                                class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 transition hover:border-blue-200 hover:bg-blue-50">
 
                             <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
                                 <i class="fa-solid fa-user text-sm"></i>
@@ -491,8 +507,8 @@
 
                         <!-- Profile Dropdown -->
                         <div
-                            id="profile-menu"
-                            class="profile-menu hidden absolute left-0 top-14 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-soft">
+                                id="profile-menu"
+                                class="profile-menu hidden absolute left-0 top-14 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-soft">
 
                             <div class="border-b border-slate-100 px-3 py-3">
                                 <p class="truncate text-sm font-bold text-slate-800">
