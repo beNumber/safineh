@@ -1,0 +1,462 @@
+﻿{% load static %}
+<!doctype html>
+<html lang="fa" dir="rtl" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>
+      {% block title %} سامانه آموزشی مدرسه سفینه دانش {% endblock %}
+    </title>
+
+    <meta
+      name="description"
+      content="{% block meta_description %}سامانه آموزشی مدرسه سفینه دانش برای دانش‌آموزان پایه پنجم تا دوازدهم{% endblock %}"
+    />
+
+    <!-- FontAwesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+
+    <!-- فونت رسمی پروژه؛ محتوای این فایل تغییر نمی‌کند -->
+    <link rel="stylesheet" href="{% static 'font/font.css' %}" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Aria", "Tahoma", "sans-serif"],
+              aria: ["Aria", "Tahoma", "sans-serif"],
+            },
+
+            colors: {
+              school: {
+                navy: "#12304A",
+                blue: "#1D5D8F",
+                cyan: "#2F8FAD",
+                green: "#3A8F72",
+                gold: "#D6A84F",
+                cream: "#F7F8F5",
+                ink: "#1F2933",
+                muted: "#64748B",
+              },
+            },
+
+            boxShadow: {
+              soft: "0 10px 30px rgba(18, 48, 74, 0.08)",
+              card: "0 5px 18px rgba(18, 48, 74, 0.07)",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      :root {
+        --school-navy: #12304a;
+        --school-blue: #1d5d8f;
+        --school-cyan: #2f8fad;
+        --school-green: #3a8f72;
+        --school-gold: #d6a84f;
+        --school-cream: #f7f8f5;
+        --school-ink: #1f2933;
+        --school-muted: #64748b;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background-color: var(--school-cream);
+        color: var(--school-ink);
+        font-family: "Aria", Tahoma, sans-serif !important;
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font-family: inherit;
+      }
+
+      ::selection {
+        background-color: rgba(47, 143, 173, 0.2);
+        color: var(--school-navy);
+      }
+
+      .page-container {
+        width: min(1180px, calc(100% - 32px));
+        margin-inline: auto;
+      }
+
+      .section-heading {
+        color: var(--school-navy);
+        font-size: clamp(1.45rem, 3vw, 2.15rem);
+        font-weight: 700;
+        line-height: 1.6;
+      }
+
+      .section-description {
+        color: var(--school-muted);
+        line-height: 2;
+      }
+
+      .focus-ring:focus-visible {
+        outline: 3px solid rgba(214, 168, 79, 0.65);
+        outline-offset: 3px;
+      }
+
+      .mobile-menu {
+        display: none;
+      }
+
+      .mobile-menu.is-open {
+        display: block;
+      }
+
+      @media (max-width: 767px) {
+        .page-container {
+          width: min(100% - 24px, 1180px);
+        }
+      }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+  </head>
+
+  <body class="bg-school-cream text-school-ink antialiased">
+    <!-- نوار بالایی -->
+    <header
+      class="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur"
+    >
+      <div class="page-container">
+        <nav
+          class="flex min-h-[76px] items-center justify-between gap-5"
+          aria-label="ناوبری اصلی"
+        >
+          <!-- نشان و نام مدرسه -->
+          <a
+            href="/"
+            class="focus-ring flex shrink-0 items-center gap-3 rounded-lg"
+            aria-label="صفحه اصلی سامانه آموزشی مدرسه سفینه دانش"
+          >
+            <span
+              class="flex h-11 w-11 items-center justify-center rounded-xl bg-school-navy text-xl text-white shadow-card"
+            >
+              <i class="fa-solid fa-school" aria-hidden="true"></i>
+            </span>
+
+            <span class="hidden sm:block">
+              <span class="block text-sm font-bold leading-6 text-school-navy">
+                مدرسه سفینه دانش
+              </span>
+              <span class="block text-xs leading-5 text-slate-500">
+                سامانه آموزشی دانش‌آموزان
+              </span>
+            </span>
+          </a>
+
+          <!-- منوی دسکتاپ -->
+          <div class="hidden items-center gap-1 lg:flex">
+            <a
+              href="/"
+              class="focus-ring rounded-lg px-3 py-2 text-sm font-bold text-school-blue transition hover:bg-slate-100"
+            >
+              صفحه اصلی
+            </a>
+
+            <a
+              href="/#grades"
+              class="focus-ring rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-school-blue"
+            >
+              پایه‌های تحصیلی
+            </a>
+
+            <a
+              href="/#articles"
+              class="focus-ring rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-school-blue"
+            >
+              مقالات
+            </a>
+
+            <a
+              href="/#news"
+              class="focus-ring rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 hover:text-school-blue"
+            >
+              اخبار و اطلاعیه‌ها
+            </a>
+          </div>
+
+          <!-- دکمه ورود و منوی موبایل -->
+          <div class="flex items-center gap-2">
+            <a
+              href="/dashboard/"
+              class="focus-ring inline-flex min-h-11 items-center gap-2 rounded-lg bg-school-navy px-4 py-2 text-sm font-bold text-white transition hover:bg-school-blue"
+            >
+              <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+              <span class="hidden xs:inline sm:inline">ورود به سامانه</span>
+              <span class="xs:hidden sm:hidden">ورود</span>
+            </a>
+
+            <button
+              type="button"
+              id="mobile-menu-button"
+              class="focus-ring inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-school-navy transition hover:bg-slate-100 lg:hidden"
+              aria-label="باز کردن منوی سایت"
+              aria-controls="mobile-menu"
+              aria-expanded="false"
+            >
+              <i class="fa-solid fa-bars text-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+        </nav>
+
+        <!-- منوی موبایل -->
+        <div
+          id="mobile-menu"
+          class="mobile-menu border-t border-slate-100 py-3 lg:hidden"
+        >
+          <div class="grid gap-1">
+            <a
+              href="/"
+              class="focus-ring rounded-lg px-3 py-3 text-sm font-bold text-school-blue hover:bg-slate-100"
+            >
+              <i class="fa-solid fa-house ms-2" aria-hidden="true"></i>
+              صفحه اصلی
+            </a>
+
+            <a
+              href="/#grades"
+              class="focus-ring rounded-lg px-3 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100"
+            >
+              <i class="fa-solid fa-layer-group ms-2" aria-hidden="true"></i>
+              پایه‌های تحصیلی
+            </a>
+
+            <a
+              href="/#articles"
+              class="focus-ring rounded-lg px-3 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100"
+            >
+              <i class="fa-solid fa-book-open ms-2" aria-hidden="true"></i>
+              مقالات آموزشی
+            </a>
+
+            <a
+              href="/#news"
+              class="focus-ring rounded-lg px-3 py-3 text-sm font-bold text-slate-600 hover:bg-slate-100"
+            >
+              <i class="fa-solid fa-bullhorn ms-2" aria-hidden="true"></i>
+              اخبار و اطلاعیه‌ها
+            </a>
+
+            <a
+              href="/dashboard/"
+              class="focus-ring mt-2 rounded-lg bg-slate-100 px-3 py-3 text-sm font-bold text-school-navy hover:bg-slate-200"
+            >
+              <i
+                class="fa-solid fa-right-to-bracket ms-2"
+                aria-hidden="true"
+              ></i>
+              ورود به سامانه
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- پیام‌های Django -->
+    {% if messages %}
+    <div class="page-container pt-5">
+      <div class="grid gap-3">
+        {% for message in messages %}
+        <div
+          class="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-card"
+          role="alert"
+        >
+          {% if message.tags == 'success' %}
+          <i
+            class="fa-solid fa-circle-check mt-1 text-school-green"
+            aria-hidden="true"
+          ></i>
+          {% elif message.tags == 'error' %}
+          <i
+            class="fa-solid fa-circle-exclamation mt-1 text-red-600"
+            aria-hidden="true"
+          ></i>
+          {% else %}
+          <i
+            class="fa-solid fa-circle-info mt-1 text-school-blue"
+            aria-hidden="true"
+          ></i>
+          {% endif %}
+
+          <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- محتوای هر صفحه -->
+    <main>{% block content %}{% endblock %}</main>
+
+    <!-- فوتر -->
+    <footer class="mt-16 border-t border-slate-200 bg-white">
+      <div class="page-container py-10">
+        <div class="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
+          <!-- معرفی -->
+          <div>
+            <div class="mb-4 flex items-center gap-3">
+              <span
+                class="flex h-10 w-10 items-center justify-center rounded-lg bg-school-navy text-lg text-white"
+              >
+                <i class="fa-solid fa-school" aria-hidden="true"></i>
+              </span>
+
+              <div>
+                <h2 class="font-bold text-school-navy">مدرسه سفینه دانش</h2>
+                <p class="text-xs text-slate-500">سامانه آموزشی مدرسه</p>
+              </div>
+            </div>
+
+            <p class="max-w-md text-sm leading-8 text-slate-500">
+              مرجع دسترسی دانش‌آموزان به برنامه‌های آموزشی، اخبار مدرسه، مقالات
+              و محتوای کمک‌آموزشی.
+            </p>
+          </div>
+
+          <!-- دسترسی سریع -->
+          <div>
+            <h2 class="mb-4 font-bold text-school-navy">دسترسی سریع</h2>
+
+            <div class="grid gap-3 text-sm">
+              <a
+                href="/"
+                class="text-slate-500 transition hover:text-school-blue"
+              >
+                صفحه اصلی
+              </a>
+
+              <a
+                href="/#grades"
+                class="text-slate-500 transition hover:text-school-blue"
+              >
+                پایه‌های تحصیلی
+              </a>
+
+              <a
+                href="/#articles"
+                class="text-slate-500 transition hover:text-school-blue"
+              >
+                مقالات آموزشی
+              </a>
+
+              <a
+                href="/#news"
+                class="text-slate-500 transition hover:text-school-blue"
+              >
+                اخبار و اطلاعیه‌ها
+              </a>
+            </div>
+          </div>
+
+          <!-- ارتباط با سامانه -->
+          <div>
+            <h2 class="mb-4 font-bold text-school-navy">ارتباط با سامانه</h2>
+
+            <div class="grid gap-3 text-sm text-slate-500">
+              <p class="flex items-center gap-2">
+                <i
+                  class="fa-solid fa-location-dot w-4 text-school-blue"
+                  aria-hidden="true"
+                ></i>
+                مدرسه سفینه دانش
+              </p>
+
+              <p class="flex items-center gap-2">
+                <i
+                  class="fa-solid fa-phone w-4 text-school-blue"
+                  aria-hidden="true"
+                ></i>
+                ۰۲۱-۱۲۳۴۵۶۷۸
+              </p>
+
+              <p class="flex items-center gap-2">
+                <i
+                  class="fa-solid fa-envelope w-4 text-school-blue"
+                  aria-hidden="true"
+                ></i>
+                info@safinehdanesh.ir
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="mt-8 flex flex-col gap-3 border-t border-slate-100 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p>تمامی حقوق این سامانه برای مدرسه سفینه دانش محفوظ است.</p>
+
+          <p>{% now "Y" %} - سامانه آموزشی مدرسه</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- اسکریپت منوی موبایل -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const menuButton = document.getElementById("mobile-menu-button");
+        const mobileMenu = document.getElementById("mobile-menu");
+
+        if (!menuButton || !mobileMenu) {
+          return;
+        }
+
+        const menuLinks = mobileMenu.querySelectorAll("a");
+
+        menuButton.addEventListener("click", function () {
+          const isOpen = mobileMenu.classList.toggle("is-open");
+
+          menuButton.setAttribute("aria-expanded", String(isOpen));
+          menuButton.setAttribute(
+            "aria-label",
+            isOpen ? "بستن منوی سایت" : "باز کردن منوی سایت",
+          );
+
+          const icon = menuButton.querySelector("i");
+
+          if (icon) {
+            icon.classList.toggle("fa-bars", !isOpen);
+            icon.classList.toggle("fa-xmark", isOpen);
+          }
+        });
+
+        menuLinks.forEach(function (link) {
+          link.addEventListener("click", function () {
+            mobileMenu.classList.remove("is-open");
+            menuButton.setAttribute("aria-expanded", "false");
+            menuButton.setAttribute("aria-label", "باز کردن منوی سایت");
+
+            const icon = menuButton.querySelector("i");
+
+            if (icon) {
+              icon.classList.remove("fa-xmark");
+              icon.classList.add("fa-bars");
+            }
+          });
+        });
+      });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
