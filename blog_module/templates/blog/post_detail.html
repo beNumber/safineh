@@ -1,0 +1,60 @@
+{% extends "blog/base.html" %}
+{% load jalali_tags %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<article class="mx-auto max-w-4xl">
+  <header class="post-cover">
+    <h1 class="mb-4 text-2xl font-extrabold">{{ post.title }}</h1>
+
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+      {% if post.category %}
+        <a href="{% url 'blog:category_posts' post.category.slug %}">
+          <i class="fa-solid fa-folder-open ml-1"></i>{{ post.category.name }}
+        </a>
+      {% endif %}
+{{ post.body|safe }}
+
+      {% if post.published_at %}
+        <span>
+          <i class="fa-regular fa-clock ml-1"></i>{{ post.published_at|jalali }}
+
+        </span>
+      {% endif %}
+
+      {% if post.author %}
+        <span>
+          <i class="fa-regular fa-user ml-1"></i>{{ post.author }}
+        </span>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="post-media-stack">
+    {% if post.content_image %}
+      <figure class="post-media-frame">
+        <img src="{{ post.content_image.url }}" alt="{{ post.title }}" class="post-media">
+      </figure>
+    {% endif %}
+
+    {% if post.content_video %}
+      <figure class="post-media-frame">
+        <video class="post-media" controls preload="metadata">
+          <source src="{{ post.content_video.url }}">
+        </video>
+      </figure>
+    {% endif %}
+  </div>
+
+  {% if post.body %}
+    <div class="post-body-glass">
+      {{ post.body|linebreaks }}
+    </div>
+  {% elif post.content %}
+    <div class="post-body-glass">
+      {{ post.content|linebreaks }}
+    </div>
+  {% endif %}
+</article>
+{% endblock %}
