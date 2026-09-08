@@ -1,6 +1,21 @@
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
+from ckeditor_uploader.fields import RichTextUploadingField
 from users_module.models import Subject
+
+
+def validate_question_image_size(image):
+    """Keep question-bank uploads reasonably small."""
+    if image.size > 5 * 1024 * 1024:
+        raise ValidationError('حجم تصویر نباید بیشتر از ۵ مگابایت باشد.')
+
+
+QUESTION_IMAGE_VALIDATORS = [
+    FileExtensionValidator(['jpg', 'jpeg', 'png', 'webp']),
+    validate_question_image_size,
+]
 
 
 # ==============================================================================
@@ -8,10 +23,9 @@ from users_module.models import Subject
 # ==============================================================================
 class Difficulty(models.TextChoices):
     """سطح دشواری سوال"""
-    EASY = 'E', 'ساده'
+    EASY = 'E', 'آسان'
     MEDIUM = 'M', 'متوسط'
-    HARD = 'H', 'سخت'
-    VERY_HARD = 'VH', 'خیلی سخت'
+    HARD = 'H', 'دشوار'
 
 
 # ==============================================================================
@@ -125,14 +139,25 @@ class Question(models.Model):
         null=True,
         blank=True,
     )
-    text = models.TextField('متن سوال')
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'pending', 'در انتظار تأیید'
+        APPROVED = 'approved', 'تأیید شده'
+        REJECTED = 'rejected', 'رد شده'
+
+    text = RichTextUploadingField('متن سوال', blank=True)
+    image = models.ImageField(
+        'تصویر سوال',
+        upload_to='questions/question_images/%Y/%m/',
+        blank=True,
+        validators=QUESTION_IMAGE_VALIDATORS,
+    )
     difficulty = models.CharField(
         'سطح دشواری',
         max_length=2,
         choices=Difficulty.choices,
         default=Difficulty.MEDIUM,
     )
-    explanation = models.TextField('پاسخ تشریحی', blank=True)
+    explanation = RichTextUploadingField('پاسخ تشریحی', blank=True)
     creator = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -143,6 +168,17 @@ class Question(models.Model):
     is_active = models.BooleanField('فعال', default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    approval_status = models.CharField(
+        'وضعیت تأیید', max_length=20, choices=ApprovalStatus.choices,
+        default=ApprovalStatus.APPROVED,
+    )
+    approval_note = models.TextField('یادداشت تأیید/رد', blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='approved_questions',
+        verbose_name='تأییدکننده',
+    )
+    approved_at = models.DateTimeField('زمان بررسی', null=True, blank=True)
 
     class Meta:
         verbose_name = 'سوال'
@@ -153,13 +189,15 @@ class Question(models.Model):
         ]
 
     def __str__(self):
-        return f'Q{self.pk}: {self.text[:50]}'
+        return f'Q{self.pk}: {self.text[:50] or "سؤال تصویری"}'
 
     def clean(self):
         from django.core.exceptions import ValidationError
 
         if self.question_type != self.Type.MCQ:
             raise ValidationError({'question_type': 'تمام سؤال‌ها باید چهارگزینه‌ای باشند.'})
+        if not self.text.strip() and not self.image:
+            raise ValidationError('برای سؤال، متن یا تصویر وارد کنید.')
 
 
 class Choice(models.Model):
@@ -170,7 +208,13 @@ class Choice(models.Model):
         related_name='choices',
         verbose_name='سوال',
     )
-    text = models.CharField('متن گزینه', max_length=255)
+    text = RichTextUploadingField('متن گزینه', blank=True)
+    image = models.ImageField(
+        'تصویر گزینه',
+        upload_to='questions/choice_images/%Y/%m/',
+        blank=True,
+        validators=QUESTION_IMAGE_VALIDATORS,
+    )
     is_correct = models.BooleanField('گزینه درست', default=False)
 
     class Meta:
@@ -179,7 +223,11 @@ class Choice(models.Model):
         ordering = ['pk']
 
     def __str__(self):
-        return self.text
+        return self.text or 'گزینه تصویری'
+
+    def clean(self):
+        if not self.text.strip() and not self.image:
+            raise ValidationError('برای گزینه، متن یا تصویر وارد کنید.')
 
 
 # ==============================================================================
@@ -208,6 +256,7 @@ class PracticeSession(models.Model):
     requested_difficulty = models.CharField(
         'سطح انتخابی', max_length=2, choices=Difficulty.choices, blank=True
     )
+    difficulty_breakdown = models.JSONField('ترکیب سطح سؤال‌ها', default=dict, blank=True)
     status = models.CharField('وضعیت', max_length=20, choices=Status.choices, default=Status.IN_PROGRESS)
 
     class Meta:
@@ -272,6 +321,7 @@ class ExamSession(models.Model):
     requested_difficulty = models.CharField(
         'سطح انتخابی', max_length=2, choices=Difficulty.choices, blank=True
     )
+    difficulty_breakdown = models.JSONField('ترکیب سطح سؤال‌ها', default=dict, blank=True)
     status = models.CharField('وضعیت', max_length=20, choices=Status.choices, default=Status.IN_PROGRESS)
     auto_submitted = models.BooleanField('ثبت خودکار (اتمام زمان)', default=False)
 

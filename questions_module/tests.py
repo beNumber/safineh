@@ -2,11 +2,13 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from auth_module.models import UserRole
+from auth_module.models import ProvinceTrustee
 from users_module.models import Access, FieldOfStudy, Grade, Province, School, Subject
 
 from .models import (
     Chapter,
     Choice,
+    Difficulty,
     ExamAnswer,
     ExamSession,
     PracticeAnswer,
@@ -103,6 +105,45 @@ class QuestionWizardTests(TestCase):
         self.assertEqual(practice_session.correct_count, 1)
         self.assertEqual(practice_session.percent, 100.0)
 
+    def test_multiple_difficulty_levels_use_exact_requested_counts(self):
+        for difficulty, title in ((Difficulty.EASY, 'آسان'), (Difficulty.HARD, 'دشوار')):
+            question = Question.objects.create(
+                chapter=self.chapter,
+                text=f'سؤال {title}',
+                difficulty=difficulty,
+                question_type=Question.Type.MCQ,
+                is_active=True,
+            )
+            Choice.objects.create(question=question, text='صحیح', is_correct=True)
+            for index in range(3):
+                Choice.objects.create(question=question, text=f'غلط {index}')
+
+        self.client.post(reverse('questions_module:choose_mode'), {'mode': 'practice'})
+        self.client.post(
+            reverse('questions_module:select_courses'),
+            {'courses': [self.subject.pk]},
+        )
+        response = self.client.post(
+            reverse('questions_module:select_chapters'),
+            {
+                'chapters': [self.chapter.pk],
+                'difficulties': [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD],
+                'count_E': 1,
+                'count_M': 1,
+                'count_H': 1,
+            },
+            follow=True,
+        )
+
+        session = PracticeSession.objects.latest('pk')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(session.total_questions, 3)
+        self.assertEqual(session.difficulty_breakdown, {'E': 1, 'M': 1, 'H': 1})
+        self.assertEqual(
+            set(session.questions.values_list('difficulty', flat=True)),
+            {'E', 'M', 'H'},
+        )
+
     def test_question_with_more_or_less_than_four_choices_is_not_usable(self):
         Choice.objects.create(question=self.question, text="پنج")
         self.client.post(reverse("questions_module:choose_mode"), {"mode": "practice"})
@@ -120,6 +161,53 @@ class QuestionWizardTests(TestCase):
         response = self.client.get(reverse("questions_module:question_create"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "دقیقاً چهار گزینه")
+        self.assertContains(response, 'enctype="multipart/form-data"')
+        self.assertContains(response, 'name="image"')
+
+    def test_consultant_question_waits_for_province_trustee(self):
+        self.user.role = UserRole.CONSULTANT
+        self.user.save(update_fields=['role'])
+        self.user.accesses.add(self.question_access)
+        response = self.client.post(
+            reverse('questions_module:question_create'),
+            {
+                'chapter': self.chapter.pk,
+                'difficulty': Difficulty.MEDIUM,
+                'text': 'سؤال مشاور',
+                'explanation': '',
+                'is_active': 'on',
+                'choices-TOTAL_FORMS': '4',
+                'choices-INITIAL_FORMS': '0',
+                'choices-MIN_NUM_FORMS': '4',
+                'choices-MAX_NUM_FORMS': '4',
+                'choices-0-text': 'یک', 'choices-0-is_correct': 'on',
+                'choices-1-text': 'دو', 'choices-2-text': 'سه', 'choices-3-text': 'چهار',
+            },
+        )
+        created = Question.objects.latest('pk')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(created.approval_status, Question.ApprovalStatus.PENDING)
+
+    def test_trustee_can_approve_consultant_question(self):
+        self.user.role = UserRole.CONSULTANT
+        self.user.save(update_fields=['role'])
+        pending = Question.objects.create(
+            chapter=self.chapter, text='در انتظار', approval_status=Question.ApprovalStatus.PENDING,
+        )
+        pending.choices.set(self.question.choices.all())
+        trustee = get_user_model().objects.create_user(username='trustee', password='pass', role=UserRole.PROVINCE_TRUSTEE)
+        ProvinceTrustee.objects.create(user=trustee, province=self.chapter.subject.field.grade.school.province)
+        self.client.force_login(trustee)
+        response = self.client.post(reverse('questions_module:review_question', args=[pending.pk]), {'decision': 'approved'})
+        pending.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(pending.approval_status, Question.ApprovalStatus.APPROVED)
+
+    def test_difficulty_has_exactly_three_requested_levels(self):
+        self.assertEqual(
+            list(Difficulty.choices),
+            [('E', 'آسان'), ('M', 'متوسط'), ('H', 'دشوار')],
+        )
 
     def test_non_student_without_access_cannot_create_question(self):
         self.user.role = UserRole.ADMIN
@@ -203,5 +291,45 @@ class QuestionWizardTests(TestCase):
         session.refresh_from_db()
         self.assertEqual(session.correct_count, 1)
         self.assertEqual(ExamAnswer.objects.get().selected_choice, self.correct_choice)
+
+    def test_repeated_question_shows_previous_wrong_result(self):
+        previous = ExamSession.objects.create(
+            user=self.user,
+            total_questions=1,
+            status=ExamSession.Status.DONE,
+        )
+        previous.questions.add(self.question)
+        previous.chapters.add(self.chapter)
+        wrong_choice = self.question.choices.filter(is_correct=False).first()
+        ExamAnswer.objects.create(
+            session=previous,
+            question=self.question,
+            selected_choice=wrong_choice,
+            is_correct=False,
+        )
+        current = PracticeSession.objects.create(user=self.user, total_questions=1)
+        current.questions.add(self.question)
+        current.chapters.add(self.chapter)
+
+        response = self.client.get(
+            reverse('questions_module:practice_session', args=[current.pk])
+        )
+
+        self.assertContains(response, 'قبلاً غلط زده‌اید')
+
+    def test_my_performance_contains_exam_line_chart(self):
+        exam = ExamSession.objects.create(
+            user=self.user,
+            total_questions=4,
+            correct_count=3,
+            percent=75,
+            status=ExamSession.Status.DONE,
+        )
+        exam.chapters.add(self.chapter)
+
+        response = self.client.get(reverse('questions_module:choose_mode'))
+
+        self.assertContains(response, 'exam-progress-chart')
+        self.assertEqual(response.context['exam_progress'][0]['label'], 'آزمون ۱')
 
 # Create your tests here.

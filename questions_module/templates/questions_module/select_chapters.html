@@ -1,2 +1,34 @@
-{% extends "base.html" %}{% load static %}{% block title %}تنظیمات جلسه{% endblock %}{% block page_title %}فصل‌ها و تنظیمات{% endblock %}{% block breadcrumb %}مرحله سوم{% endblock %}{% block extra_css %}<link rel="stylesheet" href="{% static 'css/questions.css' %}">{% endblock %}
-{% block content %}<div class="qb-shell">{% include "questions_module/_wizard_steps.html" with step=3 %}<form method="post" class="qb-card p-6 sm:p-8">{% csrf_token %}<h1 class="text-xl font-black text-slate-800">فصل‌های موردنظر را انتخاب کنید</h1><p class="mt-2 text-sm text-slate-500">می‌توانید فصل‌هایی از چند درس را در یک جلسه ترکیب کنید.</p><div class="mt-6 grid gap-3 sm:grid-cols-2">{% for chapter in chapters %}<label class="qb-check-card flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-slate-200 p-4"><input class="h-5 w-5 accent-blue-600" type="checkbox" name="chapters" value="{{ chapter.id }}" {% if chapter.id in selected_chapter_ids %}checked{% endif %}><span><strong class="block text-sm text-slate-700">{{ chapter.name }}</strong><small class="mt-1 block text-slate-400">{{ chapter.subject.title }}</small></span></label>{% empty %}<p class="text-sm text-slate-500">فصل قابل استفاده‌ای یافت نشد.</p>{% endfor %}</div><div class="my-7 border-t border-slate-100"></div><div class="grid gap-5 sm:grid-cols-2"><label class="text-sm font-bold text-slate-700">سطح سؤال<select name="difficulty" class="qb-field mt-2">{% for value,label in difficulties %}<option value="{{ value }}" {% if value == selected_difficulty %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><label class="text-sm font-bold text-slate-700">تعداد سؤال<input class="qb-field mt-2" type="number" name="question_count" min="1" max="100" value="{{ question_count }}"><small class="mt-2 block font-normal text-slate-400">حداکثر ۱۰۰ سؤال؛ بر اساس موجودی انتخاب شما</small></label></div><div class="mt-7 flex gap-3"><button class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white">شروع {% if mode == 'practice' %}تمرین{% else %}آزمون{% endif %}</button><a href="{% url 'questions_module:select_courses' %}" class="rounded-xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600">بازگشت</a></div></form></div>{% endblock %}
+{% extends "base.html" %}{% load static %}
+{% block title %}تنظیمات جلسه{% endblock %}{% block page_title %}فصل‌ها و تنظیمات{% endblock %}{% block breadcrumb %}مرحله سوم{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/questions.css' %}"><link rel="stylesheet" href="{% static 'css/questions-modern.css' %}">{% endblock %}
+{% block content %}
+<div class="qb-shell">
+  {% include "questions_module/_wizard_steps.html" with step=3 %}
+  <form method="post" class="qb-card p-6 sm:p-8" id="session-settings-form">{% csrf_token %}
+    <h1 class="text-xl font-black text-slate-800">فصل‌های موردنظر را انتخاب کنید</h1>
+    <p class="mt-2 text-sm text-slate-500">می‌توانید فصل‌هایی از چند درس را در یک جلسه ترکیب کنید.</p>
+    <div class="mt-6 grid gap-3 sm:grid-cols-2">{% for chapter in chapters %}<label class="qb-check-card flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-slate-200 p-4"><input class="h-5 w-5 accent-blue-600" type="checkbox" name="chapters" value="{{ chapter.id }}" {% if chapter.id in selected_chapter_ids %}checked{% endif %}><span><strong class="block text-sm text-slate-700">{{ chapter.name }}</strong><small class="mt-1 block text-slate-400">{{ chapter.subject.title }}</small></span></label>{% empty %}<p class="text-sm text-slate-500">فصل قابل استفاده‌ای یافت نشد.</p>{% endfor %}</div>
+
+    <div class="my-8 border-t border-slate-100"></div>
+    <div class="mb-5"><h2 class="text-lg font-black text-slate-800">ترکیب سطح سؤال‌ها</h2><p class="mt-1 text-sm text-slate-500">یک یا چند سطح را فعال کنید و تعداد سؤال هر سطح را جداگانه بنویسید.</p></div>
+    <div class="qb-level-grid">
+      {% for item in difficulty_options %}
+      <article class="qb-level-card qb-level-{{ item.value|lower }}">
+        <label class="qb-level-main" for="difficulty-{{ item.value }}">
+          <input class="qb-level-checkbox sr-only" id="difficulty-{{ item.value }}" type="checkbox" name="difficulties" value="{{ item.value }}" {% if item.selected %}checked{% endif %}>
+          <span class="qb-level-icon"><i class="fa-solid {% if item.value == 'E' %}fa-seedling{% elif item.value == 'M' %}fa-layer-group{% else %}fa-fire-flame-curved{% endif %}"></i></span>
+          <span class="min-w-0 flex-1"><strong class="block text-base text-slate-800">{{ item.label }}</strong><small class="mt-1 block text-slate-500">{% if item.value == 'E' %}شروع روان و پایه‌ای{% elif item.value == 'M' %}تمرین متعادل و استاندارد{% else %}چالش جدی‌تر برای تسلط{% endif %}</small></span>
+          <span class="qb-ios-switch" aria-hidden="true"><span></span></span>
+        </label>
+        <div class="qb-level-count"><label for="count-{{ item.value }}">تعداد سؤال</label><div><button type="button" class="qb-count-btn" data-step="-1" aria-label="کم کردن">−</button><input id="count-{{ item.value }}" name="count_{{ item.value }}" type="number" min="1" max="100" value="{{ item.count }}" inputmode="numeric"><button type="button" class="qb-count-btn" data-step="1" aria-label="زیاد کردن">+</button></div></div>
+      </article>
+      {% endfor %}
+    </div>
+    <div class="mt-5 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm"><span class="font-bold text-slate-600">مجموع سؤال‌های انتخابی</span><strong id="selected-total" class="text-lg text-blue-600">۰</strong></div>
+    <div class="mt-7 flex gap-3"><button class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white">شروع {% if mode == 'practice' %}تمرین{% else %}آزمون{% endif %}</button><a href="{% url 'questions_module:select_courses' %}" class="rounded-xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600">بازگشت</a></div>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}<script>
+document.addEventListener('DOMContentLoaded',()=>{const cards=[...document.querySelectorAll('.qb-level-card')],total=document.getElementById('selected-total');const fa=n=>Number(n||0).toLocaleString('fa-IR');function sync(){let sum=0;cards.forEach(card=>{const check=card.querySelector('.qb-level-checkbox'),count=card.querySelector('input[type=number]');card.classList.toggle('is-selected',check.checked);count.disabled=!check.checked;if(check.checked)sum+=Math.max(0,Number(count.value)||0)});total.textContent=fa(sum)}cards.forEach(card=>{card.querySelector('.qb-level-checkbox').addEventListener('change',sync);card.querySelector('input[type=number]').addEventListener('input',sync);card.querySelectorAll('.qb-count-btn').forEach(btn=>btn.addEventListener('click',()=>{const input=card.querySelector('input[type=number]');input.value=Math.min(100,Math.max(1,(Number(input.value)||1)+Number(btn.dataset.step)));sync()}))});sync()});
+</script>{% endblock %}

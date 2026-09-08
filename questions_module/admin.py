@@ -92,8 +92,13 @@ class ChoiceInlineFormSet(forms.models.BaseInlineFormSet):
             return
 
         valid_choices = [
-            form for form in self.forms 
+            form for form in self.forms
             if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
+            and (
+                form.cleaned_data.get('text', '').strip()
+                or form.cleaned_data.get('image')
+                or (form.instance.pk and form.instance.image)
+            )
         ]
 
         if not valid_choices:
@@ -118,7 +123,7 @@ class ChoiceInline(admin.TabularInline):
     extra = 4
     min_num = 4
     max_num = 4
-    fields = ("text", "is_correct")
+    fields = ("text", "image", "is_correct")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -128,14 +133,17 @@ class ChoiceInline(admin.TabularInline):
 class QuestionAdmin(admin.ModelAdmin):
     list_display = (
         "short_text", 
+        "creator",
         "get_course", 
         "chapter", 
         "difficulty", 
+        "approval_status",
         "is_active", 
         "choices_status"
     )
     list_filter = (
         "is_active", 
+        "approval_status",
         "difficulty", 
         "chapter__subject",
         "chapter"
@@ -147,16 +155,24 @@ class QuestionAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("اطلاعات دسته‌بندی", {
-            "fields": (("chapter", "category"), "difficulty", "is_active")
+            "fields": (("chapter", "category"), "difficulty", "approval_status", "is_active")
         }),
         ("محتوای سوال", {
-            "fields": ("text", "explanation")
+            "fields": ("text", "image", "explanation")
+        }),
+        ("گردش تأیید", {
+            "fields": ("creator", "approved_by", "approved_at", "approval_note"),
         }),
     )
 
     def short_text(self, obj):
+        if not obj.text:
+            return "سؤال تصویری"
         return obj.text[:60] + "..." if len(obj.text) > 60 else obj.text
     short_text.short_description = "متن سوال"
+
+    def get_readonly_fields(self, request, obj=None):
+        return ('creator', 'approved_by', 'approved_at')
 
     def get_course(self, obj):
         return obj.chapter.subject.title if obj.chapter and obj.chapter.subject else "-"

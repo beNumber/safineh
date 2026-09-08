@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
+from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from users_module.models import Access, Subject
 
 from .models import Choice, Question, Chapter
@@ -15,6 +16,7 @@ class QuestionForm(forms.ModelForm):
             "category",
             "difficulty",
             "text",
+            "image",
             "explanation",
             "is_active",
         ]
@@ -23,6 +25,7 @@ class QuestionForm(forms.ModelForm):
             "category": "دسته‌بندی (اختیاری)",
             "difficulty": "سطح دشواری",
             "text": "متن سوال",
+            "image": "تصویر سوال (اختیاری)",
             "explanation": "پاسخ تشریحی (اختیاری)",
             "is_active": "فعال باشد؟",
         }
@@ -30,19 +33,10 @@ class QuestionForm(forms.ModelForm):
             "chapter": forms.Select(attrs={"class": "form-select"}),
             "category": forms.Select(attrs={"class": "form-select"}),
             "difficulty": forms.Select(attrs={"class": "form-select"}),
-            "text": forms.Textarea(
-                attrs={
-                    "rows": 4,
-                    "class": "form-control",
-                    "placeholder": "متن سوال را اینجا وارد کنید...",
-                }
-            ),
-            "explanation": forms.Textarea(
-                attrs={
-                    "rows": 3,
-                    "class": "form-control",
-                    "placeholder": "توضیحات و پاسخ تشریحی برای نمایش در حالت تمرین یا کارنامه...",
-                }
+            "text": CKEditorUploadingWidget(),
+            "explanation": CKEditorUploadingWidget(),
+            "image": forms.ClearableFileInput(
+                attrs={"class": "form-control", "accept": "image/jpeg,image/png,image/webp"}
             ),
             "is_active": forms.CheckboxInput(
                 attrs={"class": "form-check-input"}
@@ -105,7 +99,11 @@ class BaseChoiceFormSet(forms.BaseInlineFormSet):
         active_forms = [
             form for form in self.forms
             if form.cleaned_data and not form.cleaned_data.get("DELETE", False)
-            and form.cleaned_data.get("text", "").strip()
+            and (
+                form.cleaned_data.get("text", "").strip()
+                or form.cleaned_data.get("image")
+                or (form.instance.pk and form.instance.image)
+            )
         ]
         correct_answers = [form for form in active_forms if form.cleaned_data.get("is_correct")]
 
@@ -119,7 +117,7 @@ ChoiceFormSet = inlineformset_factory(
     Question,
     Choice,
     formset=BaseChoiceFormSet,
-    fields=("text", "is_correct"),
+    fields=("text", "image", "is_correct"),
     extra=4,  # ۴ ردیف پیش‌فرض برای گزینه‌ها
     min_num=4,
     max_num=4,
@@ -129,13 +127,15 @@ ChoiceFormSet = inlineformset_factory(
     labels={
         "text": "متن گزینه",
         "is_correct": "گزینه صحیح",
+        "image": "تصویر گزینه (اختیاری)",
     },
     widgets={
-        "text": forms.TextInput(
-            attrs={"class": "form-control", "placeholder": "متن گزینه..."}
-        ),
+        "text": CKEditorUploadingWidget(),
         "is_correct": forms.CheckboxInput(
             attrs={"class": "form-check-input"}
+        ),
+        "image": forms.ClearableFileInput(
+            attrs={"class": "form-control", "accept": "image/jpeg,image/png,image/webp"}
         ),
     },
 )

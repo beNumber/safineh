@@ -1,4 +1,5 @@
 from datetime import timedelta
+import random
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -9,6 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 from auth_module.models import UserRole
+from auth_module.models import ProvinceTrustee
 from users_module.models import Access, Subject
 
 from .models import (
@@ -33,6 +35,7 @@ SESSION_COURSES_KEY = "qb_course_ids"
 SESSION_CHAPTERS_KEY = "qb_chapter_ids"
 SESSION_DIFFICULTY_KEY = "qb_difficulty"
 SESSION_QUESTION_COUNT_KEY = "qb_question_count"
+SESSION_DIFFICULTY_COUNTS_KEY = "qb_difficulty_counts"
 MAX_QUESTIONS_PER_SESSION = 100
 
 
@@ -52,6 +55,7 @@ def _reset_wizard(request):
     request.session.pop(SESSION_CHAPTERS_KEY, None)
     request.session.pop(SESSION_DIFFICULTY_KEY, None)
     request.session.pop(SESSION_QUESTION_COUNT_KEY, None)
+    request.session.pop(SESSION_DIFFICULTY_COUNTS_KEY, None)
     _save_session(request)
 
 
@@ -74,7 +78,11 @@ def _usable_question_qs():
     """سؤال‌های فعال با دقیقاً چهار گزینه و دقیقاً یک پاسخ صحیح."""
     return (
         Question.objects
-        .filter(is_active=True, question_type=Question.Type.MCQ)
+        .filter(
+            is_active=True,
+            question_type=Question.Type.MCQ,
+            approval_status=Question.ApprovalStatus.APPROVED,
+        )
         .annotate(
             choice_count=Count("choices", distinct=True),
             correct_choice_count=Count(
@@ -124,6 +132,62 @@ def _get_wizard_chapter_ids(request):
     return _parse_integer_list(request.session.get(SESSION_CHAPTERS_KEY, []))
 
 
+def _get_difficulty_counts(request):
+    valid = {value for value, _label in Difficulty.choices}
+    stored = request.session.get(SESSION_DIFFICULTY_COUNTS_KEY, {})
+    result = {}
+    if isinstance(stored, dict):
+        for value, count in stored.items():
+            try:
+                count = int(count)
+            except (TypeError, ValueError):
+                continue
+            if value in valid and count > 0:
+                result[value] = count
+    if result:
+        return result
+
+    # سازگاری با جلسه‌هایی که قبل از انتخاب چندسطحی در سشن مانده‌اند.
+    old_difficulty = request.session.get(SESSION_DIFFICULTY_KEY)
+    old_count = request.session.get(SESSION_QUESTION_COUNT_KEY)
+    if old_difficulty in valid:
+        try:
+            old_count = int(old_count)
+        except (TypeError, ValueError):
+            old_count = 0
+        if old_count > 0:
+            return {old_difficulty: old_count}
+    return {}
+
+
+def _difficulty_options(selected_counts):
+    return [
+        {
+            "value": value,
+            "label": label,
+            "selected": value in selected_counts,
+            "count": selected_counts.get(value, 1),
+        }
+        for value, label in Difficulty.choices
+    ]
+
+
+def _select_questions(chapter_ids, difficulty_counts):
+    questions = []
+    for difficulty, requested_count in difficulty_counts.items():
+        selected = list(
+            _usable_question_qs()
+            .filter(chapter_id__in=chapter_ids, difficulty=difficulty)
+            .prefetch_related("choices")
+            .order_by("?")[:requested_count]
+        )
+        if len(selected) != requested_count:
+            return [], difficulty
+        questions.extend(selected)
+    random.shuffle(questions)
+    return questions, None
+
+
 def _validate_selected_ids(selected_ids, queryset):
     """بررسی اینکه شناسه‌های ارسالی حتماً در لیست مجاز موجود باشند."""
     selected_ids = _parse_integer_list(selected_ids)
@@ -156,6 +220,52 @@ def _can_create_subject(user):
     ).exists()
 
 
+def _can_view_question_overview(user):
+    return user.is_authenticated and (
+        user.is_superuser or user.role in {UserRole.ADMIN, UserRole.CONTENT_MODERATOR}
+    )
+
+
+def _question_overview():
+    questions = Question.objects.select_related(
+        'creator', 'chapter__subject', 'approved_by'
+    ).order_by('-created_at', '-pk')
+    counts = {
+        status: Question.objects.filter(approval_status=status).count()
+        for status, _label in Question.ApprovalStatus.choices
+    }
+    return {
+        'questions': questions[:100],
+        'total': sum(counts.values()),
+        'pending': counts.get(Question.ApprovalStatus.PENDING, 0),
+        'approved': counts.get(Question.ApprovalStatus.APPROVED, 0),
+        'rejected': counts.get(Question.ApprovalStatus.REJECTED, 0),
+    }
+
+
+def _question_requires_approval(user):
+    return user.role == UserRole.CONSULTANT and not user.is_superuser
+
+
+def _trustee_can_review(user, question):
+    if user.is_superuser or user.role == UserRole.ADMIN:
+        return True
+    if user.role != UserRole.PROVINCE_TRUSTEE or not question.chapter_id:
+        return False
+    province_id = question.chapter.subject.field.grade.school.province_id
+    return ProvinceTrustee.objects.filter(user=user, province_id=province_id).exists()
+
+
+def _pending_questions_for_trustee(user):
+    qs = Question.objects.filter(
+        approval_status=Question.ApprovalStatus.PENDING,
+    ).select_related('chapter__subject__field__grade__school').prefetch_related('choices')
+    if user.is_superuser or user.role == UserRole.ADMIN:
+        return qs
+    province_ids = ProvinceTrustee.objects.filter(user=user).values_list('province_id', flat=True)
+    return qs.filter(chapter__subject__field__grade__school__province_id__in=province_ids)
+
+
 def _performance_data(user, course_ids=None):
     """خلاصه عملکرد ذخیره‌شده کاربر به تفکیک درس."""
     courses = Subject.objects.all()
@@ -181,6 +291,71 @@ def _performance_data(user, course_ids=None):
     return result
 
 
+def _persian_digits(value):
+    return str(value).translate(str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹'))
+
+
+def _exam_progress_data(user, course_ids=None):
+    """روند درصد آزمون‌های تکمیل‌شده، به ترتیب زمان انجام."""
+    exams = ExamSession.objects.filter(
+        user=user,
+        status=ExamSession.Status.DONE,
+    )
+    if course_ids:
+        exams = exams.filter(chapters__subject_id__in=course_ids)
+    exams = list(exams.distinct().order_by('-finished_at', '-id')[:20])
+    exams.reverse()
+    return [
+        {
+            "label": f"آزمون {_persian_digits(exam.pk)}",
+            "percent": exam.percent,
+            "date": _persian_digits(
+                timezone.localtime(exam.finished_at or exam.started_at).strftime('%Y/%m/%d')
+            ),
+            "correct": exam.correct_count,
+            "wrong": exam.wrong_count,
+            "unanswered": exam.unanswered_count,
+            "total": exam.total_questions,
+        }
+        for exam in exams
+    ]
+
+
+def _previous_answer_map(user, question_ids, *, practice_session_id=None, exam_session_id=None):
+    """آخرین نتیجه قبلی کاربر برای سؤال‌های تکراری."""
+    attempts = []
+    practice_answers = PracticeAnswer.objects.filter(
+        session__user=user,
+        question_id__in=question_ids,
+    )
+    exam_answers = ExamAnswer.objects.filter(
+        session__user=user,
+        question_id__in=question_ids,
+    )
+    if practice_session_id:
+        practice_answers = practice_answers.exclude(session_id=practice_session_id)
+    if exam_session_id:
+        exam_answers = exam_answers.exclude(session_id=exam_session_id)
+    attempts.extend(practice_answers.values('question_id', 'selected_choice_id', 'is_correct', 'answered_at'))
+    attempts.extend(exam_answers.values('question_id', 'selected_choice_id', 'is_correct', 'answered_at'))
+
+    latest = {}
+    for attempt in attempts:
+        old = latest.get(attempt['question_id'])
+        if old is None or attempt['answered_at'] > old['answered_at']:
+            latest[attempt['question_id']] = attempt
+
+    result = {}
+    for question_id, attempt in latest.items():
+        if attempt['selected_choice_id'] is None:
+            result[question_id] = {"label": "قبلاً نزده‌اید", "class": "skipped"}
+        elif attempt['is_correct']:
+            result[question_id] = {"label": "قبلاً درست زده‌اید", "class": "correct"}
+        else:
+            result[question_id] = {"label": "قبلاً غلط زده‌اید", "class": "wrong"}
+    return result
+
+
 # ============================================================
 # مدیریت سوالات (CRUD پایه)
 # ============================================================
@@ -199,8 +374,8 @@ def question_create(request):
         return redirect(f"{APP_NS}:choose_mode")
 
     question = Question(creator=request.user, question_type=Question.Type.MCQ)
-    form = QuestionForm(request.POST or None, instance=question, user=request.user)
-    formset = ChoiceFormSet(request.POST or None, instance=question)
+    form = QuestionForm(request.POST or None, request.FILES or None, instance=question, user=request.user)
+    formset = ChoiceFormSet(request.POST or None, request.FILES or None, instance=question)
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         if not _can_manage_subject(request.user, form.cleaned_data["chapter"].subject_id):
             messages.error(request, "برای درس انتخاب‌شده دسترسی بانک سؤال ندارید.")
@@ -209,10 +384,22 @@ def question_create(request):
             question = form.save(commit=False)
             question.creator = request.user
             question.question_type = Question.Type.MCQ
+            if _question_requires_approval(request.user):
+                question.approval_status = Question.ApprovalStatus.PENDING
+                question.approved_by = None
+                question.approved_at = None
+                question.approval_note = ''
+            else:
+                question.approval_status = Question.ApprovalStatus.APPROVED
             question.save()
             formset.instance = question
             formset.save()
-        messages.success(request, "سؤال چهارگزینه‌ای با موفقیت ثبت شد.")
+        messages.success(
+            request,
+            "سؤال ثبت شد و برای تأیید معتمد استان ارسال گردید."
+            if _question_requires_approval(request.user)
+            else "سؤال چهارگزینه‌ای با موفقیت وارد بانک سؤال شد.",
+        )
         return redirect(f"{APP_NS}:question_create")
     return render(request, "questions_module/question_form.html", {"form": form, "formset": formset, "editing": False})
 
@@ -226,17 +413,52 @@ def question_edit(request, pk):
     if not question.chapter_id or not _can_manage_subject(request.user, question.chapter.subject_id):
         messages.error(request, "برای ویرایش سؤال این درس دسترسی ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
-    form = QuestionForm(request.POST or None, instance=question, user=request.user)
-    formset = ChoiceFormSet(request.POST or None, instance=question)
+    form = QuestionForm(request.POST or None, request.FILES or None, instance=question, user=request.user)
+    formset = ChoiceFormSet(request.POST or None, request.FILES or None, instance=question)
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         with transaction.atomic():
             question = form.save(commit=False)
             question.question_type = Question.Type.MCQ
+            if _question_requires_approval(request.user):
+                question.approval_status = Question.ApprovalStatus.PENDING
+                question.approved_by = None
+                question.approved_at = None
             question.save()
             formset.save()
         messages.success(request, "تغییرات سؤال ذخیره شد.")
         return redirect(f"{APP_NS}:question_edit", pk=question.pk)
     return render(request, "questions_module/question_form.html", {"form": form, "formset": formset, "editing": True, "question": question})
+
+
+@login_required
+def approval_queue(request):
+    if not (request.user.is_superuser or request.user.role in {UserRole.ADMIN, UserRole.PROVINCE_TRUSTEE}):
+        messages.error(request, "شما دسترسی بررسی سؤال‌ها را ندارید.")
+        return redirect(f"{APP_NS}:choose_mode")
+    return render(request, "questions_module/approval_queue.html", {
+        "questions": _pending_questions_for_trustee(request.user),
+    })
+
+
+@login_required
+@require_POST
+def review_question(request, pk):
+    question = get_object_or_404(Question.objects.select_related('chapter__subject__field__grade__school'), pk=pk)
+    if not _trustee_can_review(request.user, question):
+        messages.error(request, "برای بررسی این سؤال دسترسی ندارید.")
+        return redirect(f"{APP_NS}:approval_queue")
+    decision = request.POST.get('decision')
+    if decision not in {Question.ApprovalStatus.APPROVED, Question.ApprovalStatus.REJECTED}:
+        messages.error(request, "وضعیت بررسی نامعتبر است.")
+        return redirect(f"{APP_NS}:approval_queue")
+    question.approval_status = decision
+    question.approved_by = request.user
+    question.approved_at = timezone.now()
+    question.approval_note = request.POST.get('note', '').strip()
+    question.is_active = decision == Question.ApprovalStatus.APPROVED
+    question.save(update_fields=['approval_status', 'approved_by', 'approved_at', 'approval_note', 'is_active', 'updated_at'])
+    messages.success(request, 'سؤال تأیید شد و وارد بانک سؤال شد.' if decision == Question.ApprovalStatus.APPROVED else 'سؤال رد شد.')
+    return redirect(f"{APP_NS}:approval_queue")
 
 
 @login_required
@@ -296,6 +518,7 @@ def choose_mode(request):
         request.session.pop(SESSION_CHAPTERS_KEY, None)
         request.session.pop(SESSION_DIFFICULTY_KEY, None)
         request.session.pop(SESSION_QUESTION_COUNT_KEY, None)
+        request.session.pop(SESSION_DIFFICULTY_COUNTS_KEY, None)
         _save_session(request)
 
         return redirect(f"{APP_NS}:select_courses")
@@ -308,7 +531,11 @@ def choose_mode(request):
             "can_create_question": _can_manage_questions(request.user),
             "can_create_chapter": _can_create_chapter(request.user),
             "can_create_subject": _can_create_subject(request.user),
+            "can_review_questions": request.user.is_superuser or request.user.role in {UserRole.ADMIN, UserRole.PROVINCE_TRUSTEE},
+            "can_view_question_overview": _can_view_question_overview(request.user),
+            "question_overview": _question_overview() if _can_view_question_overview(request.user) else None,
             "performance": _performance_data(request.user),
+            "exam_progress": _exam_progress_data(request.user),
         },
     )
 
@@ -367,37 +594,63 @@ def select_chapters(request):
 
     chapters = _usable_chapters(course_ids)
     selected_chapter_ids = _get_wizard_chapter_ids(request)
+    selected_counts = _get_difficulty_counts(request) or {Difficulty.MEDIUM: 10}
 
     if request.method == "POST":
         posted_chapter_ids = request.POST.getlist("chapters")
         valid_selected_ids = _validate_selected_ids(posted_chapter_ids, chapters)
 
-        difficulty = request.POST.get("difficulty", "").strip()
-        try:
-            question_count = int(request.POST.get("question_count", "10"))
-        except (TypeError, ValueError):
-            question_count = 0
-
         valid_difficulties = {value for value, _label in Difficulty.choices}
-        available_count = _usable_question_qs().filter(chapter_id__in=valid_selected_ids)
-        if difficulty:
-            available_count = available_count.filter(difficulty=difficulty)
-        available_count = available_count.count()
+        selected_difficulties = request.POST.getlist("difficulties")
+
+        # پشتیبانی از فرم قدیمی برای جلوگیری از شکستن درخواست‌های ذخیره‌شده یا تست‌ها.
+        if not selected_difficulties and request.POST.get("difficulty"):
+            selected_difficulties = [request.POST.get("difficulty")]
+
+        selected_counts = {}
+        invalid_count = False
+        for difficulty in selected_difficulties:
+            if difficulty not in valid_difficulties or difficulty in selected_counts:
+                continue
+            raw_count = request.POST.get(f"count_{difficulty}")
+            if raw_count is None and len(selected_difficulties) == 1:
+                raw_count = request.POST.get("question_count")
+            try:
+                count = int(raw_count)
+            except (TypeError, ValueError):
+                count = 0
+            if count < 1:
+                invalid_count = True
+            selected_counts[difficulty] = count
+
+        total_count = sum(selected_counts.values())
+        shortage = None
+        for difficulty, count in selected_counts.items():
+            available = _usable_question_qs().filter(
+                chapter_id__in=valid_selected_ids,
+                difficulty=difficulty,
+            ).count()
+            if count > available:
+                shortage = (dict(Difficulty.choices)[difficulty], available)
+                break
 
         if not posted_chapter_ids:
             messages.error(request, "لطفاً حداقل یک فصل را انتخاب کنید.")
         elif not valid_selected_ids:
             messages.error(request, "فصل انتخابی فاقد سوال فعال تستی است.")
-        elif difficulty not in valid_difficulties:
-            messages.error(request, "لطفاً سطح دشواری را انتخاب کنید.")
-        elif question_count < 1 or question_count > MAX_QUESTIONS_PER_SESSION:
-            messages.error(request, "تعداد سؤال باید بین ۱ تا ۱۰۰ باشد.")
-        elif question_count > available_count:
-            messages.error(request, f"با این فیلتر فقط {available_count} سؤال موجود است.")
+        elif not selected_counts:
+            messages.error(request, "لطفاً حداقل یک سطح سؤال را انتخاب کنید.")
+        elif invalid_count:
+            messages.error(request, "تعداد هر سطح انتخاب‌شده باید حداقل یک سؤال باشد.")
+        elif total_count > MAX_QUESTIONS_PER_SESSION:
+            messages.error(request, "مجموع تعداد سؤال‌ها نمی‌تواند بیشتر از ۱۰۰ باشد.")
+        elif shortage:
+            messages.error(request, f"برای سطح {shortage[0]} فقط {shortage[1]} سؤال موجود است.")
         else:
             request.session[SESSION_CHAPTERS_KEY] = valid_selected_ids
-            request.session[SESSION_DIFFICULTY_KEY] = difficulty
-            request.session[SESSION_QUESTION_COUNT_KEY] = question_count
+            request.session[SESSION_DIFFICULTY_COUNTS_KEY] = selected_counts
+            request.session[SESSION_DIFFICULTY_KEY] = next(iter(selected_counts)) if len(selected_counts) == 1 else ""
+            request.session[SESSION_QUESTION_COUNT_KEY] = total_count
             _save_session(request)
 
             if mode == "practice":
@@ -411,9 +664,7 @@ def select_chapters(request):
             "mode": mode,
             "chapters": chapters,
             "selected_chapter_ids": selected_chapter_ids,
-            "difficulties": Difficulty.choices,
-            "selected_difficulty": request.session.get(SESSION_DIFFICULTY_KEY, Difficulty.MEDIUM),
-            "question_count": request.session.get(SESSION_QUESTION_COUNT_KEY, 10),
+            "difficulty_options": _difficulty_options(selected_counts),
         },
     )
 
@@ -437,30 +688,25 @@ def start_practice(request):
     """ایجاد جلسه تمرین جدید و هدایت به صفحه پاسخگویی."""
     mode = _get_wizard_mode(request)
     chapter_ids = _get_wizard_chapter_ids(request)
-    difficulty = request.session.get(SESSION_DIFFICULTY_KEY)
-    question_count = request.session.get(SESSION_QUESTION_COUNT_KEY)
+    difficulty_counts = _get_difficulty_counts(request)
 
-    if mode != "practice" or not chapter_ids or not difficulty or not question_count:
+    if mode != "practice" or not chapter_ids or not difficulty_counts:
         messages.warning(request, "لطفاً فرآیند انتخاب را کامل کنید.")
         return redirect(f"{APP_NS}:choose_mode")
 
-    questions = list(
-        _usable_question_qs()
-        .filter(chapter_id__in=chapter_ids)
-        .filter(difficulty=difficulty)
-        .prefetch_related("choices")
-        .order_by("?")[:question_count]
-    )
+    questions, missing_difficulty = _select_questions(chapter_ids, difficulty_counts)
 
     if not questions:
-        messages.error(request, "هیچ سوال فعالی برای فصل‌های انتخابی یافت نشد.")
+        label = dict(Difficulty.choices).get(missing_difficulty, "انتخاب‌شده")
+        messages.error(request, f"تعداد سؤال کافی برای سطح {label} موجود نیست.")
         return redirect(f"{APP_NS}:select_chapters")
 
     with transaction.atomic():
         practice_session = PracticeSession.objects.create(
             user=request.user,
             total_questions=len(questions),
-            requested_difficulty=difficulty,
+            requested_difficulty=next(iter(difficulty_counts)) if len(difficulty_counts) == 1 else "",
+            difficulty_breakdown=difficulty_counts,
         )
         practice_session.chapters.set(Chapter.objects.filter(id__in=chapter_ids))
         practice_session.questions.set(questions)
@@ -486,7 +732,20 @@ def practice_session_view(request, pk):
         ans.question_id: ans
         for ans in practice_session.answers.select_related("selected_choice")
     }
-    items = [{"question": question, "answer": answers.get(question.pk)} for question in practice_session.questions.prefetch_related("choices").all()]
+    questions = list(practice_session.questions.prefetch_related("choices").all())
+    previous_answers = _previous_answer_map(
+        request.user,
+        [question.pk for question in questions],
+        practice_session_id=practice_session.pk,
+    )
+    items = [
+        {
+            "question": question,
+            "answer": answers.get(question.pk),
+            "previous": previous_answers.get(question.pk),
+        }
+        for question in questions
+    ]
 
     return render(
         request,
@@ -630,6 +889,7 @@ def practice_result(request, pk):
             "session": practice_session,
             "review": review,
             "performance": _performance_data(request.user, practice_session.chapters.values_list("subject_id", flat=True)),
+            "exam_progress": _exam_progress_data(request.user, practice_session.chapters.values_list("subject_id", flat=True)),
         },
     )
 
@@ -644,23 +904,17 @@ def start_exam(request):
     """شروع جلسه آزمون با محاسبه تایمر زمانی."""
     mode = _get_wizard_mode(request)
     chapter_ids = _get_wizard_chapter_ids(request)
-    difficulty = request.session.get(SESSION_DIFFICULTY_KEY)
-    question_count = request.session.get(SESSION_QUESTION_COUNT_KEY)
+    difficulty_counts = _get_difficulty_counts(request)
 
-    if mode != "exam" or not chapter_ids or not difficulty or not question_count:
+    if mode != "exam" or not chapter_ids or not difficulty_counts:
         messages.warning(request, "لطفاً ابتدا تنظیمات آزمون را تکمیل کنید.")
         return redirect(f"{APP_NS}:choose_mode")
 
-    questions = list(
-        _usable_question_qs()
-        .filter(chapter_id__in=chapter_ids)
-        .filter(difficulty=difficulty)
-        .prefetch_related("choices")
-        .order_by("?")[:question_count]
-    )
+    questions, missing_difficulty = _select_questions(chapter_ids, difficulty_counts)
 
     if not questions:
-        messages.error(request, "هیچ سوالی برای آزمون در این فصول موجود نیست.")
+        label = dict(Difficulty.choices).get(missing_difficulty, "انتخاب‌شده")
+        messages.error(request, f"تعداد سؤال کافی برای سطح {label} موجود نیست.")
         return redirect(f"{APP_NS}:select_chapters")
 
     duration = timedelta(minutes=MINUTES_PER_EXAM_QUESTION * len(questions))
@@ -670,7 +924,8 @@ def start_exam(request):
             user=request.user,
             total_questions=len(questions),
             ends_at=timezone.now() + duration,
-            requested_difficulty=difficulty,
+            requested_difficulty=next(iter(difficulty_counts)) if len(difficulty_counts) == 1 else "",
+            difficulty_breakdown=difficulty_counts,
         )
         exam_session.chapters.set(Chapter.objects.filter(id__in=chapter_ids))
         exam_session.questions.set(questions)
@@ -705,9 +960,19 @@ def exam_session_view(request, pk):
         answer.question_id: answer
         for answer in exam_session.answers.select_related("selected_choice")
     }
+    questions = list(exam_session.questions.prefetch_related("choices").all())
+    previous_answers = _previous_answer_map(
+        request.user,
+        [question.pk for question in questions],
+        exam_session_id=exam_session.pk,
+    )
     items = [
-        {"question": question, "answer": saved_answers.get(question.pk)}
-        for question in exam_session.questions.prefetch_related("choices").all()
+        {
+            "question": question,
+            "answer": saved_answers.get(question.pk),
+            "previous": previous_answers.get(question.pk),
+        }
+        for question in questions
     ]
 
     return render(
@@ -850,5 +1115,6 @@ def exam_result(request, pk):
             "session": exam_session,
             "review": review,
             "performance": _performance_data(request.user, exam_session.chapters.values_list("subject_id", flat=True)),
+            "exam_progress": _exam_progress_data(request.user, exam_session.chapters.values_list("subject_id", flat=True)),
         },
     )
