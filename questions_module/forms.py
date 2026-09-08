@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
+from users_module.models import Access, Subject
 
 from .models import Choice, Question, Chapter
 
@@ -53,12 +54,44 @@ class QuestionForm(forms.ModelForm):
         chapters = Chapter.objects.select_related("subject").filter(
             subject__is_active=True
         )
-        if user is not None:
-            bank_accesses = user.accesses.filter(name="bank")
-            if not bank_accesses.filter(subject__isnull=True).exists():
-                subject_ids = bank_accesses.values_list("subject_id", flat=True)
-                chapters = chapters.filter(subject_id__in=subject_ids)
+        if user is not None and not user.is_superuser:
+            accesses = user.accesses.filter(name=Access.Code.CREATE_QUESTION)
+            if not accesses.filter(subject__isnull=True).exists():
+                chapters = chapters.filter(
+                    subject_id__in=accesses.values_list("subject_id", flat=True)
+                )
         self.fields["chapter"].queryset = chapters.order_by("subject__title", "name")
+
+
+class ChapterForm(forms.ModelForm):
+    class Meta:
+        model = Chapter
+        fields = ("subject", "name")
+        widgets = {
+            "subject": forms.Select(attrs={"class": "form-select"}),
+            "name": forms.TextInput(attrs={"class": "form-control", "placeholder": "نام فصل"}),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        subjects = Subject.objects.filter(is_active=True)
+        if user is not None and not user.is_superuser:
+            accesses = user.accesses.filter(name=Access.Code.CREATE_CHAPTER)
+            if not accesses.filter(subject__isnull=True).exists():
+                subjects = subjects.filter(pk__in=accesses.values_list("subject_id", flat=True))
+        self.fields["subject"].queryset = subjects.order_by("title")
+
+
+class SubjectForm(forms.ModelForm):
+    class Meta:
+        model = Subject
+        fields = ("title", "code", "field", "is_active")
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "نام درس"}),
+            "code": forms.TextInput(attrs={"class": "form-control", "placeholder": "کد یکتا"}),
+            "field": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
 
 
 class BaseChoiceFormSet(forms.BaseInlineFormSet):

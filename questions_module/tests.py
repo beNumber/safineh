@@ -28,7 +28,9 @@ class QuestionWizardTests(TestCase):
         grade = Grade.objects.create(title="دهم", code="G10", school=school)
         field = FieldOfStudy.objects.create(title="ریاضی", code="MATH", grade=grade)
         self.subject = Subject.objects.create(title="ریاضی", code="MATH-1", field=field)
-        self.bank_access = Access.objects.create(name="bank", subject=self.subject)
+        self.question_access = Access.objects.create(
+            name=Access.Code.CREATE_QUESTION, subject=self.subject
+        )
         self.chapter = Chapter.objects.create(subject=self.subject, name="فصل اول")
         self.question = Question.objects.create(
             chapter=self.chapter,
@@ -114,7 +116,7 @@ class QuestionWizardTests(TestCase):
     def test_non_student_with_bank_access_can_open_question_form(self):
         self.user.role = UserRole.CONTENT_MODERATOR
         self.user.save(update_fields=["role"])
-        self.user.accesses.add(self.bank_access)
+        self.user.accesses.add(self.question_access)
         response = self.client.get(reverse("questions_module:question_create"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "دقیقاً چهار گزینه")
@@ -126,9 +128,34 @@ class QuestionWizardTests(TestCase):
         self.assertRedirects(response, reverse("questions_module:choose_mode"))
 
     def test_student_is_denied_even_when_bank_access_is_checked(self):
-        self.user.accesses.add(self.bank_access)
+        self.user.accesses.add(self.question_access)
         response = self.client.get(reverse("questions_module:question_create"))
         self.assertRedirects(response, reverse("questions_module:choose_mode"))
+
+    def test_superuser_can_create_without_access_tick(self):
+        self.user.is_superuser = True
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_superuser", "is_staff"])
+        self.assertEqual(self.client.get(reverse("questions_module:question_create")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("questions_module:chapter_create")).status_code, 200)
+        self.assertEqual(self.client.get(reverse("questions_module:subject_create")).status_code, 200)
+
+    def test_each_creation_permission_is_independent(self):
+        self.user.role = UserRole.CONTENT_MODERATOR
+        self.user.save(update_fields=["role"])
+        chapter_access = Access.objects.create(
+            name=Access.Code.CREATE_CHAPTER, subject=self.subject
+        )
+        self.user.accesses.add(chapter_access)
+        self.assertEqual(self.client.get(reverse("questions_module:chapter_create")).status_code, 200)
+        self.assertRedirects(
+            self.client.get(reverse("questions_module:question_create")),
+            reverse("questions_module:choose_mode"),
+        )
+        self.assertRedirects(
+            self.client.get(reverse("questions_module:subject_create")),
+            reverse("questions_module:choose_mode"),
+        )
 
     def test_practice_answer_is_immediate_and_cannot_change(self):
         session = PracticeSession.objects.create(user=self.user, total_questions=1)

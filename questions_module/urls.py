@@ -7,6 +7,8 @@ urlpatterns = [
     # مدیریت سوالات
     path("", views.question_list, name="question_list"),
     path("create/", views.question_create, name="question_create"),
+    path("chapters/create/", views.chapter_create, name="chapter_create"),
+    path("subjects/create/", views.subject_create, name="subject_create"),
     path("<int:pk>/edit/", views.question_edit, name="question_edit"),
 
     # ویزارد ۳ مرحله‌ای

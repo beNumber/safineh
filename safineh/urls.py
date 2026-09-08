@@ -14,6 +14,7 @@ urlpatterns = [
     ),
     path('dashboard/',include('dashboard_module.urls')),
     path('auth/',include('auth_module.urls')),
+    path('questions/', include('questions_module.urls')),
     path('', include("landing_module.urls")),
 
 ]

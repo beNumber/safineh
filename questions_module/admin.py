@@ -1,17 +1,14 @@
 from django.contrib import admin
 from django import forms
+from users_module.models import Access
 from .models import (
     Chapter, Question, Choice,
     PracticeSession, ExamSession, PracticeAnswer, ExamAnswer, Category
 )
 
 
-def has_bank_access(user):
-    return (
-        user.is_authenticated
-        and getattr(user, 'role', '') != 'STUDENT'
-        and user.accesses.filter(name='bank').exists()
-    )
+def has_access(user, code, subject=None):
+    return user.is_authenticated and user.has_project_access(code, subject)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -21,6 +18,12 @@ def has_bank_access(user):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name",)
     search_fields = ("name",)
+
+    def has_add_permission(self, request):
+        return has_access(request.user, Access.Code.CREATE_QUESTION)
+
+    def has_change_permission(self, request, obj=None):
+        return has_access(request.user, Access.Code.CREATE_QUESTION)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -36,6 +39,47 @@ class ChapterAdmin(admin.ModelAdmin):
     def questions_count(self, obj):
         return obj.questions.count()
     questions_count.short_description = "تعداد سوالات"
+
+    def has_add_permission(self, request):
+        return has_access(request.user, Access.Code.CREATE_CHAPTER)
+
+    def has_module_permission(self, request):
+        return has_access(request.user, Access.Code.CREATE_CHAPTER)
+
+    def has_view_permission(self, request, obj=None):
+        return has_access(
+            request.user,
+            Access.Code.CREATE_CHAPTER,
+            obj.subject if obj else None,
+        )
+
+    def has_change_permission(self, request, obj=None):
+        return has_access(
+            request.user,
+            Access.Code.CREATE_CHAPTER,
+            obj.subject if obj else None,
+        )
+
+    def has_delete_permission(self, request, obj=None):
+        return self.has_change_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'subject' and not request.user.is_superuser:
+            accesses = request.user.accesses.filter(name=Access.Code.CREATE_CHAPTER)
+            if not accesses.filter(subject__isnull=True).exists():
+                kwargs['queryset'] = db_field.remote_field.model.objects.filter(
+                    pk__in=accesses.values_list('subject_id', flat=True)
+                )
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if request.user.is_superuser:
+            return queryset
+        accesses = request.user.accesses.filter(name=Access.Code.CREATE_CHAPTER)
+        if accesses.filter(subject__isnull=True).exists():
+            return queryset
+        return queryset.filter(subject_id__in=accesses.values_list('subject_id', flat=True))
 
 
 # ─────────────────────────────────────────────────────────────
@@ -120,14 +164,24 @@ class QuestionAdmin(admin.ModelAdmin):
     get_course.admin_order_field = "chapter__subject__title"
 
     def has_add_permission(self, request):
-        return has_bank_access(request.user)
+        return has_access(request.user, Access.Code.CREATE_QUESTION)
+
+    def has_module_permission(self, request):
+        return has_access(request.user, Access.Code.CREATE_QUESTION)
+
+    def has_view_permission(self, request, obj=None):
+        return has_access(
+            request.user,
+            Access.Code.CREATE_QUESTION,
+            obj.chapter.subject if obj else None,
+        )
 
     def has_change_permission(self, request, obj=None):
-        if not has_bank_access(request.user):
-            return False
-        if obj is None or request.user.accesses.filter(name='bank', subject__isnull=True).exists():
-            return True
-        return request.user.accesses.filter(name='bank', subject=obj.chapter.subject).exists()
+        return has_access(
+            request.user,
+            Access.Code.CREATE_QUESTION,
+            obj.chapter.subject if obj else None,
+        )
 
     def has_delete_permission(self, request, obj=None):
         return self.has_change_permission(request, obj)
@@ -135,11 +189,22 @@ class QuestionAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'chapter':
             chapters = Chapter.objects.filter(subject__is_active=True)
-            accesses = request.user.accesses.filter(name='bank')
-            if not accesses.filter(subject__isnull=True).exists():
+            accesses = request.user.accesses.filter(name=Access.Code.CREATE_QUESTION)
+            if not request.user.is_superuser and not accesses.filter(subject__isnull=True).exists():
                 chapters = chapters.filter(subject_id__in=accesses.values_list('subject_id', flat=True))
             kwargs['queryset'] = chapters.select_related('subject')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        if request.user.is_superuser:
+            return queryset
+        accesses = request.user.accesses.filter(name=Access.Code.CREATE_QUESTION)
+        if accesses.filter(subject__isnull=True).exists():
+            return queryset
+        return queryset.filter(
+            chapter__subject_id__in=accesses.values_list('subject_id', flat=True)
+        )
 
     def choices_status(self, obj):
         count = obj.choices.count()

@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 from auth_module.models import UserRole
-from users_module.models import Subject
+from users_module.models import Access, Subject
 
 from .models import (
     Chapter,
@@ -21,7 +21,7 @@ from .models import (
     PracticeSession,
     Question,
 )
-from .forms import ChoiceFormSet, QuestionForm
+from .forms import ChapterForm, ChoiceFormSet, QuestionForm, SubjectForm
 
 # هماهنگ با app_name در urls.py و پوشه‌بندی پروژه
 APP_NS = "questions_module"
@@ -132,17 +132,28 @@ def _validate_selected_ids(selected_ids, queryset):
 
 
 def _can_manage_questions(user):
-    """دانش‌آموز هرگز مجاز نیست؛ سایر نقش‌ها فقط با تیک دسترسی بانک سؤال."""
-    if not user.is_authenticated or user.role == UserRole.STUDENT:
-        return False
-    return user.accesses.filter(name="bank").exists()
+    return user.is_authenticated and user.has_project_access(Access.Code.CREATE_QUESTION)
 
 
 def _can_manage_subject(user, subject_id):
-    if not _can_manage_questions(user):
+    return user.has_project_access(Access.Code.CREATE_QUESTION, subject_id)
+
+
+def _can_create_chapter(user, subject_id=None):
+    return user.is_authenticated and user.has_project_access(Access.Code.CREATE_CHAPTER, subject_id)
+
+
+def _can_create_subject(user):
+    if not user.is_authenticated:
         return False
-    accesses = user.accesses.filter(name="bank")
-    return accesses.filter(subject__isnull=True).exists() or accesses.filter(subject_id=subject_id).exists()
+    if user.is_superuser:
+        return True
+    if user.role == UserRole.STUDENT:
+        return False
+    return user.accesses.filter(
+        name=Access.Code.CREATE_SUBJECT,
+        subject__isnull=True,
+    ).exists()
 
 
 def _performance_data(user, course_ids=None):
@@ -228,6 +239,38 @@ def question_edit(request, pk):
     return render(request, "questions_module/question_form.html", {"form": form, "formset": formset, "editing": True, "question": question})
 
 
+@login_required
+@require_http_methods(["GET", "POST"])
+def chapter_create(request):
+    if not _can_create_chapter(request.user):
+        messages.error(request, "شما اجازه ایجاد فصل ندارید.")
+        return redirect(f"{APP_NS}:choose_mode")
+    form = ChapterForm(request.POST or None, user=request.user)
+    if request.method == "POST" and form.is_valid():
+        subject = form.cleaned_data["subject"]
+        if not _can_create_chapter(request.user, subject.pk):
+            messages.error(request, "برای درس انتخاب‌شده اجازه ایجاد فصل ندارید.")
+            return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": "ایجاد فصل"}, status=403)
+        form.save()
+        messages.success(request, "فصل جدید با موفقیت ایجاد شد.")
+        return redirect(f"{APP_NS}:chapter_create")
+    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": "ایجاد فصل", "entity_help": "فصل را برای یکی از درس‌های مجاز خود ثبت کنید."})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def subject_create(request):
+    if not _can_create_subject(request.user):
+        messages.error(request, "شما اجازه ایجاد درس ندارید.")
+        return redirect(f"{APP_NS}:choose_mode")
+    form = SubjectForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "درس جدید با موفقیت ایجاد شد.")
+        return redirect(f"{APP_NS}:subject_create")
+    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": "ایجاد درس", "entity_help": "درس به ساختار پایه، رشته و مدرسه موجود در سامانه متصل می‌شود."})
+
+
 # ============================================================
 # ویزارد ۳ مرحله‌ای (Wizard)
 # ============================================================
@@ -263,6 +306,8 @@ def choose_mode(request):
         {
             "selected_mode": _get_wizard_mode(request),
             "can_create_question": _can_manage_questions(request.user),
+            "can_create_chapter": _can_create_chapter(request.user),
+            "can_create_subject": _can_create_subject(request.user),
             "performance": _performance_data(request.user),
         },
     )
