@@ -15,7 +15,6 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=20, choices=UserRole.choices, default=UserRole.STUDENT
     )
-    national_code = models.CharField(max_length=10, unique=True, null=True)
     phone_number = models.CharField(max_length=11, unique=True, null=True)
     gender = models.CharField(
         max_length=10,
