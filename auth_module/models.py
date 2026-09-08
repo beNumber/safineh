@@ -32,6 +32,13 @@ class User(AbstractUser):
         null=True,
         blank=True,
     )
+    accesses = models.ManyToManyField(
+        Access,
+        blank=True,
+        related_name='users',
+        verbose_name='دسترسی‌ها',
+        help_text='برای کاربران غیر دانش‌آموز، دسترسی‌های مجاز را انتخاب کنید.',
+    )
 
     @property
     def mobile(self):

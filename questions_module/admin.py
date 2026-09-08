@@ -1,0 +1,170 @@
+from django.contrib import admin
+from django import forms
+from .models import (
+    Chapter, Question, Choice,
+    PracticeSession, ExamSession, PracticeAnswer, ExamAnswer, Category
+)
+
+
+def has_bank_access(user):
+    return (
+        user.is_authenticated
+        and getattr(user, 'role', '') != 'STUDENT'
+        and user.accesses.filter(name='bank').exists()
+    )
+
+
+# ─────────────────────────────────────────────────────────────
+# ۱. ثبت دسته‌بندی
+# ─────────────────────────────────────────────────────────────
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("name",)
+    search_fields = ("name",)
+
+
+# ─────────────────────────────────────────────────────────────
+# ۲. مدیریت درس‌ها و فصل‌ها
+# ─────────────────────────────────────────────────────────────
+@admin.register(Chapter)
+class ChapterAdmin(admin.ModelAdmin):
+    fields = ("subject", "name")
+    list_display = ("name", "subject", "questions_count")
+    list_filter = ("subject",)
+    search_fields = ("name", "subject__title")
+
+    def questions_count(self, obj):
+        return obj.questions.count()
+    questions_count.short_description = "تعداد سوالات"
+
+
+# ─────────────────────────────────────────────────────────────
+# ۳. گزینه‌های تستی و اعتبارسنجی
+# ─────────────────────────────────────────────────────────────
+class ChoiceInlineFormSet(forms.models.BaseInlineFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+
+        valid_choices = [
+            form for form in self.forms 
+            if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
+        ]
+
+        if not valid_choices:
+            return
+
+        correct_count = sum(
+            1 for form in valid_choices if form.cleaned_data.get('is_correct')
+        )
+
+        if len(valid_choices) != 4:
+            raise forms.ValidationError("هر سؤال باید دقیقاً چهار گزینه داشته باشد.")
+
+        if correct_count == 0:
+            raise forms.ValidationError("لطفاً یک گزینه را به عنوان پاسخ صحیح انتخاب کنید.")
+        elif correct_count > 1:
+            raise forms.ValidationError("تنها یک گزینه می‌تواند پاسخ صحیح باشد.")
+
+
+class ChoiceInline(admin.TabularInline):
+    model = Choice
+    formset = ChoiceInlineFormSet
+    extra = 4
+    min_num = 4
+    max_num = 4
+    fields = ("text", "is_correct")
+
+
+# ─────────────────────────────────────────────────────────────
+# ۴. مدیریت سوالات
+# ─────────────────────────────────────────────────────────────
+@admin.register(Question)
+class QuestionAdmin(admin.ModelAdmin):
+    list_display = (
+        "short_text", 
+        "get_course", 
+        "chapter", 
+        "difficulty", 
+        "is_active", 
+        "choices_status"
+    )
+    list_filter = (
+        "is_active", 
+        "difficulty", 
+        "chapter__subject",
+        "chapter"
+    )
+    search_fields = ("text", "explanation", "chapter__name", "chapter__subject__title")
+    list_editable = ("is_active",)
+    inlines = [ChoiceInline]
+    save_on_top = True
+
+    fieldsets = (
+        ("اطلاعات دسته‌بندی", {
+            "fields": (("chapter", "category"), "difficulty", "is_active")
+        }),
+        ("محتوای سوال", {
+            "fields": ("text", "explanation")
+        }),
+    )
+
+    def short_text(self, obj):
+        return obj.text[:60] + "..." if len(obj.text) > 60 else obj.text
+    short_text.short_description = "متن سوال"
+
+    def get_course(self, obj):
+        return obj.chapter.subject.title if obj.chapter and obj.chapter.subject else "-"
+    get_course.short_description = "درس"
+    get_course.admin_order_field = "chapter__subject__title"
+
+    def has_add_permission(self, request):
+        return has_bank_access(request.user)
+
+    def has_change_permission(self, request, obj=None):
+        if not has_bank_access(request.user):
+            return False
+        if obj is None or request.user.accesses.filter(name='bank', subject__isnull=True).exists():
+            return True
+        return request.user.accesses.filter(name='bank', subject=obj.chapter.subject).exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return self.has_change_permission(request, obj)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'chapter':
+            chapters = Chapter.objects.filter(subject__is_active=True)
+            accesses = request.user.accesses.filter(name='bank')
+            if not accesses.filter(subject__isnull=True).exists():
+                chapters = chapters.filter(subject_id__in=accesses.values_list('subject_id', flat=True))
+            kwargs['queryset'] = chapters.select_related('subject')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def choices_status(self, obj):
+        count = obj.choices.count()
+        correct = obj.choices.filter(is_correct=True).count()
+        return f"{count} گزینه ({correct} صحیح)"
+    choices_status.short_description = "وضعیت گزینه‌ها"
+
+    def save_model(self, request, obj, form, change):
+        if not change and hasattr(obj, 'creator_id') and not obj.creator_id:
+            obj.creator = request.user
+        super().save_model(request, obj, form, change)
+
+
+# ─────────────────────────────────────────────────────────────
+# ۵. نشست‌های تمرین و آزمون
+# ─────────────────────────────────────────────────────────────
+@admin.register(PracticeSession)
+class PracticeSessionAdmin(admin.ModelAdmin):
+    list_display = ("user", "status", "percent", "correct_count", "wrong_count")
+    list_filter = ("status",)
+    readonly_fields = [f.name for f in PracticeSession._meta.fields]
+
+
+@admin.register(ExamSession)
+class ExamSessionAdmin(admin.ModelAdmin):
+    list_display = ("user", "status", "percent", "correct_count", "wrong_count")
+    list_filter = ("status", "auto_submitted")
+    readonly_fields = [f.name for f in ExamSession._meta.fields]
