@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}تیکت‌ها{% endblock %}
+{% block page_title %}تیکت‌ها و پرسش‌ها{% endblock %}
+{% block breadcrumb %}تیکت‌ها{% endblock %}
+
+{% block page_actions %}
+    {% if user.role == "STUDENT" %}
+        <a href="{% url 'ticketing:create' %}" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
+            <i class="fa-solid fa-plus ml-1"></i> ثبت تیکت
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+    <form method="get" class="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-card sm:grid-cols-3">
+        <select name="status" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+            <option value="">همه وضعیت‌ها</option>
+            {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <select name="type" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+            <option value="">همه موضوع‌ها</option>
+            <option value="LESSON" {% if selected_type == "LESSON" %}selected{% endif %}>درسی</option>
+            <option value="TECHNICAL" {% if selected_type == "TECHNICAL" %}selected{% endif %}>فنی</option>
+            <option value="PSYCHOLOGY" {% if selected_type == "PSYCHOLOGY" %}selected{% endif %}>روانشناسی</option>
+        </select>
+        <button class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">اعمال فیلتر</button>
+    </form>
+
+    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[760px] text-right text-sm">
+                <thead class="bg-slate-50 text-xs text-slate-500">
+                    <tr><th class="p-4">شماره و عنوان</th><th class="p-4">دانش‌آموز</th><th class="p-4">موضوع</th><th class="p-4">مقصد فعلی</th><th class="p-4">وضعیت</th><th class="p-4">آخرین تغییر</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for ticket in tickets %}
+                    <tr class="transition hover:bg-blue-50/40">
+                        <td class="p-4"><a class="font-bold text-blue-700 hover:underline" href="{% url 'ticketing:detail' ticket.pk %}">#{{ ticket.pk }} — {{ ticket.title }}</a></td>
+                        <td class="p-4 text-slate-600">{{ ticket.student.user.get_full_name|default:ticket.student.user.username }}</td>
+                        <td class="p-4">{{ ticket.get_ticket_type_display }}{% if ticket.subject %} / {{ ticket.subject }}{% endif %}</td>
+                        <td class="p-4">{{ ticket.get_current_queue_display }}{% if ticket.current_assignee_user %}<span class="block text-xs text-slate-400">{{ ticket.current_assignee_user }}</span>{% endif %}</td>
+                        <td class="p-4"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{{ ticket.get_status_display }}</span></td>
+                        <td class="p-4 text-xs text-slate-400">{{ ticket.updated_at|date:"Y/m/d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="p-12 text-center text-slate-400">تیکتی در این بخش وجود ندارد.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

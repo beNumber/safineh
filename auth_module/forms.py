@@ -101,7 +101,7 @@ class ForgotPasswordRequestForm(forms.Form):
         if username and mobile:
             user = User.objects.filter(
                 username=username,
-                mobile=mobile,
+                phone_number=mobile,
                 is_active=True,
             ).first()
 
