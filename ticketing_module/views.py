@@ -165,6 +165,7 @@ def ticket_detail(request, pk):
             "can_moderate": can_moderate,
             "can_edit": can_edit,
             "can_refer": can_refer,
+            "can_view_student_academic_details": request.user.role != UserRole.CONSULTANT,
         },
     )
 

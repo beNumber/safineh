@@ -1,4 +1,4 @@
-{% load static %}
+{% load static shamsi %}
 
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -465,7 +465,7 @@
                     <!-- Date -->
                     <div class="hidden items-center gap-2 text-xs font-medium text-slate-400 xl:flex">
                         <i class="fa-regular fa-calendar"></i>
-                        <span>{{ "now"|date:"Y/m/d" }}</span>
+                        <span>{% shamsi_now "%Y/%m/%d" %}</span>
                     </div>
 
                     <!-- Notifications -->

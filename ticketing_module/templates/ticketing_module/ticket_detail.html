@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load shamsi %}
 {% block title %}تیکت #{{ ticket.pk }}{% endblock %}
 {% block page_title %}تیکت #{{ ticket.pk }}{% endblock %}
 {% block breadcrumb %}{{ ticket.title }}{% endblock %}
@@ -18,7 +19,7 @@
                 <p class="text-sm font-bold text-slate-700">{{ item.sender.get_full_name|default:item.sender.username }} <span class="mr-2 text-xs font-normal text-slate-400">{{ item.sender.get_role_display }}</span></p>
                 <div class="flex gap-2 text-xs">
                     {% if item.moderation_status == "PENDING" %}<span class="text-amber-600">در انتظار تأیید</span>{% elif item.moderation_status == "REJECTED" %}<span class="text-red-600">رد شده</span>{% else %}<span class="text-emerald-600">تأیید شده</span>{% endif %}
-                    <span class="text-slate-400">{{ item.created_at|date:"Y/m/d H:i" }}</span>
+                    <span class="text-slate-400">{{ item.created_at|shamsi:"%Y/%m/%d - %H:%M" }}</span>
                 </div>
             </div>
             <p class="mt-4 whitespace-pre-line text-sm leading-8 text-slate-700">{{ item.content }}</p>
@@ -44,17 +45,24 @@
     </section>
 
     <aside class="space-y-4">
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-            <h3 class="font-black text-slate-800">اطلاعات تیکت</h3>
-            <dl class="mt-4 space-y-3 text-sm"><div class="flex justify-between"><dt class="text-slate-400">استان</dt><dd>{{ ticket.province }}</dd></div><div class="flex justify-between"><dt class="text-slate-400">مدرسه</dt><dd>{{ ticket.student.field.grade.school }}</dd></div><div class="flex justify-between"><dt class="text-slate-400">پایه</dt><dd>{{ ticket.student.field.grade }}</dd></div><div class="flex justify-between"><dt class="text-slate-400">رشته</dt><dd>{{ ticket.student.field }}</dd></div></dl>
-        </div>
+        {% if can_view_student_academic_details %}
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+                <h3 class="font-black text-slate-800">اطلاعات تیکت</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                    <div class="flex justify-between"><dt class="text-slate-400">استان</dt><dd>{{ ticket.province.get_name_display }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-400">مدرسه</dt><dd>{{ ticket.student.field.grade.school }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-400">پایه</dt><dd>{{ ticket.student.field.grade }}</dd></div>
+                    <div class="flex justify-between"><dt class="text-slate-400">رشته</dt><dd>{{ ticket.student.field }}</dd></div>
+                </dl>
+            </div>
+        {% endif %}
 
         {% if can_refer %}<form method="post" action="{% url 'ticketing:refer' ticket.pk %}" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">{% csrf_token %}<h3 class="mb-4 font-black">ارجاع تیکت</h3>{{ referral_form.as_p }}<button class="mt-3 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">ثبت ارجاع</button></form>{% endif %}
         {% if can_edit %}<form method="post" action="{% url 'ticketing:edit' ticket.pk %}" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">{% csrf_token %}<h3 class="mb-4 font-black">ویرایش موضوع و وضعیت</h3>{{ edit_form.as_p }}<button class="mt-3 w-full rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white">ذخیره تغییرات</button></form>{% endif %}
 
         {% if previous_tickets %}<div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><h3 class="font-black">پرسش‌های قبلی همین دانش‌آموز در این درس</h3><div class="mt-4 space-y-3">{% for old in previous_tickets %}<a href="{% url 'ticketing:detail' old.pk %}" class="block rounded-xl bg-slate-50 p-3 text-sm text-blue-700">#{{ old.pk }} — {{ old.title }}<span class="mt-1 block text-xs text-slate-400">{{ old.get_status_display }}</span></a>{% endfor %}</div></div>{% endif %}
 
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><h3 class="font-black">گردش تیکت</h3><div class="mt-4 space-y-4 border-r-2 border-slate-100 pr-4">{% for log in ticket.logs.all %}<div><p class="text-sm font-bold text-slate-700">{{ log.get_action_display }}</p><p class="text-xs leading-6 text-slate-400">{{ log.actor }} — {{ log.created_at|date:"Y/m/d H:i" }}{% if log.description %}<br>{{ log.description }}{% endif %}</p></div>{% empty %}<p class="text-xs text-slate-400">رویدادی ثبت نشده است.</p>{% endfor %}</div></div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><h3 class="font-black">گردش تیکت</h3><div class="mt-4 space-y-4 border-r-2 border-slate-100 pr-4">{% for log in ticket.logs.all %}<div><p class="text-sm font-bold text-slate-700">{{ log.get_action_display }}</p><p class="text-xs leading-6 text-slate-400">{{ log.actor.get_full_name|default:"نام ثبت نشده" }} — {{ log.created_at|shamsi:"%Y/%m/%d - %H:%M" }}{% if log.description %}<br>{{ log.description }}{% endif %}</p></div>{% empty %}<p class="text-xs text-slate-400">رویدادی ثبت نشده است.</p>{% endfor %}</div></div>
     </aside>
 </div>
 {% endblock %}

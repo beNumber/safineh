@@ -35,7 +35,8 @@ class TicketingFlowTests(TestCase):
         )
         cls.other_student = Student.objects.create(user=cls.other_student_user, field=cls.field)
         cls.consultant_user = User.objects.create_user(
-            username="consultant", password="pass12345", role=UserRole.CONSULTANT
+            username="consultant", password="pass12345", role=UserRole.CONSULTANT,
+            first_name="مشاور", last_name="آزمایشی",
         )
         cls.scope = Consultant.objects.create(
             consultant=cls.consultant_user,
@@ -61,7 +62,8 @@ class TicketingFlowTests(TestCase):
         )
         ProvinceTrustee.objects.create(user=cls.other_trustee, province=cls.other_province)
         cls.moderator = User.objects.create_user(
-            username="moderator", password="pass12345", role=UserRole.CONTENT_MODERATOR
+            username="moderator", password="pass12345", role=UserRole.CONTENT_MODERATOR,
+            first_name="ناظر", last_name="محتوا",
         )
 
     def create_ticket(self, ticket_type=TicketType.LESSON, subject=True):
@@ -185,3 +187,34 @@ class TicketingFlowTests(TestCase):
         self.client.force_login(self.other_student_user)
         response = self.client.get(reverse("ticketing:detail", args=[ticket.pk]))
         self.assertEqual(response.status_code, 403)
+
+    def test_consultant_cannot_see_student_academic_location_details(self):
+        ticket, item = self.create_ticket()
+        item.moderation_status = ModerationStatus.APPROVED
+        item.is_approved_by_moderator = True
+        item.save()
+        ticket.current_queue = TicketQueue.CONSULTANT
+        ticket.status = TicketStatus.OPEN
+        ticket.save()
+
+        self.client.force_login(self.consultant_user)
+        response = self.client.get(reverse("ticketing:detail", args=[ticket.pk]))
+        self.assertNotContains(response, "مدرسه یک")
+        self.assertNotContains(response, "اطلاعات تیکت")
+
+    def test_trustee_sees_persian_province_display_name_and_full_actor_name(self):
+        ticket, item = self.create_ticket(TicketType.TECHNICAL, subject=False)
+        ticket.current_queue = TicketQueue.TRUSTEE
+        ticket.status = TicketStatus.OPEN
+        ticket.save()
+        TicketAuditLog.objects.create(
+            ticket=ticket,
+            actor=self.moderator,
+            action=TicketAuditLog.Action.APPROVED,
+        )
+
+        self.client.force_login(self.trustee_user)
+        response = self.client.get(reverse("ticketing:detail", args=[ticket.pk]))
+        self.assertContains(response, "هرمزگان")
+        self.assertContains(response, "ناظر محتوا")
+        self.assertNotContains(response, "moderator —")
