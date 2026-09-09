@@ -95,9 +95,27 @@ class ReferralForm(forms.Form):
     def __init__(self, *args, actor=None, ticket=None, **kwargs):
         super().__init__(*args, **kwargs)
         User = get_user_model()
-        roles = [UserRole.CONSULTANT, UserRole.PROVINCE_TRUSTEE, UserRole.CONTENT_MODERATOR, UserRole.ADMIN]
+        eligible = Q(role__in=[UserRole.CONTENT_MODERATOR, UserRole.ADMIN]) | Q(
+            is_superuser=True
+        )
+        if ticket:
+            eligible |= Q(
+                role=UserRole.PROVINCE_TRUSTEE,
+                trustee_provinces__province_id=ticket.province.id,
+            )
+            if ticket.ticket_type == TicketType.PSYCHOLOGY:
+                eligible |= Q(
+                    role=UserRole.CONSULTANT,
+                    scopes__can_answer_psychology=True,
+                )
+            elif ticket.ticket_type == TicketType.LESSON and ticket.subject_id:
+                eligible |= Q(
+                    role=UserRole.CONSULTANT,
+                    scopes__accesses__name="ticket",
+                    scopes__accesses__subject_id=ticket.subject_id,
+                )
         self.fields["assignee"].queryset = User.objects.filter(
-            Q(role__in=roles) | Q(is_superuser=True), is_active=True
+            eligible, is_active=True
         ).distinct()
         if actor and actor.role == UserRole.CONSULTANT:
             self.fields["queue"].choices = [(TicketQueue.TRUSTEE, "معتمد استان")]

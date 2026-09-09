@@ -77,9 +77,9 @@ class SchoolAdmin(admin.ModelAdmin):
 
 @admin.register(Grade)
 class GradeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'code', 'school', 'province_name', 'is_active')
+    list_display = ('id', 'title', 'school', 'province_name', 'is_active')
     list_filter = ('is_active', 'school__province', 'school')
-    search_fields = ('title', 'code', 'school__name')
+    search_fields = ('title', 'school__name')
     autocomplete_fields = ('school',)
     list_editable = ('is_active',)
     inlines = [FieldOfStudyInline]
@@ -94,9 +94,9 @@ class GradeAdmin(admin.ModelAdmin):
 
 @admin.register(FieldOfStudy)
 class FieldOfStudyAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'code', 'grade', 'school_name', 'is_active')
+    list_display = ('id', 'title', 'grade', 'school_name', 'is_active')
     list_filter = ('is_active', 'grade__school__province', 'grade__school')
-    search_fields = ('title', 'code', 'grade__title', 'grade__school__name')
+    search_fields = ('title', 'grade__title', 'grade__school__name')
     autocomplete_fields = ('grade',)
     list_editable = ('is_active',)
     inlines = [SubjectInline]
@@ -111,9 +111,9 @@ class FieldOfStudyAdmin(admin.ModelAdmin):
 
 @admin.register(Subject)
 class SubjectAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'code', 'field', 'grade_title', 'school_name', 'is_active')
+    list_display = ('id', 'title', 'field', 'grade_title', 'school_name', 'is_active')
     list_filter = ('is_active', 'field__grade__school__province', 'field__grade__school')
-    search_fields = ('title', 'code', 'field__title', 'field__grade__title', 'field__grade__school__name')
+    search_fields = ('title', 'field__title', 'field__grade__title', 'field__grade__school__name')
     autocomplete_fields = ('field',)
     list_editable = ('is_active',)
     inlines = [AccessInline]
@@ -136,7 +136,7 @@ class SubjectAdmin(admin.ModelAdmin):
 class AccessAdmin(admin.ModelAdmin):
     list_display = ('id', 'name_display', 'subject', 'subject_field', 'subject_grade', 'subject_school')
     list_filter = ('name', 'subject__field__grade__school__province')
-    search_fields = ('name', 'subject__title', 'subject__code')
+    search_fields = ('name', 'subject__title')
     autocomplete_fields = ('subject',)
 
     def get_queryset(self, request):

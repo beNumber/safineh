@@ -2,6 +2,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.test import RequestFactory, TestCase
+from django.urls import reverse
 
 from .decorators import role_required
 from .models import User, UserRole
@@ -37,3 +38,14 @@ class RoleRequiredTests(TestCase):
 
         request.user = User(username="root", role=UserRole.STUDENT, is_superuser=True)
         self.assertEqual(self.decorated_view()(request).status_code, 200)
+
+
+class LogoutTests(TestCase):
+    def test_logout_works_with_post(self):
+        user = User.objects.create_user(username="logout-user", password="pass12345")
+        self.client.force_login(user)
+
+        response = self.client.post(reverse("auth_module:logout"))
+
+        self.assertRedirects(response, reverse("auth_module:login"))
+        self.assertNotIn("_auth_user_id", self.client.session)

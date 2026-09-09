@@ -408,16 +408,6 @@
 
         </nav>
 
-        <!-- Sidebar Footer -->
-        <div class="border-t border-slate-100 p-4">
-            <a href="{% url 'auth_module:logout' %}"
-               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600">
-                <span class="sidebar-icon text-slate-400">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </span>
-                <span>خروج از حساب</span>
-            </a>
-        </div>
     </aside>
 
     <!-- Main Area -->
@@ -538,11 +528,16 @@
 
                             <div class="my-1 border-t border-slate-100"></div>
 
-                            <a href=""
-                               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-500 transition hover:bg-red-50">
-                                <i class="fa-solid fa-right-from-bracket w-4"></i>
-                                خروج
-                            </a>
+                            {% if user.is_authenticated %}
+                                <form method="post" action="{% url 'auth_module:logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm text-red-500 transition hover:bg-red-50">
+                                        <i class="fa-solid fa-right-from-bracket w-4"></i>
+                                        خروج
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
 

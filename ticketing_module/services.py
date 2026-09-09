@@ -28,14 +28,13 @@ def student_profile_for(user):
 
 
 def consultant_scope_ids(user, student, subject, psychology=False):
+    scopes = Consultant.objects.filter(consultant=user).prefetch_related("accesses")
     ids = []
-    scopes = Consultant.objects.filter(
-        consultant=user, can_answer_tickets=True
-    ).select_related("province", "school", "grade", "field", "subject")
     for scope in scopes:
-        if psychology and not scope.can_answer_psychology:
-            continue
-        if scope.matches_student(student, subject):
+        if psychology:
+            if scope.can_answer_psychology:
+                ids.append(scope.pk)
+        elif scope.matches_student(student, subject):
             ids.append(scope.pk)
     return ids
 

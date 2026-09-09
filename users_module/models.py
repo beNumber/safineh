@@ -9,7 +9,7 @@ class Province(models.Model):
     ))
 
     def __str__(self):
-        return self.name
+        return self.get_name_display()
 
 
 class School(models.Model):
@@ -30,7 +30,6 @@ class School(models.Model):
 
 class Grade(models.Model):
     title = models.CharField(max_length=100)
-    code = models.CharField(max_length=50, unique=True)
     school = models.ForeignKey(School, models.CASCADE, 'grades')
     is_active = models.BooleanField(default=True)
 
@@ -40,7 +39,6 @@ class Grade(models.Model):
 
 class FieldOfStudy(models.Model):
     title = models.CharField(max_length=100)
-    code = models.CharField(max_length=50, unique=True)
     is_active = models.BooleanField(default=True)
     grade = models.ForeignKey(Grade, models.CASCADE, 'fields')
 
@@ -50,7 +48,6 @@ class FieldOfStudy(models.Model):
 
 class Subject(models.Model):
     title = models.CharField(max_length=100)
-    code = models.CharField(max_length=50, unique=True)
     field = models.ForeignKey(FieldOfStudy, models.CASCADE, 'subjects')
     is_active = models.BooleanField(default=True)
 
@@ -66,3 +63,10 @@ class Access(models.Model):
         ('course', 'دوره')
     ))
     subject = models.ForeignKey(Subject, models.CASCADE)
+
+    class Meta:
+        verbose_name = "دسترسی"
+        verbose_name_plural = "دسترسی‌ها"
+
+    def __str__(self):
+        return f"{self.get_name_display()} - {self.subject}"

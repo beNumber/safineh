@@ -89,6 +89,15 @@ class Ticket(models.Model):
     def clean(self):
         if self.ticket_type == TicketType.LESSON and not self.subject_id:
             raise ValidationError({"subject": "برای تیکت درسی انتخاب درس الزامی است."})
+        if (
+            self.ticket_type == TicketType.LESSON
+            and self.subject_id
+            and self.student_id
+            and self.subject.field_id != self.student.field_id
+        ):
+            raise ValidationError(
+                {"subject": "درس انتخاب‌شده باید متعلق به رشته دانش‌آموز باشد."}
+            )
         if self.ticket_type != TicketType.LESSON and self.subject_id:
             raise ValidationError(
                 {"subject": "برای موضوع فنی یا روانشناسی نباید درس انتخاب شود."}

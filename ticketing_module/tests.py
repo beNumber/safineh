@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from auth_module.models import Consultant, ProvinceTrustee, Student, User, UserRole
-from users_module.models import FieldOfStudy, Grade, Province, School, Subject
+from users_module.models import Access, FieldOfStudy, Grade, Province, School, Subject
 
 from .models import (
     ModerationStatus,
@@ -22,9 +22,10 @@ class TicketingFlowTests(TestCase):
         cls.province = Province.objects.create(name="hormozgan")
         cls.other_province = Province.objects.create(name="kerman")
         cls.school = School.objects.create(name="مدرسه یک", province=cls.province)
-        cls.grade = Grade.objects.create(title="دهم", code="g10", school=cls.school)
-        cls.field = FieldOfStudy.objects.create(title="ریاضی", code="math", grade=cls.grade)
-        cls.subject = Subject.objects.create(title="حسابان", code="calculus", field=cls.field)
+        cls.grade = Grade.objects.create(title="دهم", school=cls.school)
+        cls.field = FieldOfStudy.objects.create(title="ریاضی", grade=cls.grade)
+        cls.subject = Subject.objects.create(title="حسابان", field=cls.field)
+        cls.ticket_access = Access.objects.create(name="ticket", subject=cls.subject)
 
         cls.student_user = User.objects.create_user(
             username="student", password="pass12345", role=UserRole.STUDENT, gender="MALE"
@@ -38,19 +39,13 @@ class TicketingFlowTests(TestCase):
             username="consultant", password="pass12345", role=UserRole.CONSULTANT,
             first_name="مشاور", last_name="آزمایشی",
         )
-        cls.scope = Consultant.objects.create(
-            consultant=cls.consultant_user,
-            province=cls.province,
-            subject=cls.subject,
-            can_answer_tickets=True,
-        )
+        cls.scope = Consultant.objects.create(consultant=cls.consultant_user)
+        cls.scope.accesses.add(cls.ticket_access)
         cls.psychologist_user = User.objects.create_user(
             username="psychologist", password="pass12345", role=UserRole.CONSULTANT
         )
         Consultant.objects.create(
             consultant=cls.psychologist_user,
-            province=cls.province,
-            can_answer_tickets=True,
             can_answer_psychology=True,
         )
         cls.trustee_user = User.objects.create_user(
@@ -108,6 +103,24 @@ class TicketingFlowTests(TestCase):
         self.assertEqual(ticket.current_queue, TicketQueue.CONSULTANT)
         self.assertEqual(ticket.status, TicketStatus.OPEN)
         self.assertTrue(consultant_can_access(self.consultant_user, ticket))
+
+    def test_consultant_without_ticket_access_cannot_see_lesson_ticket(self):
+        consultant = User.objects.create_user(
+            username="no-ticket-access",
+            password="pass12345",
+            role=UserRole.CONSULTANT,
+        )
+        Consultant.objects.create(consultant=consultant)
+        ticket, item = self.create_ticket()
+        item.moderation_status = ModerationStatus.APPROVED
+        item.is_approved_by_moderator = True
+        item.save()
+        ticket.current_queue = TicketQueue.CONSULTANT
+        ticket.status = TicketStatus.OPEN
+        ticket.save()
+
+        self.assertFalse(consultant_can_access(consultant, ticket))
+        self.assertNotIn(ticket, visible_tickets_for(consultant))
 
     def test_technical_ticket_is_visible_only_to_its_province_trustee(self):
         ticket, item = self.create_ticket(TicketType.TECHNICAL, subject=False)
