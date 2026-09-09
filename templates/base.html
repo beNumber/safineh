@@ -1,3 +1,4 @@
+{% load static %}
 {% load static shamsi %}
 
 <!DOCTYPE html>
@@ -309,7 +310,12 @@
                 </p>
 
                 <div class="space-y-1">
-                    <a href="{% url 'ticketing:list' %}"
+                    <a href="{% url 'courses_module:course_create' %}"
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-plus"></i></span>
+                        <span>ساخت دوره جدید</span>
+                    </a>
+                    <a href=""
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-inbox"></i>
@@ -335,8 +341,35 @@
                 </div>
             {% endif %}
 
+            {% if user.is_authenticated and user.role == 'PROVINCE_TRUSTEE' %}
+                <div class="my-6 border-t border-slate-100"></div>
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">دوره‌های من</p>
+                <div class="rounded-2xl bg-amber-50/60 p-2">
+                    <a href="{% url 'courses_module:my_courses' %}" class="sidebar-link flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold {% if request.path == '/courses/my/' %}bg-white text-amber-700 shadow-sm{% else %}text-slate-700{% endif %}">
+                        <span class="flex items-center gap-3"><span class="sidebar-icon text-amber-500"><i class="fa-solid fa-shield-check"></i></span><span>دوره‌های تأییدنشده</span></span>
+                        <i class="fa-solid fa-chevron-left text-[10px] text-amber-500"></i>
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if user.is_authenticated and user.role == 'ADMIN' %}
+                <div class="my-6 border-t border-slate-100"></div>
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">مدیریت دوره‌ها</p>
+                <a href="{% url 'courses_module:course_list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-lock"></i></span>
+                    <span>بستن یا حذف دوره‌ها</span>
+                </a>
+            {% endif %}
+            {% if user.is_authenticated and user.is_superuser and user.role != 'ADMIN' %}
+                <div class="my-6 border-t border-slate-100"></div>
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">مدیریت دوره‌ها</p>
+                <a href="{% url 'courses_module:course_list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-lock"></i></span><span>بستن یا حذف دوره‌ها</span>
+                </a>
+            {% endif %}
+
             <!-- Support Menu -->
-            {% if user.is_authenticated and user.role == "CONTENT_MODERATOR" %}
+            {% if user.is_authenticated and user.user_type == "support" %}
                 <div class="my-6 border-t border-slate-100"></div>
 
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
@@ -734,6 +767,21 @@
 
 <script src="{% static 'js/persian-utils.js' %}"></script>
 <script src="{% static 'js/app.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const currentPath = window.location.pathname; // مثلاً /courses/
+        const links = document.querySelectorAll('.sidebar-link');
+
+        links.forEach(link => {
+            const href = new URL(link.href, window.location.origin).pathname;
+            // تطبیق دقیق: فقط اگه مسیر فعلی با مسیر لینک شروع بشه
+            if (href !== '/' && currentPath.startsWith(href)) {
+                links.forEach(l => l.classList.remove('sidebar-link-active'));
+                link.classList.add('sidebar-link-active');
+            }
+        });
+    });
+</script>
 
 {% block extra_js %}{% endblock %}
 
