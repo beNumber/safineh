@@ -4,61 +4,53 @@
 {% block title %}{% if active_category %}{{ active_category.name }}{% else %}وبلاگ{% endif %}{% endblock %}
 
 {% block content %}
-<section class="post-hero mb-8 rounded-3xl p-6 text-brand-900 dark:text-brand-50 md:p-10">
-  <h1 class="text-2xl font-extrabold md:text-4xl">نوشته‌های تازه</h1>
-  <form method="get" class="mt-5 flex flex-col gap-2 sm:flex-row">
-    <input name="q" value="{{ q }}" placeholder="جستجو..."
-      class="w-full rounded-xl border border-brand-100 bg-white px-4 py-2 text-brand-900 dark:border-white/10 dark:bg-brand-900 dark:text-brand-50">
-    <button type="submit" class="rounded-xl bg-brand-500 px-5 py-2 text-white">
-      <i class="fa-solid fa-magnifying-glass"></i>
-    </button>
-  </form>
-</section>
-
-<div class="mb-6 flex flex-wrap gap-2">
-  <a href="{% url 'blog:post_list' %}"
-     class="post-chip rounded-full px-3 py-1 text-sm {% if not active_category %}is-active{% endif %}">همه</a>
-  {% for c in categories %}
-    <a href="{% url 'blog:category_posts' c.slug %}"
-       class="post-chip rounded-full px-3 py-1 text-sm {% if active_category.pk == c.pk %}is-active{% endif %}">{{ c.name }}</a>
-  {% endfor %}
+<div class="mb-7 flex items-end justify-between gap-4 border-b border-brand-100/80 pb-5">
+  <div>
+    <span class="mb-2 inline-flex items-center gap-2 text-xs font-bold tracking-wide text-brand-500"><i class="fa-solid fa-sparkles"></i> مجله‌ی سبز سفینه</span>
+    <h1 class="text-2xl font-extrabold tracking-tight md:text-3xl">{% if active_category %}مطالب {{ active_category.name }}{% elif query %}نتایج جستجو{% else %}جدیدترین نوشته‌ها{% endif %}</h1>
+  </div>
+  {% if query %}<span class="rounded-full bg-brand-100 px-3 py-1 text-xs text-brand-700">«{{ query }}»</span>{% endif %}
 </div>
 
 <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
   {% for post in posts %}
-    <article class="post-card overflow-hidden rounded-3xl shadow-sm
-                    transition duration-300
-                    hover:scale-[1.03]
-                    hover:shadow-[0_0_28px_rgba(34,197,94,0.38)]
-                    dark:hover:shadow-[0_0_32px_rgba(74,222,128,0.28)]">
+    <article class="post-card overflow-hidden rounded-3xl shadow-sm">
 
       {% if post.cover %}
-        <img src="{{ post.cover.url }}" alt="{{ post.title }}" class="h-52 w-full object-cover">
+        <a href="{% url 'blog:post_detail' post.slug %}" class="block" aria-label="مشاهده {{ post.title }}">
+          <img src="{{ post.cover.url }}" alt="{{ post.title }}" class="h-52 w-full object-cover">
+        </a>
       {% elif post.image %}
-        <img src="{{ post.image.url }}" alt="{{ post.title }}" class="h-52 w-full object-cover">
+        <a href="{% url 'blog:post_detail' post.slug %}" class="block" aria-label="مشاهده {{ post.title }}">
+          <img src="{{ post.image.url }}" alt="{{ post.title }}" class="h-52 w-full object-cover">
+        </a>
       {% else %}
-        <div class="flex h-52 w-full items-center justify-center bg-brand-100 dark:bg-brand-800">
+        <a href="{% url 'blog:post_detail' post.slug %}" class="flex h-52 w-full items-center justify-center bg-brand-100" aria-label="مشاهده {{ post.title }}">
           <i class="fa-regular fa-image text-3xl opacity-50"></i>
-        </div>
+        </a>
       {% endif %}
 
       <div class="p-4">
-        <h2 class="mb-2 text-lg font-bold text-brand-900 dark:text-brand-50">
+        <div class="mb-3 flex items-center justify-between gap-3 text-xs text-brand-700/70">
+          <span><i class="fa-regular fa-clock ml-1"></i>{{ post.published_at|jalali }}</span>
+          {% if post.category %}<span class="rounded-full bg-brand-100/70 px-2 py-1">{{ post.category.name }}</span>{% endif %}
+        </div>
+        <h2 class="mb-2 text-lg font-bold leading-8 text-brand-900">
           <a href="{% url 'blog:post_detail' post.slug %}">{{ post.title }}</a>
         </h2>
 
         {% if post.summary %}
-          <p class="mb-3 text-sm text-brand-800/80 dark:text-brand-100/80">{{ post.summary }}</p>
+          <p class="mb-3 text-sm text-brand-800/80">{{ post.summary }}</p>
         {% endif %}
 
         <a href="{% url 'blog:post_detail' post.slug %}"
-           class="text-sm text-brand-600 dark:text-brand-200">
+           class="text-sm text-brand-600">
           ادامه مطلب
         </a>
       </div>
     </article>
   {% empty %}
-    <p class="post-card col-span-full rounded-2xl p-8 text-center text-brand-900 dark:text-brand-50">
+    <p class="post-card col-span-full rounded-2xl p-8 text-center text-brand-900">
       هنوز پستی نیست.
     </p>
   {% endfor %}

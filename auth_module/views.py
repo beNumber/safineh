@@ -83,6 +83,15 @@ class UserLoginView(LoginView):
     redirect_authenticated_user = True
     next_page = reverse_lazy("dashboard")
 
+    def get_success_url(self):
+        """After a normal login always open the dashboard first.
+
+        Course pages can still be opened explicitly from the sidebar.  We keep
+        Django's ``next`` behaviour only when another protected flow explicitly
+        supplied it; a plain login never starts inside the courses module.
+        """
+        return str(reverse_lazy("dashboard"))
+
     def form_valid(self, form):
         response = super().form_valid(form)
 

@@ -1,0 +1,62 @@
+<div class="course-grid">
+    {% for course in courses %}
+        <article class="course-card" data-aos="fade-up">
+            <a href="{% url 'courses_module:course_detail' course.slug %}" class="course-cover">
+                {% if course.cover_image %}
+                    <img src="{{ course.cover_image.url }}" alt="{{ course.title }}">
+                {% else %}
+                    <div class="cover-placeholder"><i class="fa-solid fa-graduation-cap"></i></div>
+                {% endif %}
+                <span class="level-pill">{{ course.get_level_display }}</span>
+                {% if user.role != 'STUDENT' and course.approval_status != 'APPROVED' %}
+                    <span class="status-pill status-{{ course.approval_status|lower }}">{{ course.get_approval_status_display }}</span>
+                {% endif %}
+            </a>
+            <div class="course-body">
+                <div class="subject-row">
+                    {% for subject in course.subjects.all|slice:':3' %}<span>{{ subject.title }}</span>{% empty %}<span>{{ course.topic }}</span>{% endfor %}
+                </div>
+                <a href="{% url 'courses_module:course_detail' course.slug %}"><h3>{{ course.title }}</h3></a>
+                <p>{{ course.description|truncatechars:115 }}</p>
+                <div class="course-meta">
+                    <span><i class="fa-regular fa-clock"></i> {{ course.estimated_duration|default:'آزاد' }}</span>
+                    <span><i class="fa-solid fa-signal"></i> {{ course.get_level_display }}</span>
+                </div>
+                <div class="rating-line" aria-label="میانگین امتیاز {{ course.rating_average|floatformat:1 }} از ۵">
+                    <span class="stars">★★★★★</span>
+                    <strong>{{ course.rating_average|floatformat:1 }}</strong>
+                    <small>({{ course.rating_count }} رأی)</small>
+                </div>
+                {% if user == course.author and course.approval_status == 'REJECTED' %}
+                    <div class="mt-3 rounded-xl border border-rose-100 bg-rose-50/80 p-3 text-[10px] leading-5 text-rose-700">
+                        <b>دلیل رد معتمد استان:</b> {{ course.rejection_reason|default:'دلیلی ثبت نشده است.' }}
+                    </div>
+                {% endif %}
+            </div>
+                <div class="course-footer">
+                <span class="teacher"><i class="fa-solid fa-user-tie"></i> {{ course.author.get_full_name|default:course.author.username }}</span>
+                {% if user.role == 'STUDENT' and course.approval_status == 'APPROVED' %}
+                    {% if course.is_enrolled %}
+                        <a class="joined-button" href="{% url 'courses_module:course_detail' course.slug %}"><i class="fa-solid fa-check"></i> وارد دوره شو</a>
+                    {% else %}
+                        <form method="post" action="{% url 'courses_module:course_enroll' course.slug %}">
+                            {% csrf_token %}
+                            <button class="join-button" type="submit"><i class="fa-solid fa-plus"></i> شرکت در دوره</button>
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <a class="joined-button" href="{% url 'courses_module:course_detail' course.slug %}"><i class="fa-solid fa-eye"></i> مشاهده دوره</a>
+                {% endif %}
+                </div>
+                {% if user == course.author or user.role == 'PROVINCE_TRUSTEE' or user.role == 'ADMIN' or user.is_superuser %}
+                    <a href="{% url 'courses_module:course_edit' course.pk %}" class="mx-4 mb-4 rounded-xl border border-blue-100 bg-blue-50/70 py-2 text-center text-[11px] font-black text-blue-700 transition hover:bg-blue-100"><i class="fa-solid fa-pen ml-1"></i>ویرایش دوره</a>
+                {% endif %}
+        </article>
+    {% empty %}
+        <div class="empty-state">
+            <i class="fa-solid fa-book-open-reader"></i>
+            <h3>دوره‌ای برای نمایش وجود ندارد</h3>
+            <p>به‌محض انتشار دوره مناسب، اینجا نمایش داده می‌شود.</p>
+        </div>
+    {% endfor %}
+</div>
