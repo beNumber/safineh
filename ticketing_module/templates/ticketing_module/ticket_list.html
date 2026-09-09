@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load shamsi %}
 
 {% block title %}تیکت‌ها{% endblock %}
 {% block page_title %}تیکت‌ها و پرسش‌ها{% endblock %}
@@ -44,7 +45,7 @@
                         <td class="p-4">{{ ticket.get_ticket_type_display }}{% if ticket.subject %} / {{ ticket.subject }}{% endif %}</td>
                         <td class="p-4">{{ ticket.get_current_queue_display }}{% if ticket.current_assignee_user %}<span class="block text-xs text-slate-400">{{ ticket.current_assignee_user }}</span>{% endif %}</td>
                         <td class="p-4"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{{ ticket.get_status_display }}</span></td>
-                        <td class="p-4 text-xs text-slate-400">{{ ticket.updated_at|date:"Y/m/d H:i" }}</td>
+                        <td class="p-4 text-xs text-slate-400">{{ ticket.updated_at|shamsi:"%Y/%m/%d - %H:%M" }}</td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="6" class="p-12 text-center text-slate-400">تیکتی در این بخش وجود ندارد.</td></tr>
