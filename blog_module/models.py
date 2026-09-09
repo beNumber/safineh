@@ -3,7 +3,7 @@ from ckeditor.fields import RichTextField
 from django.utils.text import slugify
 from django.utils import timezone
 
-
+from django.conf import settings
 # ====================== Category ======================
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="نام دسته‌بندی")
@@ -77,7 +77,7 @@ class Post(models.Model):
 )
 
     author = models.ForeignKey(
-        "auth.User", 
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE, 
         related_name="posts",
         verbose_name="نویسنده"

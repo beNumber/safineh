@@ -1,4 +1,5 @@
 {% load static %}
+{% load static shamsi %}
 
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -239,98 +240,69 @@
                 منوی اصلی
             </p>
 
-            <!-- منوی اصلی -->
-<div class="space-y-1.5">
+            <div class="space-y-1">
 
-    <!-- ۱. داشبورد -->
-    <a href="/" 
-       class="sidebar-link relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all {% if request.resolver_match.url_name == 'index' or request.path == '/' %}bg-blue-50 text-blue-600 font-bold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
-        <div class="flex items-center gap-3">
-            <span class="sidebar-icon {% if request.resolver_match.url_name == 'index' or request.path == '/' %}text-blue-600{% else %}text-slate-400{% endif %}">
-                <i class="fa-solid fa-house"></i>
-            </span>
-            <span>داشبورد</span>
-        </div>
-        <!-- نوار آبی سمت راست فقط وقتی فعال است -->
-        {% if request.resolver_match.url_name == 'index' or request.path == '/' %}
-            <span class="absolute right-0 top-1.5 bottom-1.5 w-1 bg-blue-600 rounded-l-full"></span>
-        {% endif %}
-    </a>
+                <a href="{% url 'dashboard' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %} flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-grid-2"></i>
+                    </span>
+                    <span>داشبورد</span>
+                </a>
 
-    <!-- ۲. تیکت‌های من -->
-    <a href="{}" 
-       class="sidebar-link relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all {% if 'ticket' in request.path %}bg-blue-50 text-blue-600 font-bold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
-        <div class="flex items-center gap-3">
-            <span class="sidebar-icon {% if 'ticket' in request.path %}text-blue-600{% else %}text-slate-400{% endif %}">
-                <i class="fa-solid fa-comments"></i>
-            </span>
-            <span>تیکت‌های من</span>
-        </div>
-        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-600">۳</span>
-        {% if 'ticket' in request.path %}
-            <span class="absolute right-0 top-1.5 bottom-1.5 w-1 bg-blue-600 rounded-l-full"></span>
-        {% endif %}
-    </a>
+                {% if user.is_authenticated and not user.is_superuser %}
+                    <a href="{% url 'ticketing:list' %}"
+                       class="sidebar-link {% if request.resolver_match.namespace == 'ticketing' %}active{% endif %} flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-comments"></i>
+                        </span>
+                        <span class="flex-1">تیکت‌ها و پرسش‌ها</span>
+                    </a>
+                {% endif %}
 
-    <!-- ۳. دوره‌ها و درس‌ها -->
-    <a href="{% url 'courses_module:course_list' %}" 
-       class="sidebar-link relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all {% if '/courses' in request.path %}bg-blue-50 text-blue-600 font-bold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
-        <div class="flex items-center gap-3">
-            <span class="sidebar-icon {% if '/courses' in request.path %}text-blue-600{% else %}text-slate-400{% endif %}">
-                <i class="fa-solid fa-graduation-cap"></i>
-            </span>
-            <span>دوره‌ها و درس‌ها</span>
-        </div>
-        {% if '/courses' in request.path %}
-            <span class="absolute right-0 top-1.5 bottom-1.5 w-1 bg-blue-600 rounded-l-full"></span>
-        {% endif %}
-    </a>
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-book-open-reader"></i>
+                    </span>
+                    <span>دوره‌ها و درس‌ها</span>
+                </a>
 
-    {% if user.is_authenticated and user.role == 'STUDENT' %}
-    <a href="{% url 'courses_module:my_courses' %}"
-       class="sidebar-link relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all {% if '/courses/my/' in request.path %}bg-blue-50 text-blue-600 font-bold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
-        <div class="flex items-center gap-3">
-            <span class="sidebar-icon {% if '/courses/my/' in request.path %}text-blue-600{% else %}text-slate-400{% endif %}">
-                <i class="fa-solid fa-bookmark"></i>
-            </span>
-            <span>دوره‌های من</span>
-        </div>
-    </a>
-    {% endif %}
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-newspaper"></i>
+                    </span>
+                    <span>اخبار و اطلاعیه‌ها</span>
+                </a>
 
-    <!-- ۴. اخبار و اطلاعیه‌ها -->
-    <a href="{}" 
-       class="sidebar-link relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all {% if '/news' in request.path %}bg-blue-50 text-blue-600 font-bold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
-        <div class="flex items-center gap-3">
-            <span class="sidebar-icon {% if '/news' in request.path %}text-blue-600{% else %}text-slate-400{% endif %}">
-                <i class="fa-solid fa-newspaper"></i>
-            </span>
-            <span>اخبار و اطلاعیه‌ها</span>
-        </div>
-        {% if '/news' in request.path %}
-            <span class="absolute right-0 top-1.5 bottom-1.5 w-1 bg-blue-600 rounded-l-full"></span>
-        {% endif %}
-    </a>
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-blog"></i>
+                    </span>
+                    <span>مجله آموزشی</span>
+                </a>
+                <a href="{% url 'news_module:article_list' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-newspaper"></i>
+    </span>
+                    <span>اخبار و اطلاعیه‌ها</span>
+                </a>
 
-    <!-- ۵. مجله آموزشی -->
-    <a href="{}" 
-       class="sidebar-link relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all {% if '/magazine' in request.path or '/blog' in request.path %}bg-blue-50 text-blue-600 font-bold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
-        <div class="flex items-center gap-3">
-            <span class="sidebar-icon {% if '/magazine' in request.path or '/blog' in request.path %}text-blue-600{% else %}text-slate-400{% endif %}">
-                <i class="fa-solid fa-book-open"></i>
-            </span>
-            <span>مجله آموزشی</span>
-        </div>
-        {% if '/magazine' in request.path or '/blog' in request.path %}
-            <span class="absolute right-0 top-1.5 bottom-1.5 w-1 bg-blue-600 rounded-l-full"></span>
-        {% endif %}
-    </a>
+                <a href="{% url 'blog:post_list' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-blog"></i>
+    </span>
+                    <span>مجله آموزشی</span>
+                </a>
 
-</div>
-
+            </div>
 
             <!-- Counselor Menu -->
-            {% if user.is_authenticated and user.role == 'CONSULTANT' %}
+            {% if user.is_authenticated and user.role == "CONSULTANT" %}
                 <div class="my-6 border-t border-slate-100"></div>
 
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
@@ -405,12 +377,12 @@
                 </p>
 
                 <div class="space-y-1">
-                    <a href=""
+                    <a href="{% url 'ticketing:moderation_queue' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-headset"></i>
                         </span>
-                        <span>صف تیکت‌ها</span>
+                        <span>صف تأیید پیام‌ها</span>
                     </a>
 
                     <a href=""
@@ -526,7 +498,7 @@
                     <!-- Date -->
                     <div class="hidden items-center gap-2 text-xs font-medium text-slate-400 xl:flex">
                         <i class="fa-regular fa-calendar"></i>
-                        <span>{{ "now"|date:"Y/m/d" }}</span>
+                        <span>{% shamsi_now "%Y/%m/%d" %}</span>
                     </div>
 
                     <!-- Notifications -->
