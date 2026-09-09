@@ -32,11 +32,32 @@ class User(AbstractUser):
         null=True,
         blank=True,
     )
+    accesses = models.ManyToManyField(
+        Access,
+        blank=True,
+        related_name='users',
+        verbose_name='دسترسی‌ها',
+        help_text='برای کاربران غیر دانش‌آموز، دسترسی‌های مجاز را انتخاب کنید.',
+    )
 
     @property
     def mobile(self):
         """نام سازگار با کد قدیمی بازیابی رمز عبور."""
         return self.phone_number
+
+    def has_project_access(self, access_code, subject=None):
+        """سوپریوزر همیشه مجاز، دانش‌آموز همیشه غیرمجاز و سایرین تابع تیک دسترسی‌اند."""
+        if self.is_superuser:
+            return True
+        if self.role == UserRole.STUDENT or not self.is_active:
+            return False
+        accesses = self.accesses.filter(name=access_code)
+        if subject is None:
+            return accesses.exists()
+        subject_id = getattr(subject, 'pk', subject)
+        return accesses.filter(subject__isnull=True).exists() or accesses.filter(
+            subject_id=subject_id
+        ).exists()
 
 
 class Consultant(models.Model):

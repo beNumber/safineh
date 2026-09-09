@@ -1,0 +1,1 @@
+{% if previous %}<span class="qb-repeat-badge {{ previous.class }}"><i class="fa-solid {% if previous.class == 'correct' %}fa-circle-check{% elif previous.class == 'wrong' %}fa-circle-xmark{% else %}fa-circle-minus{% endif %}"></i>{{ previous.label }}</span>{% endif %}

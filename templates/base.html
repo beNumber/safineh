@@ -242,23 +242,24 @@
 
             <div class="space-y-1">
 
-                <a href="{% url 'dashboard' %}"
-                   class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %} flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                <a href=""
+                   class="sidebar-link active flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-grid-2"></i>
                     </span>
                     <span>داشبورد</span>
                 </a>
 
-                {% if user.is_authenticated and not user.is_superuser %}
-                    <a href="{% url 'ticketing:list' %}"
-                       class="sidebar-link {% if request.resolver_match.namespace == 'ticketing' %}active{% endif %} flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
-                        <span class="sidebar-icon text-slate-400">
-                            <i class="fa-solid fa-comments"></i>
-                        </span>
-                        <span class="flex-1">تیکت‌ها و پرسش‌ها</span>
-                    </a>
-                {% endif %}
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-comments"></i>
+                    </span>
+                    <span class="flex-1">تیکت‌های من</span>
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                        ۳
+                    </span>
+                </a>
 
                 <a href=""
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
@@ -310,6 +311,14 @@
                 </p>
 
                 <div class="space-y-1">
+                    <a href="{% url 'questions_module:question_list' %}"
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-list-check"></i>
+                        </span>
+                        <span>وضعیت سؤال‌های من</span>
+                    </a>
+
                     <a href="{% url 'courses_module:course_create' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-plus"></i></span>
@@ -377,12 +386,12 @@
                 </p>
 
                 <div class="space-y-1">
-                    <a href="{% url 'ticketing:moderation_queue' %}"
+                    <a href=""
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-headset"></i>
                         </span>
-                        <span>صف تأیید پیام‌ها</span>
+                        <span>صف تیکت‌ها</span>
                     </a>
 
                     <a href=""

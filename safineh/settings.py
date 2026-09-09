@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     "ticketing_module",
     "news_module",
     "users_module",
-
+    "questions_module",
 ]
 
 
