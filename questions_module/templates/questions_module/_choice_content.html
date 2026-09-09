@@ -1,0 +1,1 @@
+<span class="flex-1 text-sm font-semibold">{% if choice.text %}<span class="rich-content">{{ choice.text|safe }}</span>{% endif %}{% if choice.image %}<img src="{{ choice.image.url }}" alt="تصویر گزینه" class="qb-choice-image {% if choice.text %}mt-2{% endif %}">{% endif %}</span>

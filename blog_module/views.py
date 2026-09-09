@@ -5,13 +5,13 @@ from .models import Post, Category, Tag
 
 def post_list(request):
     posts = Post.objects.filter(status="published")
-    return render(request, "blog/post_list.html", {"posts": posts})
+    return render(request, "blog/post_list.html", {"posts": posts, "categories": Category.objects.all()})
 
 
 
 def post_detail(request, slug):
     post = get_object_or_404(Post.published, slug=slug)
-    return render(request, "blog/post_detail.html", {"post": post})
+    return render(request, "blog/post_detail.html", {"post": post, "categories": Category.objects.all()})
 
 
 def category_posts(request, slug):
@@ -19,7 +19,8 @@ def category_posts(request, slug):
     posts = Post.objects.filter(status="published", category=category)
     return render(request, "blog/post_list.html", {
         "posts": posts,
-        "category": category,
+        "categories": Category.objects.all(),
+        "active_category": category,
     })
 
 
@@ -31,7 +32,7 @@ def tag_posts(request, slug):
     return render(
         request,
         "blog/post_list.html",
-        {"tag": tag, "posts": posts},
+        {"tag": tag, "posts": posts, "categories": Category.objects.all()},
     )
 
 
@@ -51,5 +52,5 @@ def post_search(request):
     return render(
         request,
         "blog/post_list.html",
-        {"query": query, "posts": posts},
+        {"query": query, "posts": posts, "categories": Category.objects.all()},
     )

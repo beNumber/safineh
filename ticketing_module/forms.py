@@ -1,0 +1,139 @@
+from django import forms
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
+from auth_module.models import UserRole
+from users_module.models import Subject
+
+from .models import Ticket, TicketMessage, TicketQueue, TicketStatus, TicketType
+
+
+INPUT_CLASS = (
+    "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm "
+    "outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+)
+
+
+class TicketCreateForm(forms.ModelForm):
+    content = forms.CharField(
+        label="متن پرسش",
+        widget=forms.Textarea(attrs={"class": INPUT_CLASS, "rows": 7}),
+    )
+    attachment = forms.FileField(
+        label="پیوست", required=False, widget=forms.FileInput(attrs={"class": INPUT_CLASS})
+    )
+
+    class Meta:
+        model = Ticket
+        fields = ["title", "ticket_type", "subject"]
+        labels = {"title": "عنوان", "ticket_type": "موضوع", "subject": "درس"}
+        widgets = {
+            "title": forms.TextInput(attrs={"class": INPUT_CLASS}),
+            "ticket_type": forms.Select(attrs={"class": INPUT_CLASS}),
+            "subject": forms.Select(attrs={"class": INPUT_CLASS}),
+        }
+
+    def __init__(self, *args, student=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.student = student
+        if student:
+            self.fields["subject"].queryset = Subject.objects.filter(
+                field=student.field, is_active=True
+            )
+
+    def clean(self):
+        cleaned = super().clean()
+        ticket_type = cleaned.get("ticket_type")
+        subject = cleaned.get("subject")
+        if ticket_type == TicketType.LESSON and not subject:
+            self.add_error("subject", "برای پرسش درسی، درس را انتخاب کنید.")
+        if ticket_type != TicketType.LESSON:
+            cleaned["subject"] = None
+        return cleaned
+
+
+class TicketMessageForm(forms.ModelForm):
+    class Meta:
+        model = TicketMessage
+        fields = ["content", "attachment"]
+        labels = {"content": "متن پیام", "attachment": "پیوست"}
+        widgets = {
+            "content": forms.Textarea(attrs={"class": INPUT_CLASS, "rows": 5}),
+            "attachment": forms.FileInput(attrs={"class": INPUT_CLASS}),
+        }
+
+
+class ModerationForm(forms.Form):
+    decision = forms.ChoiceField(
+        label="نتیجه بررسی",
+        choices=(("approve", "تأیید"), ("reject", "رد")),
+        widget=forms.Select(attrs={"class": INPUT_CLASS}),
+    )
+    note = forms.CharField(
+        label="توضیح ناظر",
+        required=False,
+        widget=forms.Textarea(attrs={"class": INPUT_CLASS, "rows": 3}),
+    )
+
+
+class ReferralForm(forms.Form):
+    queue = forms.ChoiceField(
+        label="ارجاع به", choices=TicketQueue.choices, widget=forms.Select(attrs={"class": INPUT_CLASS})
+    )
+    assignee = forms.ModelChoiceField(
+        label="کاربر مشخص",
+        queryset=get_user_model().objects.none(),
+        required=False,
+        widget=forms.Select(attrs={"class": INPUT_CLASS}),
+    )
+    note = forms.CharField(
+        label="علت ارجاع",
+        required=False,
+        widget=forms.Textarea(attrs={"class": INPUT_CLASS, "rows": 3}),
+    )
+
+    def __init__(self, *args, actor=None, ticket=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        User = get_user_model()
+        roles = [UserRole.CONSULTANT, UserRole.PROVINCE_TRUSTEE, UserRole.CONTENT_MODERATOR, UserRole.ADMIN]
+        self.fields["assignee"].queryset = User.objects.filter(
+            Q(role__in=roles) | Q(is_superuser=True), is_active=True
+        ).distinct()
+        if actor and actor.role == UserRole.CONSULTANT:
+            self.fields["queue"].choices = [(TicketQueue.TRUSTEE, "معتمد استان")]
+
+    def clean(self):
+        cleaned = super().clean()
+        queue = cleaned.get("queue")
+        assignee = cleaned.get("assignee")
+        expected_roles = {
+            TicketQueue.CONSULTANT: UserRole.CONSULTANT,
+            TicketQueue.TRUSTEE: UserRole.PROVINCE_TRUSTEE,
+            TicketQueue.MODERATOR: UserRole.CONTENT_MODERATOR,
+            TicketQueue.ADMIN: UserRole.ADMIN,
+        }
+        if assignee and not (
+            queue == TicketQueue.ADMIN and assignee.is_superuser
+        ) and assignee.role != expected_roles.get(queue):
+            self.add_error("assignee", "نقش کاربر انتخاب‌شده با مقصد ارجاع سازگار نیست.")
+        return cleaned
+
+
+class TicketEditForm(forms.ModelForm):
+    class Meta:
+        model = Ticket
+        fields = ["ticket_type", "subject", "status"]
+        labels = {"ticket_type": "موضوع", "subject": "درس", "status": "وضعیت"}
+        widgets = {
+            "ticket_type": forms.Select(attrs={"class": INPUT_CLASS}),
+            "subject": forms.Select(attrs={"class": INPUT_CLASS}),
+            "status": forms.Select(attrs={"class": INPUT_CLASS}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("ticket_type") == TicketType.LESSON and not cleaned.get("subject"):
+            self.add_error("subject", "برای موضوع درسی، انتخاب درس الزامی است.")
+        if cleaned.get("ticket_type") != TicketType.LESSON:
+            cleaned["subject"] = None
+        return cleaned

@@ -1,0 +1,258 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ورود | سفینه</title>
+
+    <script src="{% static 'tailwind/tailwind.js' %}"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        vazir: ['Aria', 'Tahoma', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: '#172554',
+                    },
+                    boxShadow: {
+                        auth: '0 25px 80px rgba(15, 23, 42, .14)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="{% static 'font/font.css' %}">
+    <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+
+    <style>
+        body {
+            font-family: 'Aria', Tahoma, sans-serif;
+        }
+
+        .auth-background {
+            background: radial-gradient(
+                    circle at 10% 20%,
+                    rgba(96, 165, 250, .28),
+                    transparent 28%
+            ),
+            radial-gradient(
+                    circle at 90% 80%,
+                    rgba(129, 140, 248, .28),
+                    transparent 30%
+            ),
+            linear-gradient(135deg, #eff6ff 0%, #f8fafc 48%, #eef2ff 100%);
+        }
+
+        .brand-background {
+            background: radial-gradient(circle at 20% 15%, rgba(255, 255, 255, .18) 0 2px, transparent 3px),
+            radial-gradient(circle at 80% 75%, rgba(255, 255, 255, .12) 0 2px, transparent 3px),
+            linear-gradient(135deg, #172554 0%, #1d4ed8 100%);
+            background-size: 28px 28px, 34px 34px, auto;
+        }
+    </style>
+</head>
+
+<body class="auth-background min-h-screen">
+
+<main class="flex min-h-screen items-center justify-center px-4 py-8">
+
+    <div class="grid w-full max-w-5xl overflow-hidden rounded-[2rem] bg-white shadow-auth lg:grid-cols-2">
+
+        <!-- معرفی سامانه -->
+        <section
+                class="brand-background relative hidden min-h-[620px] overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between">
+
+            <div class="absolute -left-20 -top-20 h-64 w-64 rounded-full border-[30px] border-white/10"></div>
+            <div class="absolute -bottom-24 -right-16 h-72 w-72 rounded-full border-[35px] border-white/10"></div>
+
+            <div class="relative z-10">
+                <div class="mb-8 flex items-center gap-3">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
+                        <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                    </div>
+
+                    <div>
+                        <h1 class="text-2xl font-black">سفینه</h1>
+                        <p class="mt-1 text-sm text-blue-100">
+                            سامانه مشاوره تحصیلی
+                        </p>
+                    </div>
+                </div>
+
+                <span class="rounded-full bg-white/10 px-4 py-2 text-xs text-blue-100">
+                    مسیر موفقیت از یک تصمیم درست شروع می‌شود
+                </span>
+
+                <h2 class="mt-8 max-w-md text-4xl font-black leading-[1.5]">
+                    همراه مطمئن تو در مسیر یادگیری و پیشرفت
+                </h2>
+
+                <p class="mt-5 max-w-md text-sm leading-8 text-blue-100">
+                    در سامانه سفینه می‌توانی با مشاوران و پشتیبانان در ارتباط باشی،
+                    تیکت ثبت کنی و به محتوای آموزشی متناسب با شرایط خودت دسترسی داشته باشی.
+                </p>
+            </div>
+
+            <div class="relative z-10 grid grid-cols-3 gap-3">
+                <div class="rounded-2xl bg-white/10 p-4 backdrop-blur">
+                    <i class="fa-solid fa-comments text-xl text-blue-200"></i>
+                    <p class="mt-3 text-xs text-blue-100">مشاوره آنلاین</p>
+                </div>
+
+                <div class="rounded-2xl bg-white/10 p-4 backdrop-blur">
+                    <i class="fa-solid fa-book-open text-xl text-blue-200"></i>
+                    <p class="mt-3 text-xs text-blue-100">دوره‌های آموزشی</p>
+                </div>
+
+                <div class="rounded-2xl bg-white/10 p-4 backdrop-blur">
+                    <i class="fa-solid fa-headset text-xl text-blue-200"></i>
+                    <p class="mt-3 text-xs text-blue-100">پشتیبانی تخصصی</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- فرم ورود -->
+        <section class="flex min-h-[620px] items-center justify-center p-6 sm:p-10">
+
+            <div class="w-full max-w-md">
+
+                <div class="mb-8 text-center lg:text-right">
+                    <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 lg:mx-0">
+                        <i class="fa-solid fa-right-to-bracket text-2xl"></i>
+                    </div>
+
+                    <h2 class="text-2xl font-black text-slate-800">
+                        ورود به حساب کاربری
+                    </h2>
+
+                    <p class="mt-3 text-sm leading-7 text-slate-400">
+                        برای ادامه، اطلاعات حساب کاربری خود را وارد کنید.
+                    </p>
+                </div>
+
+                {% if form.non_field_errors %}
+                    <div class="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm leading-7 text-red-600">
+                        <i class="fa-solid fa-circle-exclamation ml-2"></i>
+                        نام کاربری یا رمز عبور صحیح نیست.
+                    </div>
+                {% endif %}
+
+                <form method="post" class="space-y-5" novalidate>
+                    {% csrf_token %}
+
+                    <div>
+                        <label
+                                for="{{ form.username.id_for_label }}"
+                                class="mb-2 block text-sm font-bold text-slate-700">
+                            نام کاربری
+                        </label>
+
+                        {{ form.username }}
+
+                        {% for error in form.username.errors %}
+                            <p class="mt-2 text-xs text-red-500">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div>
+                        <div class="mb-2 flex items-center justify-between">
+                            <label
+                                    for="{{ form.password.id_for_label }}"
+                                    class="block text-sm font-bold text-slate-700">
+                                رمز عبور
+                            </label>
+
+                            <a href="{% url 'auth_module:forgot-password' %}"
+                               class="text-xs font-bold text-blue-600 transition hover:text-blue-800">
+                                فراموشی رمز عبور؟
+                            </a>
+
+                        </div>
+
+                        <div class="relative">
+                            {{ form.password }}
+
+                            <button
+                                    type="button"
+                                    id="toggle-password"
+                                    class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-blue-600">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+
+                        {% for error in form.password.errors %}
+                            <p class="mt-2 text-xs text-red-500">
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input
+                                id="remember-me"
+                                type="checkbox"
+                                class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+
+                        <label for="remember-me" class="text-xs text-slate-500">
+                            مرا به خاطر بسپار
+                        </label>
+                    </div>
+
+                    <button
+                            type="submit"
+                            class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30">
+                        <span>ورود به سامانه</span>
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                </form>
+
+                <div class="mt-8 border-t border-slate-100 pt-6 text-center">
+                    <p class="text-xs leading-6 text-slate-400">
+                        در صورت بروز مشکل در ورود، با پشتیبانی سامانه تماس بگیرید.
+                    </p>
+
+                    <a href=""
+                       class="mt-3 inline-flex items-center gap-2 text-xs font-bold text-blue-600 hover:text-blue-800">
+                        <i class="fa-solid fa-headset"></i>
+                        ارتباط با پشتیبانی
+                    </a>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
+
+        togglePassword?.addEventListener('click', function () {
+            const icon = this.querySelector('i');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

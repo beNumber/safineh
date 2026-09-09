@@ -1,0 +1,798 @@
+{% load static %}
+{% load static shamsi %}
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>
+        {% block title %}
+            سامانه مشاوره تحصیلی
+        {% endblock %}
+    </title>
+
+    <meta name="theme-color" content="#172554">
+    <meta name="description" content="سامانه مشاوره و پشتیبانی تحصیلی">
+
+    <!-- Tailwind CSS -->
+    <script src="{% static 'tailwind/tailwind.js' %}"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        vazir: ['Aria', 'Tahoma', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        navy: '#172554',
+                        surface: '#f8fafc',
+                    },
+                    boxShadow: {
+                        soft: '0 10px 35px rgba(15, 23, 42, 0.07)',
+                        card: '0 4px 20px rgba(15, 23, 42, 0.06)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Persian Font -->
+    <link rel="stylesheet" href="{% static 'font/font.css' %}">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="{% static 'fontawesome/css/all.min.css' %}">
+
+    <!-- AOS -->
+    <link rel="stylesheet" href="{% static 'aos/aos.css' %}">
+    <script src="{% static 'aos/aos.js' %}"></script>
+
+    <!-- jQuery -->
+    <script src="{% static 'jquery/min.js' %}"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --primary-color: #2563eb;
+            --navy-color: #172554;
+        }
+
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        body {
+            font-family: 'Aria', Tahoma, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .app-sidebar {
+            width: var(--sidebar-width);
+            transition: transform .3s ease, box-shadow .3s ease;
+        }
+
+        .main-wrapper {
+            margin-right: var(--sidebar-width);
+        }
+
+        .sidebar-link {
+            position: relative;
+            min-height: 46px;
+            transition: all .2s ease;
+        }
+
+        .sidebar-link:hover {
+            transform: translateX(-3px);
+        }
+
+        .sidebar-link.active {
+            color: #1d4ed8;
+            background: linear-gradient(
+                    90deg,
+                    rgba(219, 234, 254, .95),
+                    rgba(239, 246, 255, .45)
+            );
+        }
+
+        .sidebar-link.active::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 10px;
+            bottom: 10px;
+            width: 4px;
+            border-radius: 999px 0 0 999px;
+            background: #2563eb;
+        }
+
+        .sidebar-icon {
+            width: 34px;
+            height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            transition: all .2s ease;
+        }
+
+        .sidebar-link:hover .sidebar-icon,
+        .sidebar-link.active .sidebar-icon {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .brand-pattern {
+            background: radial-gradient(circle at 15% 20%, rgba(255, 255, 255, .18) 0 2px, transparent 3px),
+            radial-gradient(circle at 80% 60%, rgba(255, 255, 255, .12) 0 2px, transparent 3px),
+            linear-gradient(135deg, #172554 0%, #1d4ed8 100%);
+            background-size: 26px 26px, 32px 32px, auto;
+        }
+
+        .mobile-overlay {
+            transition: opacity .3s ease;
+        }
+
+        .profile-menu {
+            transform-origin: top left;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+
+        .profile-menu.hidden {
+            opacity: 0;
+            transform: scale(.96);
+            pointer-events: none;
+        }
+
+        .profile-menu:not(.hidden) {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        @media (max-width: 1023px) {
+            .app-sidebar {
+                transform: translateX(100%);
+                box-shadow: none;
+            }
+
+            .app-sidebar.is-open {
+                transform: translateX(0);
+                box-shadow: -15px 0 40px rgba(15, 23, 42, .18);
+            }
+
+            .main-wrapper {
+                margin-right: 0;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="font-vazir">
+
+<div id="app">
+
+    <!-- Mobile Overlay -->
+    <div
+            id="sidebar-overlay"
+            class="mobile-overlay fixed inset-0 z-40 hidden bg-slate-950/50 backdrop-blur-sm lg:hidden">
+    </div>
+
+    <!-- Sidebar -->
+    <aside
+            id="sidebar"
+            class="app-sidebar fixed inset-y-0 right-0 z-50 flex flex-col overflow-hidden border-l border-slate-200 bg-white">
+
+        <!-- Brand -->
+        <div class="brand-pattern relative px-5 py-5 text-white">
+            <div class="flex items-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 shadow-lg backdrop-blur">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+
+                <div class="min-w-0">
+                    <h1 class="truncate text-lg font-black">
+                        راه‌دان
+                    </h1>
+                    <p class="mt-1 text-xs text-blue-100">
+                        سامانه مشاوره تحصیلی
+                    </p>
+                </div>
+
+                <button
+                        id="sidebar-close"
+                        type="button"
+                        class="mr-auto flex h-9 w-9 items-center justify-center rounded-xl text-blue-100 transition hover:bg-white/15 hover:text-white lg:hidden">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="mt-5 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs text-blue-50">
+                <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></span>
+                سامانه فعال است
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto px-4 py-5">
+
+            <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
+                منوی اصلی
+            </p>
+
+            <div class="space-y-1">
+
+                <a href=""
+                   class="sidebar-link active flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-grid-2"></i>
+                    </span>
+                    <span>داشبورد</span>
+                </a>
+
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-comments"></i>
+                    </span>
+                    <span class="flex-1">تیکت‌های من</span>
+                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
+                        ۳
+                    </span>
+                </a>
+
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-book-open-reader"></i>
+                    </span>
+                    <span>دوره‌ها و درس‌ها</span>
+                </a>
+
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-newspaper"></i>
+                    </span>
+                    <span>اخبار و اطلاعیه‌ها</span>
+                </a>
+
+                <a href=""
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400">
+                        <i class="fa-solid fa-blog"></i>
+                    </span>
+                    <span>مجله آموزشی</span>
+                </a>
+                <a href="{% url 'news_module:article_list' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-newspaper"></i>
+    </span>
+                    <span>اخبار و اطلاعیه‌ها</span>
+                </a>
+
+                <a href="{% url 'blog:post_list' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-blog"></i>
+    </span>
+                    <span>مجله آموزشی</span>
+                </a>
+
+            </div>
+
+            <!-- Counselor Menu -->
+            {% if user.is_authenticated and user.role == "CONSULTANT" %}
+                <div class="my-6 border-t border-slate-100"></div>
+
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
+                    پنل مشاور
+                </p>
+
+                <div class="space-y-1">
+                    <a href="{% url 'questions_module:question_list' %}"
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-list-check"></i>
+                        </span>
+                        <span>وضعیت سؤال‌های من</span>
+                    </a>
+
+                    <a href="{% url 'courses_module:course_create' %}"
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-plus"></i></span>
+                        <span>ساخت دوره جدید</span>
+                    </a>
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-inbox"></i>
+                        </span>
+                        <span>تیکت‌های ارجاع‌شده</span>
+                    </a>
+
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                        </span>
+                        <span>درس‌های من</span>
+                    </a>
+
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-clock"></i>
+                        </span>
+                        <span>برنامه کاری</span>
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if user.is_authenticated and user.role == 'PROVINCE_TRUSTEE' %}
+                <div class="my-6 border-t border-slate-100"></div>
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">دوره‌های من</p>
+                <div class="rounded-2xl bg-amber-50/60 p-2">
+                    <a href="{% url 'courses_module:my_courses' %}" class="sidebar-link flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold {% if request.path == '/courses/my/' %}bg-white text-amber-700 shadow-sm{% else %}text-slate-700{% endif %}">
+                        <span class="flex items-center gap-3"><span class="sidebar-icon text-amber-500"><i class="fa-solid fa-shield-check"></i></span><span>دوره‌های تأییدنشده</span></span>
+                        <i class="fa-solid fa-chevron-left text-[10px] text-amber-500"></i>
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if user.is_authenticated and user.role == 'ADMIN' %}
+                <div class="my-6 border-t border-slate-100"></div>
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">مدیریت دوره‌ها</p>
+                <a href="{% url 'courses_module:course_list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-lock"></i></span>
+                    <span>بستن یا حذف دوره‌ها</span>
+                </a>
+            {% endif %}
+            {% if user.is_authenticated and user.is_superuser and user.role != 'ADMIN' %}
+                <div class="my-6 border-t border-slate-100"></div>
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">مدیریت دوره‌ها</p>
+                <a href="{% url 'courses_module:course_list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-lock"></i></span><span>بستن یا حذف دوره‌ها</span>
+                </a>
+            {% endif %}
+
+            <!-- Support Menu -->
+            {% if user.is_authenticated and user.user_type == "support" %}
+                <div class="my-6 border-t border-slate-100"></div>
+
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
+                    پنل پشتیبانی
+                </p>
+
+                <div class="space-y-1">
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-headset"></i>
+                        </span>
+                        <span>صف تیکت‌ها</span>
+                    </a>
+
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-users"></i>
+                        </span>
+                        <span>دانش‌آموزان</span>
+                    </a>
+
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </span>
+                        <span>گزارش عملکرد</span>
+                    </a>
+                </div>
+            {% endif %}
+
+            <!-- Management Menu -->
+            {% if user.is_authenticated and user.is_staff %}
+                <div class="my-6 border-t border-slate-100"></div>
+
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
+                    مدیریت سامانه
+                </p>
+
+                <div class="space-y-1">
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-user-gear"></i>
+                        </span>
+                        <span>مدیریت کاربران</span>
+                    </a>
+
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-file-import"></i>
+                        </span>
+                        <span>ورود دانش‌آموزان</span>
+                    </a>
+
+                    <a href=""
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+    <span class="sidebar-icon text-slate-400">
+        <i class="fa-solid fa-sliders"></i>
+    </span>
+                        <span>تنظیمات سامانه</span>
+                    </a>
+
+                </div>
+            {% endif %}
+
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="border-t border-slate-100 p-4">
+            <a href="{% url 'auth_module:logout' %}"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-500 transition hover:bg-red-50 hover:text-red-600">
+                <span class="sidebar-icon text-slate-400">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </span>
+                <span>خروج از حساب</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Area -->
+    <div class="main-wrapper min-h-screen">
+
+        <!-- Topbar -->
+        <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+            <div class="flex h-[76px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+
+                <!-- Right Side -->
+                <div class="flex min-w-0 items-center gap-3">
+
+                    <button
+                            id="sidebar-toggle"
+                            type="button"
+                            class="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 lg:hidden">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+
+                    <div class="min-w-0">
+                        <p class="hidden text-xs font-medium text-slate-400 sm:block">
+                            خوش آمدید به پنل کاربری
+                        </p>
+
+                        <h2 class="truncate text-base font-black text-slate-800 sm:text-xl">
+                            {% block page_title %}
+                                داشبورد
+                            {% endblock %}
+                        </h2>
+                    </div>
+                </div>
+
+                <!-- Left Side -->
+                <div class="flex items-center gap-2 sm:gap-4">
+
+                    <!-- Search -->
+                    <div class="hidden items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:flex">
+                        <i class="fa-solid fa-magnifying-glass text-sm text-slate-400"></i>
+                        <input
+                                type="text"
+                                placeholder="جستجو..."
+                                class="mr-2 w-32 border-0 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48">
+                    </div>
+
+                    <!-- Date -->
+                    <div class="hidden items-center gap-2 text-xs font-medium text-slate-400 xl:flex">
+                        <i class="fa-regular fa-calendar"></i>
+                        <span>{% shamsi_now "%Y/%m/%d" %}</span>
+                    </div>
+
+                    <!-- Notifications -->
+                    <button
+                            type="button"
+                            class="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        <span class="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500"></span>
+                    </button>
+
+                    <!-- Profile -->
+                    <div class="relative">
+                        <button
+                                id="profile-toggle"
+                                type="button"
+                                class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 transition hover:border-blue-200 hover:bg-blue-50">
+
+                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+                                <i class="fa-solid fa-user text-sm"></i>
+                            </div>
+
+                            <div class="hidden text-right sm:block">
+                                <p class="max-w-[130px] truncate text-xs font-bold text-slate-700">
+                                    {% if user.is_authenticated %}
+                                        {{ user.get_full_name|default:user.username }}
+                                    {% else %}
+                                        کاربر سامانه
+                                    {% endif %}
+                                </p>
+
+                                <p class="mt-0.5 text-[10px] text-slate-400">
+                                    حساب کاربری
+                                </p>
+                            </div>
+
+                            <i class="fa-solid fa-chevron-down ml-1 hidden text-[10px] text-slate-400 sm:block"></i>
+                        </button>
+
+                        <!-- Profile Dropdown -->
+                        <div
+                                id="profile-menu"
+                                class="profile-menu hidden absolute left-0 top-14 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-soft">
+
+                            <div class="border-b border-slate-100 px-3 py-3">
+                                <p class="truncate text-sm font-bold text-slate-800">
+                                    {% if user.is_authenticated %}
+                                        {{ user.get_full_name|default:user.username }}
+                                    {% else %}
+                                        کاربر سامانه
+                                    {% endif %}
+                                </p>
+                                <p class="mt-1 truncate text-xs text-slate-400">
+                                    {% if user.is_authenticated %}
+                                        {{ user.email|default:"ایمیل ثبت نشده" }}
+                                    {% endif %}
+                                </p>
+                            </div>
+
+                            <a href=""
+                               class="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition hover:bg-blue-50 hover:text-blue-600">
+                                <i class="fa-regular fa-user w-4"></i>
+                                پروفایل من
+                            </a>
+
+                            <a href=""
+                               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition hover:bg-blue-50 hover:text-blue-600">
+                                <i class="fa-solid fa-gear w-4"></i>
+                                تنظیمات حساب
+                            </a>
+
+                            <div class="my-1 border-t border-slate-100"></div>
+
+                            <a href=""
+                               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-500 transition hover:bg-red-50">
+                                <i class="fa-solid fa-right-from-bracket w-4"></i>
+                                خروج
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </header>
+
+        <!-- Breadcrumb / Page Header -->
+        <div class="border-b border-slate-100 bg-white">
+            <div class="px-4 py-4 sm:px-6 lg:px-8">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+
+                    <div class="flex items-center gap-2 text-xs text-slate-400">
+                        <a href="" class="transition hover:text-blue-600">
+                            خانه
+                        </a>
+
+                        <i class="fa-solid fa-chevron-left text-[9px]"></i>
+
+                        <span class="font-semibold text-slate-600">
+                            {% block breadcrumb %}
+                                داشبورد
+                            {% endblock %}
+                        </span>
+                    </div>
+
+                    {% block page_actions %}
+                    {% endblock %}
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+            <div class="fixed left-4 top-24 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3">
+                {% for message in messages %}
+                    <div class="message-alert flex items-start gap-3 rounded-2xl border bg-white p-4 shadow-soft
+                        {% if message.tags == 'success' %}
+                            border-emerald-100
+                        {% elif message.tags == 'error' %}
+                            border-red-100
+                        {% elif message.tags == 'warning' %}
+                            border-amber-100
+                        {% else %}
+                            border-blue-100
+                        {% endif %}">
+
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl
+                            {% if message.tags == 'success' %}
+                                bg-emerald-100 text-emerald-600
+                            {% elif message.tags == 'error' %}
+                                bg-red-100 text-red-600
+                            {% elif message.tags == 'warning' %}
+                                bg-amber-100 text-amber-600
+                            {% else %}
+                                bg-blue-100 text-blue-600
+                            {% endif %}">
+                            {% if message.tags == 'success' %}
+                                <i class="fa-solid fa-check"></i>
+                            {% elif message.tags == 'error' %}
+                                <i class="fa-solid fa-xmark"></i>
+                            {% elif message.tags == 'warning' %}
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            {% else %}
+                                <i class="fa-solid fa-info"></i>
+                            {% endif %}
+                        </div>
+
+                        <p class="flex-1 pt-1 text-xs leading-6 text-slate-600">
+                            {{ message }}
+                        </p>
+
+                        <button type="button" class="message-close text-slate-300 hover:text-slate-600">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Main Content -->
+        <main class="min-h-[calc(100vh-132px)] px-4 py-6 sm:px-6 lg:px-8">
+            {% block content %}
+            {% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="border-t border-slate-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
+            <div class="flex flex-col items-center justify-between gap-2 text-xs text-slate-400 sm:flex-row">
+                <p>
+                    © {% now "Y" %} سامانه مشاوره تحصیلی
+                </p>
+
+                <p>
+                    طراحی و توسعه با دقت برای مسیر موفقیت دانش‌آموزان
+                </p>
+            </div>
+        </footer>
+
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarClose = document.getElementById('sidebar-close');
+
+        const profileToggle = document.getElementById('profile-toggle');
+        const profileMenu = document.getElementById('profile-menu');
+
+        function openSidebar() {
+            sidebar.classList.add('is-open');
+            overlay.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('is-open');
+            overlay.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        sidebarToggle?.addEventListener('click', openSidebar);
+        sidebarClose?.addEventListener('click', closeSidebar);
+        overlay?.addEventListener('click', closeSidebar);
+
+        document.querySelectorAll('.sidebar-link').forEach(function (link) {
+            link.addEventListener('click', function () {
+                if (window.innerWidth < 1024) {
+                    closeSidebar();
+                }
+            });
+        });
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth >= 1024) {
+                closeSidebar();
+            }
+        });
+
+        profileToggle?.addEventListener('click', function (event) {
+            event.stopPropagation();
+            profileMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', function (event) {
+            if (
+                profileMenu &&
+                !profileMenu.contains(event.target) &&
+                !profileToggle.contains(event.target)
+            ) {
+                profileMenu.classList.add('hidden');
+            }
+        });
+
+        document.querySelectorAll('.message-close').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const alert = button.closest('.message-alert');
+                alert?.remove();
+            });
+        });
+
+        setTimeout(function () {
+            document.querySelectorAll('.message-alert').forEach(function (alert) {
+                alert.style.transition = 'opacity .3s ease, transform .3s ease';
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-8px)';
+
+                setTimeout(function () {
+                    alert.remove();
+                }, 300);
+            });
+        }, 5000);
+
+        if (typeof AOS !== 'undefined') {
+            AOS.init({
+                duration: 650,
+                easing: 'ease-out-cubic',
+                once: true,
+                offset: 40
+            });
+        }
+    });
+</script>
+
+<script src="{% static 'js/persian-utils.js' %}"></script>
+<script src="{% static 'js/app.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const currentPath = window.location.pathname; // مثلاً /courses/
+        const links = document.querySelectorAll('.sidebar-link');
+
+        links.forEach(link => {
+            const href = new URL(link.href, window.location.origin).pathname;
+            // تطبیق دقیق: فقط اگه مسیر فعلی با مسیر لینک شروع بشه
+            if (href !== '/' && currentPath.startsWith(href)) {
+                links.forEach(l => l.classList.remove('sidebar-link-active'));
+                link.classList.add('sidebar-link-active');
+            }
+        });
+    });
+</script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>
