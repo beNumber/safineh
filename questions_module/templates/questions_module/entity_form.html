@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}{{ entity_title }}{% endblock %}{% block page_title %}{{ entity_title }}{% endblock %}{% block breadcrumb %}مدیریت بانک سؤال{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/questions.css' %}">{% endblock %}
+{% block content %}<div class="qb-shell"><form method="post" class="qb-card qb-form p-6 sm:p-8">{% csrf_token %}<h1 class="text-xl font-black text-slate-800">{{ entity_title }}</h1>{% if entity_help %}<p class="mb-6 mt-2 text-sm leading-7 text-slate-500">{{ entity_help }}</p>{% endif %}{{ form.as_p }}<div class="mt-7 flex gap-3"><button class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white">ذخیره</button><a href="{% url 'questions_module:choose_mode' %}" class="rounded-xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600">بازگشت</a></div></form></div>{% endblock %}

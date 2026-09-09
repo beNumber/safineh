@@ -1,0 +1,13 @@
+<form method="post" action="{% url 'questions_module:choose_mode' %}">
+  {% csrf_token %}
+  <h3>انتخاب حالت</h3>
+  <label>
+    <input type="radio" name="mode" value="practice" {% if selected_mode != 'exam' %}checked{% endif %}> حالت تمرین
+  </label>
+  <br>
+  <label>
+    <input type="radio" name="mode" value="exam" {% if selected_mode == 'exam' %}checked{% endif %}> حالت آزمون
+  </label>
+  <br><br>
+  <button type="submit">مرحله بعد: انتخاب دروس</button>
+</form>
