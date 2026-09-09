@@ -302,7 +302,7 @@
             </div>
 
             <!-- Counselor Menu -->
-            {% if user.is_authenticated and user.user_type == "counselor" %}
+            {% if user.is_authenticated and user.role == "CONSULTANT" %}
                 <div class="my-6 border-t border-slate-100"></div>
 
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
@@ -310,6 +310,14 @@
                 </p>
 
                 <div class="space-y-1">
+                    <a href="{% url 'questions_module:question_list' %}"
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-slate-400">
+                            <i class="fa-solid fa-list-check"></i>
+                        </span>
+                        <span>وضعیت سؤال‌های من</span>
+                    </a>
+
                     <a href=""
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">

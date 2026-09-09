@@ -1,5 +1,6 @@
 from datetime import timedelta
 import random
+import jdatetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -222,16 +223,22 @@ def _can_create_subject(user):
 
 def _can_view_question_overview(user):
     return user.is_authenticated and (
-        user.is_superuser or user.role in {UserRole.ADMIN, UserRole.CONTENT_MODERATOR}
+        user.is_superuser or user.role in {
+            UserRole.ADMIN, UserRole.CONTENT_MODERATOR, UserRole.CONSULTANT,
+        }
     )
 
 
-def _question_overview():
-    questions = Question.objects.select_related(
+def _question_overview(user=None):
+    """گزارش وضعیت سؤال‌ها؛ برای مشاور فقط سؤال‌های خودش را برمی‌گرداند."""
+    base_qs = Question.objects.all()
+    if user is not None and user.role == UserRole.CONSULTANT and not user.is_superuser:
+        base_qs = base_qs.filter(creator=user)
+    questions = base_qs.select_related(
         'creator', 'chapter__subject', 'approved_by'
     ).order_by('-created_at', '-pk')
     counts = {
-        status: Question.objects.filter(approval_status=status).count()
+        status: base_qs.filter(approval_status=status).count()
         for status, _label in Question.ApprovalStatus.choices
     }
     return {
@@ -295,6 +302,13 @@ def _persian_digits(value):
     return str(value).translate(str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹'))
 
 
+def _jalali_date_text(value, fmt='%Y/%m/%d'):
+    if not value:
+        return ''
+    value = timezone.localtime(value) if timezone.is_aware(value) else value
+    return _persian_digits(jdatetime.datetime.fromgregorian(datetime=value).strftime(fmt))
+
+
 def _exam_progress_data(user, course_ids=None):
     """روند درصد آزمون‌های تکمیل‌شده، به ترتیب زمان انجام."""
     exams = ExamSession.objects.filter(
@@ -310,7 +324,7 @@ def _exam_progress_data(user, course_ids=None):
             "label": f"آزمون {_persian_digits(exam.pk)}",
             "percent": exam.percent,
             "date": _persian_digits(
-                timezone.localtime(exam.finished_at or exam.started_at).strftime('%Y/%m/%d')
+                _jalali_date_text(exam.finished_at or exam.started_at)
             ),
             "correct": exam.correct_count,
             "wrong": exam.wrong_count,
@@ -410,6 +424,13 @@ def question_edit(request, pk):
         messages.error(request, "شما اجازه ویرایش سؤال ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
     question = get_object_or_404(Question, pk=pk)
+    if (
+        request.user.role == UserRole.CONSULTANT
+        and (question.creator_id != request.user.pk
+             or question.approval_status != Question.ApprovalStatus.PENDING)
+    ):
+        messages.error(request, "فقط سؤال‌های خودتان که هنوز بررسی نشده‌اند قابل ویرایش هستند.")
+        return redirect(f"{APP_NS}:choose_mode")
     if not question.chapter_id or not _can_manage_subject(request.user, question.chapter.subject_id):
         messages.error(request, "برای ویرایش سؤال این درس دسترسی ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
@@ -428,6 +449,28 @@ def question_edit(request, pk):
         messages.success(request, "تغییرات سؤال ذخیره شد.")
         return redirect(f"{APP_NS}:question_edit", pk=question.pk)
     return render(request, "questions_module/question_form.html", {"form": form, "formset": formset, "editing": True, "question": question})
+
+
+@login_required
+@require_POST
+def question_delete(request, pk):
+    question = get_object_or_404(Question, pk=pk)
+    if request.user.role == UserRole.CONSULTANT:
+        allowed = (
+            question.creator_id == request.user.pk
+            and question.approval_status == Question.ApprovalStatus.PENDING
+        )
+    else:
+        allowed = _can_manage_questions(request.user) and (
+            not question.chapter_id
+            or _can_manage_subject(request.user, question.chapter.subject_id)
+        )
+    if not allowed:
+        messages.error(request, "این سؤال قابل حذف نیست یا دسترسی لازم را ندارید.")
+        return redirect(f"{APP_NS}:choose_mode")
+    question.delete()
+    messages.success(request, "سؤال در انتظار تأیید با موفقیت حذف شد.")
+    return redirect(f"{APP_NS}:choose_mode")
 
 
 @login_required
@@ -533,7 +576,7 @@ def choose_mode(request):
             "can_create_subject": _can_create_subject(request.user),
             "can_review_questions": request.user.is_superuser or request.user.role in {UserRole.ADMIN, UserRole.PROVINCE_TRUSTEE},
             "can_view_question_overview": _can_view_question_overview(request.user),
-            "question_overview": _question_overview() if _can_view_question_overview(request.user) else None,
+            "question_overview": _question_overview(request.user) if _can_view_question_overview(request.user) else None,
             "performance": _performance_data(request.user),
             "exam_progress": _exam_progress_data(request.user),
         },
