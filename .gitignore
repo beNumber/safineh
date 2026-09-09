@@ -20,3 +20,6 @@ bunfig.toml
 .yarnrc
 .yarnrc.yml
 media/
+__pycache__/
+*.py[cod]
+*$py.class
