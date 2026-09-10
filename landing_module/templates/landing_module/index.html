@@ -1,436 +1,419 @@
-{% extends 'landing_module/base.html' %} {% block content %}
+{% extends 'landing_module/base.html' %}
 
-<!-- ۱. بخش معرفی اصلی (Hero Section) -->
-<
-<section class="relative overflow-hidden bg-white">
-  <div
-    class="page-container grid min-h-[570px] items-center gap-12 py-16 lg:grid-cols-2 lg:py-20"
-  >
-    <!-- متن اصلی -->
-    <div class="order-1 text-right">
-      <span
-        class="mb-6 inline-flex items-center rounded-full border border-school-blue/40 bg-white px-5 py-2 text-sm font-bold text-school-navy"
-      >
-        سامانه رسمی آموزشی و پژوهشی مدرسه
-      </span>
+{% block extra_css %}
+    <style>
+        .landing-hero {
+            isolation: isolate;
+            background: radial-gradient(circle at 12% 18%, rgba(47, 143, 173, 0.18), transparent 26rem),
+            radial-gradient(circle at 88% 82%, rgba(214, 168, 79, 0.18), transparent 24rem),
+            linear-gradient(135deg, #f8fbfd 0%, #fff 48%, #f7f8f5 100%);
+        }
 
-      <h1
-        class="mt-5 text-4xl font-bold leading-[1.8] text-school-navy sm:text-5xl lg:text-[3.25rem]"
-      >
-        همراه هوشمند دانش‌آموزان
-        <br />
-        در مسیر پیشرفت
-      </h1>
+        .landing-grid-pattern {
+            background-image: linear-gradient(rgba(18, 48, 74, .045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(18, 48, 74, .045) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, #000, transparent 90%);
+        }
 
-      <p class="mt-6 max-w-2xl text-base leading-9 text-slate-600 sm:text-lg">
-        دسترسی آسان دانش‌آموزان پایه‌های پنجم دبستان تا دوازدهم متوسطه به محتوای
-        آموزشی، جزوات درسی، ویدیوها، اخبار مدرسه و اطلاعیه‌های رسمی.
-      </p>
+        .hero-float {
+            animation: hero-float 5s ease-in-out infinite;
+        }
 
-      <!-- تنها دکمه قابل دسترسی -->
-      <div class="mt-8">
-        <a
-          href="/dashboard/"
-          class="focus-ring inline-flex min-h-12 items-center gap-3 rounded-xl bg-school-navy px-7 py-3 text-base font-bold text-white shadow-card transition hover:bg-school-blue"
-        >
-          <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-          ورود به سامانه
-        </a>
-      </div>
+        .hero-float-delay {
+            animation: hero-float 5s ease-in-out 1.2s infinite;
+        }
 
-      <!-- آمار نمایشی -->
-      <div
-        class="mt-10 grid grid-cols-3 divide-x divide-slate-200 divide-x-reverse border-t border-slate-200 pt-7"
-      >
-        <div class="px-3 text-center first:pr-0">
-          <strong class="block text-2xl font-bold text-school-navy"> ۸ </strong>
-          <span class="mt-2 block text-xs leading-6 text-slate-500 sm:text-sm">
-            پایه تحت پوشش
-          </span>
-        </div>
+        @keyframes hero-float {
+            50% {
+                transform: translateY(-10px);
+            }
+        }
 
-        <div class="px-3 text-center">
-          <strong class="block text-2xl font-bold text-school-navy"> ۳ </strong>
-          <span class="mt-2 block text-xs leading-6 text-slate-500 sm:text-sm">
-            رشته تخصصی متوسطه
-          </span>
-        </div>
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translate3d(0, 44px, 0) scale(.985);
+            transition: opacity 700ms cubic-bezier(.22, 1, .36, 1),
+            transform 700ms cubic-bezier(.22, 1, .36, 1);
+            transition-delay: var(--reveal-delay, 0ms);
+            will-change: opacity, transform;
+        }
 
-        <div class="px-3 text-center last:pl-0">
-          <strong class="block text-2xl font-bold text-school-navy">
-            ۱۰۰٪
-          </strong>
-          <span class="mt-2 block text-xs leading-6 text-slate-500 sm:text-sm">
-            دسترسی محتوای درسی
-          </span>
-        </div>
-      </div>
-    </div>
+        .reveal-on-scroll.is-visible {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+        }
 
-    <!-- کارت معرفی امکانات -->
-    <div class="order-2">
-      <div
-        class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-soft sm:p-8"
-      >
-        <div class="grid gap-5">
-          <div class="flex items-center gap-4 rounded-2xl bg-slate-50 p-5">
-            <span
-              class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-xl text-white shadow-card"
-            >
-              <i class="fa-solid fa-book-open" aria-hidden="true"></i>
-            </span>
+        .landing-card {
+            transition: transform 300ms ease, box-shadow 300ms ease, border-color 300ms ease;
+        }
 
-            <div>
-              <h2 class="font-bold text-school-navy">بانک جامع محتوای درسی</h2>
-              <p class="mt-1 text-sm leading-6 text-slate-500">
-                جزوات، نمونه سؤالات و ویدیوهای آموزشی
-              </p>
-            </div>
-          </div>
+        .landing-card:hover {
+            transform: translateY(-7px);
+            border-color: rgba(47, 143, 173, .34);
+            box-shadow: 0 22px 55px rgba(18, 48, 74, .12);
+        }
 
-          <div class="flex items-center gap-4 rounded-2xl bg-slate-50 p-5">
-            <span
-              class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-xl text-white shadow-card"
-            >
-              <i class="fa-solid fa-pen-ruler" aria-hidden="true"></i>
-            </span>
+        .hero-shine::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, .4) 48%, transparent 60%);
+            transform: translateX(110%);
+            animation: hero-shine 6s ease-in-out infinite;
+            pointer-events: none;
+        }
 
-            <div>
-              <h2 class="font-bold text-school-navy">
-                تکالیف و آزمون‌های منظم
-              </h2>
-              <p class="mt-1 text-sm leading-6 text-slate-500">
-                سنجش مستمر و گزارش پیشرفت دانش‌آموز
-              </p>
-            </div>
-          </div>
+        @keyframes hero-shine {
+            0%, 60% {
+                transform: translateX(110%);
+            }
+            82%, 100% {
+                transform: translateX(-110%);
+            }
+        }
 
-          <div class="flex items-center gap-4 rounded-2xl bg-slate-50 p-5">
-            <span
-              class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-school-blue text-xl text-white shadow-card"
-            >
-              <i class="fa-solid fa-bullhorn" aria-hidden="true"></i>
-            </span>
+        @media (prefers-reduced-motion: reduce) {
+            .reveal-on-scroll {
+                opacity: 1;
+                transform: none;
+                transition: none;
+            }
 
-            <div>
-              <h2 class="font-bold text-school-navy">
-                اطلاع‌رسانی سریع رویدادها
-              </h2>
-              <p class="mt-1 text-sm leading-6 text-slate-500">
-                تقویم آزمون‌ها و جلسات کلاسی مدرسه
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+            .hero-float, .hero-float-delay, .hero-shine::after {
+                animation: none;
+            }
+        }
+    </style>
+{% endblock %}
 
-<!-- ۲. بخش پایه‌های تحصیلی (از پنجم دبستان تا دوازدهم به همراه ۳ رشته) -->
-<section id="grades" class="bg-school-cream py-20">
-  <div class="page-container">
-    <div class="mb-10 text-center">
-      <span class="text-sm font-bold text-school-gold"> مسیرهای تحصیلی </span>
+{% block content %}
+    <section class="landing-hero relative overflow-hidden border-b border-slate-200/70">
+        <div class="landing-grid-pattern pointer-events-none absolute inset-0 -z-10" aria-hidden="true"></div>
+        <div class="pointer-events-none absolute -right-24 top-16 -z-10 h-72 w-72 rounded-full bg-school-cyan/10 blur-3xl"
+             aria-hidden="true"></div>
+        <div class="pointer-events-none absolute -left-24 bottom-0 -z-10 h-80 w-80 rounded-full bg-school-gold/10 blur-3xl"
+             aria-hidden="true"></div>
 
-      <h2 class="section-heading mt-2">پایه‌های تحصیلی تحت پوشش</h2>
-
-      <p class="section-description mx-auto mt-3 max-w-2xl">
-        سامانه آموزشی مدرسه برای دانش‌آموزان پایه پنجم دبستان تا دوازدهم متوسطه
-        طراحی شده است.
-      </p>
-    </div>
-
-    <!-- دسته‌بندی‌ها در یک ردیف -->
-    <div class="grid gap-6 md:grid-cols-3">
-      <!-- دوره دوم ابتدایی -->
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-        <div class="mb-5 flex items-center gap-3">
-          <span
-            class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600"
-          >
-            <i
-              class="fa-solid fa-child-reaching text-xl"
-              aria-hidden="true"
-            ></i>
-          </span>
-
-          <div>
-            <h3 class="font-bold text-school-navy">دوره دوم ابتدایی</h3>
-
-            <p class="mt-1 text-xs text-slate-500">پایه‌های پنجم و ششم</p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            پایه پنجم
-          </span>
-
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            پایه ششم
-          </span>
-        </div>
-      </div>
-
-      <!-- دوره اول متوسطه -->
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-        <div class="mb-5 flex items-center gap-3">
-          <span
-            class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-school-blue"
-          >
-            <i class="fa-solid fa-school-flag text-xl" aria-hidden="true"></i>
-          </span>
-
-          <div>
-            <h3 class="font-bold text-school-navy">دوره اول متوسطه</h3>
-
-            <p class="mt-1 text-xs text-slate-500">پایه‌های هفتم تا نهم</p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            پایه هفتم
-          </span>
-
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            پایه هشتم
-          </span>
-
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            پایه نهم
-          </span>
-        </div>
-      </div>
-
-      <!-- دوره دوم متوسطه -->
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-        <div class="mb-5 flex items-center gap-3">
-          <span
-            class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-school-green"
-          >
-            <i
-              class="fa-solid fa-graduation-cap text-xl"
-              aria-hidden="true"
-            ></i>
-          </span>
-
-          <div>
-            <h3 class="font-bold text-school-navy">دوره دوم متوسطه</h3>
-
-            <p class="mt-1 text-xs text-slate-500">پایه‌های دهم تا دوازدهم</p>
-          </div>
-        </div>
-
-        <div class="grid gap-2">
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            علوم تجربی
-          </span>
-
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            ریاضی و فیزیک
-          </span>
-
-          <span
-            class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600"
-          >
-            علوم انسانی
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ۳. بخش آخرین مقالات آموزشی -->
-<!-- مقالات آموزشی -->
-<section id="articles" class="bg-white py-20">
-  <div class="page-container">
-    <div
-      class="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
-    >
-      <div>
-        <span class="text-sm font-bold text-school-gold">
-          بانک دانش و پژوهش
+        <div class="page-container grid min-h-[690px] items-center gap-14 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-24">
+            <div class="reveal-on-scroll order-1 text-right">
+                <div class="mb-7 inline-flex items-center gap-3 rounded-full border border-school-blue/15 bg-white/80 px-4 py-2 text-sm font-bold text-school-navy shadow-card backdrop-blur">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-school-green opacity-50"></span>
+          <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-school-green"></span>
         </span>
-        <h2 class="section-heading mt-2">
-          تازه‌ترین مقالات آموزشی و مشاوره‌ای
-        </h2>
-      </div>
+                    سامانه یکپارچه یادگیری سفینه دانش
+                </div>
 
-      <a
-        href="/articles/"
-        class="focus-ring inline-flex items-center gap-2 text-sm font-bold text-school-blue transition hover:text-school-navy"
-      >
-        مشاهده آرشیو همه مقالات
-        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-      </a>
-    </div>
+                <h1 class="max-w-3xl text-4xl font-bold leading-[1.7] text-school-navy sm:text-5xl lg:text-[3.55rem]">
+                    هر روز، یک قدم نزدیک‌تر به
+                    <span class="relative whitespace-nowrap text-school-blue">
+          آینده‌ای روشن‌تر
+          <svg class="absolute -bottom-2 right-0 h-3 w-full text-school-gold/70" viewBox="0 0 220 12" fill="none"
+               aria-hidden="true">
+            <path d="M3 9C56 2 151 1 217 7" stroke="currentColor" stroke-width="5" stroke-linecap="round"></path>
+          </svg>
+        </span>
+                </h1>
+                <p class="mt-7 max-w-2xl text-base leading-9 text-slate-600 sm:text-lg">
+                    آموزش، تمرین، آزمون و پیگیری پیشرفت تحصیلی در یک فضای ساده و منظم؛ همراه دانش‌آموزان پایه پنجم تا
+                    دوازدهم در تمام مسیر یادگیری.
+                </p>
 
-    <div class="grid gap-6 lg:grid-cols-3">
-      {% for article in articles %}
-      <article
-        class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-card transition hover:shadow-soft"
-      >
-        <div>
-          <!-- بالای کارت: دسته‌بندی و زمان مطالعه -->
-          <div class="flex items-center justify-between gap-3">
-            <span
-              class="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-school-blue"
-            >
-              {{ article.category }}
-            </span>
+                <div class="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <a href="/dashboard/"
+                       class="focus-ring hero-shine relative inline-flex min-h-14 items-center justify-center gap-3 overflow-hidden rounded-2xl bg-school-navy px-7 py-3.5 font-bold text-white shadow-[0_16px_35px_rgba(18,48,74,.22)] transition duration-300 hover:-translate-y-1 hover:bg-school-blue">
+                        <i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i>
+                        ورود به پنل دانش‌آموزی
+                    </a>
+                    <a href="#grades"
+                       class="focus-ring inline-flex min-h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-7 py-3.5 font-bold text-school-navy shadow-card backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-school-cyan/40 hover:text-school-blue">
+                        مشاهده مسیرهای آموزشی
+                        <i class="fa-solid fa-arrow-down text-sm" aria-hidden="true"></i>
+                    </a>
+                </div>
 
-            <span
-              class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500"
-            >
-              <i
-                class="fa-regular fa-clock text-slate-400"
-                aria-hidden="true"
-              ></i>
-              <span>{{ article.read_time }}</span>
-            </span>
-          </div>
+                <div class="mt-10 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm font-medium text-slate-500">
+                    <span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle-check text-school-green"
+                                                                    aria-hidden="true"></i> دسترسی سریع به جزوه‌ها</span>
+                    <span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle-check text-school-green"
+                                                                    aria-hidden="true"></i> آزمون و تکلیف آنلاین</span>
+                    <span class="inline-flex items-center gap-2"><i class="fa-solid fa-circle-check text-school-green"
+                                                                    aria-hidden="true"></i> گزارش پیشرفت</span>
+                </div>
+            </div>
 
-          <!-- عنوان مقاله -->
-          <h3
-            class="mt-5 min-h-[58px] text-lg font-bold leading-8 text-school-navy"
-          >
-            {{ article.title }}
-          </h3>
+            <div class="reveal-on-scroll relative order-2 mx-auto w-full max-w-[560px]" style="--reveal-delay: 120ms">
+                <div class="hero-float absolute -right-3 top-10 z-20 hidden items-center gap-3 rounded-2xl border border-white/80 bg-white/95 p-3.5 shadow-soft backdrop-blur sm:flex">
+                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-school-green"><i
+                            class="fa-solid fa-chart-line"></i></span>
+                    <div><strong class="block text-sm text-school-navy">روند رو به رشد</strong><span
+                            class="text-xs text-slate-500">پیگیری هوشمند پیشرفت</span></div>
+                </div>
+                <div class="hero-float-delay absolute -left-4 bottom-16 z-20 hidden items-center gap-3 rounded-2xl border border-white/80 bg-white/95 p-3.5 shadow-soft backdrop-blur sm:flex">
+                    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600"><i
+                            class="fa-solid fa-medal"></i></span>
+                    <div><strong class="block text-sm text-school-navy">یادگیری هدفمند</strong><span
+                            class="text-xs text-slate-500">قدم‌به‌قدم تا موفقیت</span></div>
+                </div>
+
+                <div class="relative overflow-hidden rounded-[2.25rem] border border-white/90 bg-school-navy p-3 shadow-[0_30px_80px_rgba(18,48,74,.22)]">
+                    <div class="rounded-[1.8rem] bg-gradient-to-br from-[#1d5d8f] via-[#17486c] to-[#102d45] p-6 sm:p-8">
+                        <div class="flex items-center justify-between border-b border-white/10 pb-5">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-xl text-white"><i
+                                        class="fa-solid fa-graduation-cap"></i></span>
+                                <div><h2 class="font-bold text-white"></h2>
+                                    <p class="mt-1 text-xs text-blue-100/75"></p></div>
+                            </div>
+                            <span class="rounded-full bg-emerald-400/15 px-3 py-1.5 text-xs font-bold text-emerald-200">فعال</span>
+                        </div>
+                        <div class="mt-6 grid grid-cols-2 gap-3">
+                            <div class="rounded-2xl bg-white/10 p-4 backdrop-blur"><i
+                                    class="fa-solid fa-book-open text-amber-300"></i><strong
+                                    class="mt-4 block text-2xl text-white">300+</strong><span
+                                    class="mt-1 block text-xs text-blue-100/70">محتوای آموزشی</span></div>
+                            <div class="rounded-2xl bg-white/10 p-4 backdrop-blur"><i
+                                    class="fa-solid fa-list-check text-emerald-300"></i><strong
+                                    class="mt-4 block text-2xl text-white">10,000+</strong><span
+                                    class="mt-1 block text-xs text-blue-100/70">دانش آموز فعال</span></div>
+                        </div>
+                        <div class="mt-4 rounded-2xl bg-white p-5 shadow-card">
+                            <div class="flex items-center justify-between"><span
+                                    class="text-sm font-bold text-school-navy">پیشرفت هفتگی</span><span
+                                    class="text-sm font-bold text-school-green">۸۲٪</span></div>
+                            <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-full w-[82%] rounded-full bg-gradient-to-l from-school-green to-school-cyan"></div>
+                            </div>
+                            <div class="mt-5 grid grid-cols-5 items-end gap-2" aria-hidden="true">
+                                <span class="h-8 rounded-md bg-blue-100"></span><span
+                                    class="h-12 rounded-md bg-blue-200"></span><span
+                                    class="h-10 rounded-md bg-school-cyan/40"></span><span
+                                    class="h-16 rounded-md bg-school-blue/70"></span><span
+                                    class="h-20 rounded-md bg-school-green"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+    </section>
 
-        <!-- پایین کارت: نویسنده و برچسب مقاله -->
-        <div>
-          <div class="my-5 border-t border-slate-100"></div>
-
-          <div
-            class="flex items-center justify-between gap-4 text-xs font-medium text-slate-500"
-          >
-            <span class="inline-flex items-center gap-2">
-              <i
-                class="fa-regular fa-user text-slate-400"
-                aria-hidden="true"
-              ></i>
-              <span>{{ article.author }}</span>
-            </span>
-
-            <span class="font-bold text-school-blue"> مطالعه مقاله </span>
-          </div>
+    <section id="grades" class="scroll-mt-24 bg-school-cream py-20 sm:py-24">
+        <div class="page-container">
+            <div class="reveal-on-scroll mx-auto mb-12 max-w-2xl text-center">
+                <span class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-bold text-amber-700"><i
+                        class="fa-solid fa-route"></i> مسیرهای تحصیلی</span>
+                <h2 class="section-heading mt-4">آموزش متناسب با هر مقطع و هر هدف</h2>
+                <p class="section-description mt-3">از تقویت مفاهیم پایه تا آمادگی برای امتحانات نهایی و کنکور، مسیر
+                    یادگیری هر دانش‌آموز روشن و منظم است.</p>
+            </div>
+            <div class="relative mx-auto max-w-5xl">
+                <div class="absolute right-6 top-8 bottom-8 hidden w-1 rounded-full bg-gradient-to-b from-school-gold via-school-cyan to-school-green md:block"></div>
+                <div class="space-y-6">
+                    <article
+                            class="landing-card reveal-on-scroll relative rounded-3xl border border-slate-200 bg-white p-6 shadow-card md:mr-14 md:p-8">
+                        <span class="absolute -right-[3.15rem] top-8 hidden h-8 w-8 items-center justify-center rounded-full border-4 border-school-cream bg-school-gold text-xs text-white md:flex">۱</span>
+                        <div class="flex flex-col gap-5 sm:flex-row sm:items-start"><span
+                                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-xl text-amber-600"><i
+                                class="fa-solid fa-child-reaching"></i></span>
+                            <div><span class="text-xs font-bold text-amber-600">پایه پنجم و ششم</span>
+                                <h3 class="mt-1 text-xl font-bold text-school-navy">ساختن پایه‌های محکم</h3>
+                                <p class="mt-2 text-sm leading-7 text-slate-500">در این مرحله مفاهیم اصلی را عمیق یاد
+                                    می‌گیریم، مهارت حل مسئله را تقویت می‌کنیم و با مطالعه هدفمند آشنا می‌شویم.</p>
+                                <div class="mt-4 flex flex-wrap gap-2"><span
+                                        class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">مفاهیم پایه</span><span
+                                        class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">خلاقیت</span><span
+                                        class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">حل مسئله</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                    <article
+                            class="landing-card reveal-on-scroll relative rounded-3xl border border-slate-200 bg-white p-6 shadow-card md:mr-14 md:p-8"
+                            style="--reveal-delay: 100ms">
+                        <span class="absolute -right-[3.15rem] top-8 hidden h-8 w-8 items-center justify-center rounded-full border-4 border-school-cream bg-school-cyan text-xs text-white md:flex">۲</span>
+                        <div class="flex flex-col gap-5 sm:flex-row sm:items-start"><span
+                                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-100 text-xl text-school-blue"><i
+                                class="fa-solid fa-compass"></i></span>
+                            <div><span class="text-xs font-bold text-school-blue">پایه هفتم تا نهم</span>
+                                <h3 class="mt-1 text-xl font-bold text-school-navy">کشف توانایی و انتخاب مسیر</h3>
+                                <p class="mt-2 text-sm leading-7 text-slate-500">درس‌ها را مفهومی‌تر دنبال می‌کنیم، نقاط
+                                    قوت را می‌شناسیم و برای انتخاب رشته آگاهانه آماده می‌شویم.</p>
+                                <div class="mt-4 flex flex-wrap gap-2"><span
+                                        class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">تقویت علوم</span><span
+                                        class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">ریاضیات</span><span
+                                        class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">هدایت تحصیلی</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                    <article
+                            class="landing-card reveal-on-scroll relative rounded-3xl border border-slate-200 bg-white p-6 shadow-card md:mr-14 md:p-8"
+                            style="--reveal-delay: 200ms">
+                        <span class="absolute -right-[3.15rem] top-8 hidden h-8 w-8 items-center justify-center rounded-full border-4 border-school-cream bg-school-green text-xs text-white md:flex">۳</span>
+                        <div class="flex flex-col gap-5 sm:flex-row sm:items-start"><span
+                                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-xl text-school-green"><i
+                                class="fa-solid fa-route"></i></span>
+                            <div class="w-full"><span
+                                    class="text-xs font-bold text-school-green">پایه دهم تا دوازدهم</span>
+                                <h3 class="mt-1 text-xl font-bold text-school-navy">تخصص، پشتیبانی و آمادگی آینده</h3>
+                                <p class="mt-2 text-sm leading-7 text-slate-500">برای هر رشته، محتوای تخصصی،
+                                    برنامه‌ریزی، آزمون و همراهی مستمر در مسیر امتحانات نهایی و کنکور ارائه می‌شود.</p>
+                                <div class="mt-5 grid gap-3 sm:grid-cols-3">
+                                    <div class="rounded-2xl bg-emerald-50 p-4"><strong
+                                            class="block text-sm text-school-green">ریاضی و فیزیک</strong><span
+                                            class="mt-1 block text-xs leading-6 text-slate-500">تحلیل مسئله و تست‌زنی</span>
+                                    </div>
+                                    <div class="rounded-2xl bg-blue-50 p-4"><strong
+                                            class="block text-sm text-school-blue">علوم تجربی</strong><span
+                                            class="mt-1 block text-xs leading-6 text-slate-500">زیست شناسی، مفاهیم و مرور</span>
+                                    </div>
+                                    <div class="rounded-2xl bg-violet-50 p-4"><strong
+                                            class="block text-sm text-violet-700">علوم انسانی</strong><span
+                                            class="mt-1 block text-xs leading-6 text-slate-500">تحلیل، حفظ و جمع‌بندی</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </div>
         </div>
-      </article>
-      {% empty %}
-      <div
-        class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500 lg:col-span-3"
-      >
-        در حال حاضر مقاله‌ای منتشر نشده است.
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- ۴. بخش اخبار و اطلاعیه‌های مدرسه -->
-<section id="news" class="py-20 bg-white border-t border-slate-200">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div
-      class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4"
-    >
-      <div>
-        <span class="text-amber-600 font-bold text-sm"
-          >رویدادها و تقویم آموزشی</span
-        >
-        <h2 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
-          اطلاعیه‌ها و اخبار رسمی مدرسه
-        </h2>
-      </div>
-      <a
-        href="/news/"
-        class="inline-flex items-center gap-2 text-sm font-bold text-school-600 hover:text-school-700"
-      >
-        <span>مشاهده کلیه اطلاعیه‌ها</span>
-        <i class="fa-solid fa-arrow-left"></i>
-      </a>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {% for item in news %}
-      <div
-        class="bg-slate-50 rounded-2xl p-6 border border-slate-200 hover:border-slate-300 transition space-y-4"
-      >
-        <div class="flex items-center justify-between text-xs font-bold">
-          <span class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-md"
-            >{{ item.category }}</span
-          >
-          <span class="text-slate-500"
-            ><i class="fa-regular fa-calendar ml-1"></i>{{ item.date }}</span
-          >
+    <section id="articles" class="scroll-mt-24 bg-white py-20 sm:py-24">
+        <div class="page-container">
+            <div class="reveal-on-scroll mb-11 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div><span class="text-sm font-bold text-school-gold">بانک دانش و پژوهش</span>
+                    <h2 class="section-heading mt-2">تازه‌ترین مطالب آموزشی</h2>
+                    <p class="section-description mt-2">نکته‌ها و راهکارهایی برای مطالعه بهتر و نتیجه‌ای ماندگارتر.</p>
+                </div>
+                <a href="/articles/"
+                   class="focus-ring inline-flex items-center gap-2 font-bold text-school-blue transition hover:gap-3 hover:text-school-navy">مشاهده
+                    همه مقالات <i class="fa-solid fa-arrow-left"></i></a>
+            </div>
+            <div class="grid gap-6 lg:grid-cols-3">
+                {% for article in articles %}
+                    <article
+                            class="landing-card reveal-on-scroll flex min-h-[330px] flex-col justify-between overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-card"
+                            style="--reveal-delay: {% cycle '0ms' '90ms' '180ms' %}">
+                        {% if article.cover or article.image %}<img src="
+                                {% if article.cover %}{{ article.cover.url }}{% else %}{{ article.image.url }}{% endif %}"
+                                                                    alt="{{ article.title }}"
+                                                                    class="h-44 w-full object-cover">{% else %}
+                            <div class="flex h-44 w-full items-center justify-center bg-gradient-to-br from-school-navy to-school-cyan text-4xl text-white">
+                                <i class="fa-solid fa-book-open"></i></div>{% endif %}
+                        <div class="flex flex-1 flex-col justify-between p-7">
+                            <div>
+                                <div class="flex items-center justify-between gap-3"><span
+                                        class="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-school-blue">{{ article.category.name }}</span><span
+                                        class="text-xs text-slate-500"><i
+                                        class="fa-regular fa-calendar ml-1"></i>{{ article.published_at|date:"Y/m/d" }}</span>
+                                </div>
+                                <h3 class="mt-5 text-lg font-bold leading-8 text-school-navy">{{ article.title }}</h3>
+                                <p class="mt-2 line-clamp-2 text-sm leading-7 text-slate-500">{{ article.summary }}</p>
+                            </div>
+                            <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-5 text-xs text-slate-500">
+                                <span><i
+                                        class="fa-regular fa-user ml-1"></i>{{ article.author.get_full_name|default:"" }}</span><a
+                                    href="{% url 'blog:post_detail' article.slug %}" class="font-bold text-school-blue">ادامه
+                                مطلب <i class="fa-solid fa-arrow-left mr-1"></i></a></div>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="reveal-on-scroll rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-slate-500 lg:col-span-3">
+                        در حال حاضر مقاله‌ای منتشر نشده است.
+                    </div>
+                {% endfor %}
+            </div>
         </div>
-        <h3 class="text-base font-bold text-slate-900 leading-snug">
-          {{ item.title }}
-        </h3>
-        <p class="text-xs text-slate-600 leading-relaxed">{{ item.desc }}</p>
-        <div class="pt-2">
-          <a
-            href="/news/"
-            class="text-xs font-bold text-school-600 hover:underline"
-          >
-            متن کامل خبر <i class="fa-solid fa-angle-left mr-1"></i>
-          </a>
+    </section>
+
+    <section id="news" class="scroll-mt-24 border-y border-slate-200 bg-slate-50 py-20 sm:py-24">
+        <div class="page-container">
+            <div class="reveal-on-scroll mb-11 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div><span class="text-sm font-bold text-amber-600">رویدادها و تقویم آموزشی</span>
+                    <h2 class="section-heading mt-2">اخبار و اطلاعیه‌های مدرسه</h2></div>
+                <a href="/news/"
+                   class="focus-ring inline-flex items-center gap-2 font-bold text-school-blue transition hover:gap-3 hover:text-school-navy">مشاهده
+                    همه اطلاعیه‌ها <i class="fa-solid fa-arrow-left"></i></a>
+            </div>
+            <div class="grid gap-6 md:grid-cols-3">
+                {% for item in news %}
+                    <article
+                            class="landing-card reveal-on-scroll overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-card"
+                            style="--reveal-delay: {% cycle '0ms' '90ms' '180ms' %}">
+                        {% if item.image %}<img src="{{ item.image.url }}" alt="{{ item.title }}"
+                                                class="h-44 w-full object-cover">{% else %}
+                            <div class="flex h-44 w-full items-center justify-center bg-gradient-to-br from-school-gold to-amber-600 text-4xl text-white">
+                                <i class="fa-solid fa-newspaper"></i></div>{% endif %}
+                        <div class="p-7">
+                            <div class="flex items-center justify-between text-xs font-bold"><span
+                                    class="rounded-full bg-amber-100 px-3 py-1.5 text-amber-800">{{ item.category.name }}</span><span
+                                    class="text-slate-500"><i
+                                    class="fa-regular fa-calendar ml-1"></i>{{ item.published_at|date:"Y/m/d" }}</span>
+                            </div>
+                            <h3 class="mt-5 text-lg font-bold leading-8 text-school-navy">{{ item.title }}</h3>
+                            <p class="mt-3 line-clamp-2 text-sm leading-7 text-slate-500">{{ item.summary }}</p>
+                            <a href="{% url 'news_module:article_detail' item.slug %}"
+                               class="mt-6 inline-flex items-center gap-2 text-sm font-bold text-school-blue">متن کامل
+                                خبر <i class="fa-solid fa-angle-left"></i></a></div>
+                    </article>
+                {% endfor %}
+            </div>
         </div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- ۵. بخش سوالات متداول مدرسه -->
-<section id="faq" class="py-20 bg-slate-50 border-t border-slate-200">
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-12 space-y-2">
-      <span class="text-school-600 font-bold text-sm">راهنمای سامانه</span>
-      <h2 class="text-2xl sm:text-3xl font-black text-slate-900">
-        پرسش‌های متداول دانش‌آموزان و اولیا
-      </h2>
-    </div>
+    <section id="faq" class="scroll-mt-24 bg-white py-20 sm:py-24">
+        <div class="page-container max-w-4xl">
+            <div class="reveal-on-scroll mb-12 text-center"><span
+                    class="inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-school-blue"><i
+                    class="fa-regular fa-circle-question"></i> راهنمای سامانه</span>
+                <h2 class="section-heading mt-4">پرسش‌های متداول دانش‌آموزان و اولیا</h2></div>
+            <div class="space-y-4">
+                {% for faq in faqs %}
+                    <details
+                            class="group reveal-on-scroll rounded-2xl border border-slate-200 bg-white p-5 shadow-card transition open:border-school-cyan/30 open:shadow-soft"
+                            style="--reveal-delay: {% cycle '0ms' '60ms' '120ms' '180ms' %}">
+                        <summary
+                                class="flex cursor-pointer list-none items-center justify-between gap-5 font-bold leading-7 text-school-navy">
+                            <span>{{ faq.question }}</span><span
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-school-blue transition group-open:rotate-180 group-open:bg-blue-50"><i
+                                class="fa-solid fa-chevron-down text-xs"></i></span></summary>
+                        <p class="mt-4 border-t border-slate-100 pt-4 text-sm leading-8 text-slate-600">{{ faq.answer }}</p>
+                    </details>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+{% endblock %}
 
-    <div class="space-y-4">
-      {% for faq in faqs %}
-      <details
-        class="group bg-white p-5 rounded-2xl border border-slate-200 shadow-sm transition"
-      >
-        <summary
-          class="flex justify-between items-center font-bold text-slate-800 cursor-pointer list-none text-sm sm:text-base"
-        >
-          <span>{{ faq.question }}</span>
-          <span class="transition group-open:rotate-180 text-school-600 mr-2">
-            <i class="fa-solid fa-chevron-down"></i>
-          </span>
-        </summary>
-        <p
-          class="text-slate-600 mt-4 text-xs sm:text-sm leading-relaxed border-t border-slate-100 pt-3"
-        >
-          {{ faq.answer }}
-        </p>
-      </details>
-      {% endfor %}
-    </div>
-  </div>
-</section>
+{% block extra_js %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const revealItems = document.querySelectorAll(".reveal-on-scroll");
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+            if (reduceMotion || !("IntersectionObserver" in window)) {
+                revealItems.forEach(function (item) {
+                    item.classList.add("is-visible");
+                });
+                return;
+            }
+
+            const revealObserver = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    entry.target.classList.toggle("is-visible", entry.isIntersecting);
+                });
+            }, {
+                threshold: 0.14,
+                rootMargin: "0px 0px -7% 0px"
+            });
+
+            revealItems.forEach(function (item) {
+                revealObserver.observe(item);
+            });
+        });
+    </script>
 {% endblock %}

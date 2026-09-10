@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}دوره‌های آموزشی{% endblock %}
+{% block page_title %}دوره‌ها{% endblock %}
+{% block breadcrumb %}همه دوره‌ها{% endblock %}
+{% block page_actions %}
+    {% if user.role == 'CONSULTANT' %}
+        <a href="{% url 'courses_module:course_create' %}" class="primary-glass-button"><i class="fa-solid fa-plus"></i> ساخت دوره جدید</a>
+    {% elif user.role == 'PROVINCE_TRUSTEE' %}
+        <a href="{% url 'courses_module:my_courses' %}" class="primary-glass-button"><i class="fa-solid fa-shield-check"></i> دوره‌های تأییدنشده</a>
+    {% elif user.role == 'ADMIN' or user.is_superuser %}
+        <span class="rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs font-bold text-slate-600"><i class="fa-solid fa-lock ml-1"></i>مدیریت دوره‌ها</span>
+    {% endif %}
+{% endblock %}
+{% block extra_css %}
+<style>
+    .courses-shell{position:relative;isolation:isolate}.courses-shell:before,.courses-shell:after{content:"";position:fixed;z-index:-1;border-radius:999px;filter:blur(80px);opacity:.38}.courses-shell:before{width:320px;height:320px;background:#60a5fa;top:90px;left:7%}.courses-shell:after{width:280px;height:280px;background:#a78bfa;bottom:5%;right:20%}
+    .glass-hero{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.55);border-radius:28px;padding:30px;background:linear-gradient(135deg,rgba(23,37,84,.96),rgba(37,99,235,.82));box-shadow:0 24px 60px rgba(30,64,175,.18);color:white}.glass-hero:after{content:"";position:absolute;width:260px;height:260px;left:-60px;top:-100px;border-radius:50%;background:rgba(255,255,255,.12);filter:blur(2px)}
+    .primary-glass-button,.join-button,.joined-button{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border-radius:14px;padding:.68rem 1rem;font-size:.75rem;font-weight:800;transition:transform .35s cubic-bezier(.2,.9,.2,1.25),box-shadow .3s,background .3s}.primary-glass-button,.join-button{background:linear-gradient(135deg,#2563eb,#4f46e5);color:white;box-shadow:0 9px 24px rgba(37,99,235,.25)}.primary-glass-button:hover,.join-button:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 13px 30px rgba(37,99,235,.34)}
+    .course-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:24px}.course-card{display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(255,255,255,.78);border-radius:24px;background:rgba(255,255,255,.68);box-shadow:0 16px 40px rgba(15,23,42,.08),inset 0 1px 0 white;backdrop-filter:blur(22px) saturate(150%);transition:transform .45s cubic-bezier(.2,.85,.25,1),box-shadow .4s}.course-card:hover{transform:translateY(-7px);box-shadow:0 25px 55px rgba(37,99,235,.16),inset 0 1px 0 white}.course-cover{position:relative;height:190px;overflow:hidden;margin:10px;border-radius:18px}.course-cover img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.7,.2,1)}.course-card:hover img{transform:scale(1.055)}.cover-placeholder{display:grid;place-items:center;width:100%;height:100%;font-size:52px;color:#3b82f6;background:linear-gradient(145deg,#dbeafe,#eef2ff 55%,#e0e7ff)}
+    .level-pill,.status-pill{position:absolute;top:12px;padding:6px 10px;border:1px solid rgba(255,255,255,.7);border-radius:999px;background:rgba(255,255,255,.78);backdrop-filter:blur(12px);font-size:10px;font-weight:900;color:#334155}.level-pill{right:12px}.status-pill{left:12px}.status-pending{color:#b45309}.status-rejected{color:#be123c}.course-body{padding:5px 18px 16px}.subject-row{display:flex;gap:5px;min-height:22px;overflow:hidden}.subject-row span{white-space:nowrap;border-radius:7px;background:#eff6ff;padding:3px 7px;font-size:10px;font-weight:800;color:#2563eb}.course-body h3{margin-top:9px;font-size:16px;font-weight:950;color:#172033}.course-body p{min-height:40px;margin-top:7px;font-size:11px;line-height:1.8;color:#64748b}.course-meta{display:flex;gap:15px;margin-top:12px;font-size:10px;font-weight:700;color:#64748b}.rating-line{display:flex;align-items:center;gap:6px;margin-top:12px}.stars{direction:ltr;letter-spacing:1px;color:#fbbf24;text-shadow:0 1px 5px rgba(245,158,11,.2)}.rating-line strong{font-size:12px;color:#334155}.rating-line small{font-size:10px;color:#94a3b8}.course-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;border-top:1px solid rgba(226,232,240,.75);padding:13px 18px}.teacher{max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:700;color:#64748b}.joined-button{background:#ecfdf5;color:#059669}.empty-state{grid-column:1/-1;padding:55px;text-align:center;border:1px dashed #cbd5e1;border-radius:26px;background:rgba(255,255,255,.65)}.empty-state i{font-size:35px;color:#94a3b8}.empty-state h3{margin-top:12px;font-weight:900}.empty-state p{margin-top:5px;font-size:11px;color:#94a3b8}@media(max-width:1024px){.course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.course-grid{grid-template-columns:1fr}.glass-hero{padding:22px}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="courses-shell">
+    <section class="glass-hero" data-aos="fade-down">
+        <div class="relative z-10 max-w-2xl">
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-bold backdrop-blur-xl"><i class="fa-solid fa-sparkles text-amber-300"></i> مسیر یادگیری مخصوص تو</span>
+            <h1 class="mt-4 text-2xl font-black sm:text-3xl">دوره‌ای را پیدا کن که یک قدم جلوترت ببرد</h1>
+            <p class="mt-2 text-xs leading-7 text-blue-100">دوره‌های تأییدشده را بر اساس پایه، رشته و درس ببین، امتیاز دانش‌آموزان را مقایسه کن و با یک لمس به دوره‌هایت اضافه کن.</p>
+        </div>
+    </section>
+    {% include 'courses_module/_course_cards.html' %}
+</div>
+{% endblock %}

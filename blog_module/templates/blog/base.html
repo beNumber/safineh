@@ -8,7 +8,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: "class",
       theme: {
         extend: {
           colors: {
@@ -34,10 +33,6 @@
       isolation: isolate;
     }
 
-    html.dark body {
-      background: #081c15;
-    }
-
     main {
       background: transparent;
     }
@@ -58,7 +53,6 @@
     }
 
     .post-card,
-    .post-hero,
     .glass-cat,
     .glass-cat-panel,
     .post-cover,
@@ -122,12 +116,6 @@
       padding: 1.25rem 1.5rem;
     }
 
-    html.dark .post-cover,
-    html.dark .post-body-glass {
-      background: rgb(8 28 21 / 0.50);
-      border-color: rgb(255 255 255 / 0.12);
-    }
-
     .post-cover {
       margin-bottom: 1.5rem;
     }
@@ -174,14 +162,6 @@
       animation: orb-cross 22s ease-in-out infinite;
     }
 
-    html.dark .orb {
-      opacity: 0.2;
-    }
-
-    html.dark .orb-1 { background: #2d6a4f; }
-    html.dark .orb-2 { background: #1b4332; }
-    html.dark .orb-3 { background: #40916c; }
-
     @keyframes orb-zig {
       0%   { transform: translate(0, 0); }
       15%  { transform: translate(-28vw, 18vh); }
@@ -209,20 +189,8 @@
       100% { transform: translate(0, 0); }
     }
 
-    .post-hero {
-      background: linear-gradient(to left, #d8f3dc, #ffffff);
-    }
-
-    html.dark .post-hero {
-      background: linear-gradient(to left, #1b4332, #081c15);
-    }
-
     .post-card {
-      background: #bbf4c3;
-    }
-
-    html.dark .post-card {
-      background: #182e25;
+      background: rgb(255 255 255 / .62);
     }
 
     details.cat-menu > summary { list-style: none; }
@@ -238,11 +206,6 @@
       border: 1px solid rgb(255 255 255 / 0.35);
     }
 
-    html.dark .glass-modal {
-      background: rgb(8 28 21 / 0.50);
-      border-color: rgb(255 255 255 / 0.12);
-    }
-
     .glass-cat-panel {
       --glass-alpha: 0.22;
       --glass-blur: 22px;
@@ -252,88 +215,95 @@
       border: 1px solid rgb(255 255 255 / 0.35);
     }
 
-    html.dark .glass-cat,
-    html.dark .glass-cat-panel {
-      background: rgb(8 28 21 / 0.42);
-      border-color: rgb(255 255 255 / 0.12);
-    }
+    :root { --ink: #102d22; --green: #197a50; --mint: #dff7e8; }
+    * { box-sizing: border-box; }
+    body { color: var(--ink); background: radial-gradient(circle at 10% 0%, #effff4 0, #f7fcf8 42%, #eef8f1 100%); }
+    body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .28; background-image: linear-gradient(rgb(25 122 80 / .035) 1px, transparent 1px), linear-gradient(90deg, rgb(25 122 80 / .035) 1px, transparent 1px); background-size: 42px 42px; mask-image: linear-gradient(to bottom, black, transparent 80%); }
+    header { margin: 1rem auto 0; width: min(100% - 2rem, 70rem); border: 1px solid rgb(255 255 255 / .8) !important; border-radius: 1.5rem; background: rgb(255 255 255 / .64) !important; box-shadow: 0 18px 55px rgb(27 106 70 / .12); backdrop-filter: blur(22px) saturate(150%); }
+    header > div:first-child { min-height: 4.5rem; }
+    header a, header button { transition: color .25s ease, background .25s ease, transform .25s ease, box-shadow .25s ease; }
+    header a:hover, header button:hover { color: #0b8d55; transform: translateY(-2px); }
+    .post-card, .post-cover, .post-body-glass, .glass-cat, .glass-cat-panel { border-radius: 1.5rem !important; box-shadow: 0 14px 35px rgb(27 106 70 / .10); }
+    .post-card { overflow: hidden; background: rgb(255 255 255 / .62); border: 1px solid rgb(255 255 255 / .85); backdrop-filter: blur(18px); transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease, border-color .35s ease; }
+    .post-card:hover { transform: translateY(-8px) scale(1.015); border-color: rgb(66 190 126 / .65); box-shadow: 0 22px 48px rgb(25 122 80 / .2), 0 0 0 1px rgb(91 224 153 / .16); }
+    .post-card img { transition: transform .6s ease, filter .6s ease; }
+    .post-card:hover img { transform: scale(1.06); filter: saturate(1.12); }
+    .post-card { animation: card-enter .7s both; }
+    .post-card:nth-child(2) { animation-delay: .08s; }
+    .post-card:nth-child(3) { animation-delay: .16s; }
+    .post-card:nth-child(4) { animation-delay: .24s; }
+    .post-card:nth-child(5) { animation-delay: .32s; }
+    .post-card:nth-child(6) { animation-delay: .4s; }
+    @keyframes card-enter { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .icon-button { transition: transform .25s ease, color .25s ease, background .25s ease, box-shadow .25s ease; }
+    .icon-button:hover { background: #e3f8eb; box-shadow: 0 10px 24px rgb(25 122 80 / .18); }
+    .post-chip { border: 1px solid rgb(25 122 80 / .13); background: rgb(255 255 255 / .58); transition: all .25s ease; }
+    .post-chip:hover, .post-chip.is-active { color: white; background: linear-gradient(135deg, #239466, #12623f); box-shadow: 0 8px 22px rgb(25 122 80 / .2); transform: translateY(-2px); }
+    .cursor-glow { position: fixed; z-index: 60; width: 190px; height: 190px; border-radius: 50%; pointer-events: none; opacity: 0; background: radial-gradient(circle, rgb(92 230 153 / .2), transparent 68%); transform: translate(-50%, -50%); transition: opacity .3s ease; mix-blend-mode: multiply; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } .cursor-glow { display: none; } }
   </style>
-  <script>
-    if (localStorage.getItem("theme") === "dark") {
-      document.documentElement.classList.add("dark");
-    }
-  </script>
 </head>
-<body class="min-h-screen font-sans text-brand-900 dark:text-brand-50">
+<body class="min-h-screen font-sans text-brand-900">
+  <div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
   <div class="site-bg" aria-hidden="true">
     <span class="orb orb-1"></span>
     <span class="orb orb-2"></span>
     <span class="orb orb-3"></span>
   </div>
 
-  <header class="sticky top-0 z-50 border-b border-brand-100 bg-white/90 dark:border-brand-700 dark:bg-brand-900/90">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+  <header class="sticky top-0 z-50 border-b border-brand-100 bg-white/90">
+    <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3" dir="rtl">
 
-      <div class="flex items-center gap-3">
-        <a href="{% url 'blog:post_list' %}" class="flex items-center gap-2 font-extrabold text-brand-700 dark:text-brand-100">
+      <div class="flex items-center gap-5" dir="rtl">
+        <a href="{% url 'blog:post_list' %}" class="flex items-center gap-2 font-extrabold text-brand-700">
           <i class="fa-solid fa-leaf"></i>
           <span>سفینه</span>
         </a>
 
-        <details class="cat-menu relative">
-          <summary class="glass-cat cursor-pointer rounded-full px-4 py-2 text-sm text-brand-900 dark:text-brand-50">
-            دسته‌بندی‌ها
-            <i class="fa-solid fa-chevron-down mr-1 text-xs"></i>
-          </summary>
-          <div class="glass-cat-panel absolute right-0 z-50 mt-2 min-w-52 overflow-hidden rounded-2xl p-2 shadow-xl">
-            <a href="{% url 'blog:post_list' %}" class="block rounded-xl px-3 py-2 text-sm hover:bg-white/40 dark:hover:bg-white/10">
-              همه مطالب
-            </a>
-            {% for c in categories %}
-              <a href="{% url 'blog:category_posts' c.slug %}" class="block rounded-xl px-3 py-2 text-sm hover:bg-white/40 dark:hover:bg-white/10">
-                {{ c.name }}
-              </a>
-            {% empty %}
-              <span class="block px-3 py-2 text-sm opacity-70">دسته‌ای ثبت نشده</span>
-            {% endfor %}
-          </div>
-        </details>
+        <nav class="hidden items-center gap-5 text-sm md:flex">
+          <a href="{% url 'blog:post_list' %}">خانه</a>
+          <button type="button" onclick="openModal()">درباره</button>
+        </nav>
       </div>
 
-      <nav class="hidden items-center gap-5 text-sm md:flex">
-        <a href="{% url 'blog:post_list' %}">خانه</a>
-        <button type="button" onclick="openModal()">درباره</button>
-      </nav>
-
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2" dir="rtl">
         <div class="relative">
           <button id="search-toggle" type="button" aria-label="جستجو"
-                  class="grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white text-brand-700 dark:border-brand-700 dark:bg-brand-700 dark:text-brand-50">
+                  class="icon-button grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white text-brand-700">
             <i class="fa-solid fa-magnifying-glass"></i>
           </button>
           <form id="search-form" action="{% url 'blog:post_search' %}" method="get"
                 class="absolute left-0 top-full z-50 mt-2 hidden w-72">
             <input type="search" name="q" value="{{ query|default:'' }}" required
                    placeholder="جستجوی پست یا تگ..."
-                   class="w-full rounded-2xl border border-brand-100 bg-white px-4 py-2 text-sm shadow-md outline-none dark:border-brand-700 dark:bg-brand-900">
+                   class="w-full rounded-2xl border border-brand-100 bg-white px-4 py-2 text-sm shadow-md outline-none">
           </form>
         </div>
 
-        <button id="themeBtn" type="button"
-                class="grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white text-brand-700 dark:border-brand-700 dark:bg-brand-700 dark:text-brand-50">
-          <i class="fa-solid fa-moon dark:hidden"></i>
-          <i class="fa-solid fa-sun hidden dark:inline"></i>
-        </button>
+        <details class="cat-menu relative">
+          <summary class="glass-cat cursor-pointer rounded-full px-4 py-2 text-sm text-brand-900">
+            <i class="fa-solid fa-layer-group ml-1 text-brand-500"></i> دسته‌بندی‌ها
+            <i class="fa-solid fa-chevron-down mr-1 text-xs"></i>
+          </summary>
+          <div class="glass-cat-panel absolute left-0 z-50 mt-2 min-w-52 overflow-hidden rounded-2xl p-2 shadow-xl">
+            <a href="{% url 'blog:post_list' %}" class="block rounded-xl px-3 py-2 text-sm hover:bg-white/60">همه مطالب</a>
+            {% for c in categories %}
+              <a href="{% url 'blog:category_posts' c.slug %}" class="block rounded-xl px-3 py-2 text-sm hover:bg-white/60">{{ c.name }}</a>
+            {% empty %}
+              <span class="block px-3 py-2 text-sm opacity-70">دسته‌ای ثبت نشده</span>
+            {% endfor %}
+          </div>
+        </details>
 
         <button type="button"
-                class="grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white md:hidden dark:border-brand-700 dark:bg-brand-700"
+                class="grid h-10 w-10 place-items-center rounded-full border border-brand-100 bg-white md:hidden"
                 onclick="document.getElementById('mobileNav').classList.toggle('hidden')">
           <i class="fa-solid fa-bars"></i>
         </button>
       </div>
     </div>
 
-    <div id="mobileNav" class="hidden space-y-2 border-t border-brand-100 px-4 py-3 md:hidden dark:border-brand-700">
+    <div id="mobileNav" class="hidden space-y-2 border-t border-brand-100 px-4 py-3 md:hidden">
       <a class="block" href="{% url 'blog:post_list' %}">خانه</a>
       <button type="button" onclick="openModal()">درباره</button>
     </div>
@@ -343,8 +313,8 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="mt-16 border-t border-brand-100 px-4 py-8 dark:border-brand-700">
-    <div class="mx-auto max-w-6xl text-center text-sm leading-7 text-brand-700 dark:text-brand-100">
+  <footer class="mt-16 border-t border-brand-100 px-4 py-8">
+    <div class="mx-auto max-w-6xl text-center text-sm leading-7 text-brand-700">
       <p class="font-bold">وبلاگ موسسه سفینه النجاه</p>
       <p>تمامی حقوق مادی و معنوی این وبلاگ متعلق به موسسه سفینه النجاه است.</p>
       <p>هرگونه کپی، بازنشر یا استفاده از مطالب، بدون اجازه کتبی موسسه ممنوع است.</p>
@@ -354,7 +324,7 @@
 
   <div id="aboutModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div class="absolute inset-0 bg-brand-900/25 backdrop-blur-md" onclick="closeModal()"></div>
-    <div class="glass-modal relative z-10 w-full max-w-md rounded-2xl p-6 shadow-xl text-brand-900 dark:text-brand-50">
+    <div class="glass-modal relative z-10 w-full max-w-md rounded-2xl p-6 shadow-xl text-brand-900">
       <div class="mb-4 flex items-center justify-between">
         <h2 class="text-lg font-bold"><i class="fa-solid fa-circle-info text-brand-500"></i> درباره وبلاگ</h2>
         <button type="button" onclick="closeModal()" class="text-xl">&times;</button>
@@ -367,7 +337,6 @@
   <script>
     const searchToggle = document.getElementById("search-toggle");
     const searchForm = document.getElementById("search-form");
-    const themeBtn = document.getElementById("themeBtn");
 
     if (searchToggle && searchForm) {
       searchToggle.addEventListener("click", function (e) {
@@ -384,13 +353,6 @@
       });
     }
 
-    if (themeBtn) {
-      themeBtn.addEventListener("click", function () {
-        const dark = document.documentElement.classList.toggle("dark");
-        localStorage.setItem("theme", dark ? "dark" : "light");
-      });
-    }
-
     function openModal() {
       const m = document.getElementById("aboutModal");
       if (!m) return;
@@ -403,6 +365,16 @@
       if (!m) return;
       m.classList.add("hidden");
       m.classList.remove("flex");
+    }
+
+    const cursorGlow = document.getElementById("cursorGlow");
+    if (cursorGlow && window.matchMedia("(pointer:fine)").matches) {
+      window.addEventListener("pointermove", (event) => {
+        cursorGlow.style.left = event.clientX + "px";
+        cursorGlow.style.top = event.clientY + "px";
+        cursorGlow.style.opacity = "1";
+      }, { passive: true });
+      document.addEventListener("mouseleave", () => cursorGlow.style.opacity = "0");
     }
   </script>
 </body>
