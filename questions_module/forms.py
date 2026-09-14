@@ -79,10 +79,10 @@ class ChapterForm(forms.ModelForm):
 class SubjectForm(forms.ModelForm):
     class Meta:
         model = Subject
-        fields = ("title", "code", "field", "is_active")
+        fields = ("title", "field", "is_active")
         widgets = {
             "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "نام درس"}),
-            "code": forms.TextInput(attrs={"class": "form-control", "placeholder": "کد یکتا"}),
+            # "code": forms.TextInput(attrs={"class": "form-control", "placeholder": "کد یکتا"}),
             "field": forms.Select(attrs={"class": "form-select"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
@@ -99,11 +99,11 @@ class BaseChoiceFormSet(forms.BaseInlineFormSet):
         active_forms = [
             form for form in self.forms
             if form.cleaned_data and not form.cleaned_data.get("DELETE", False)
-            and (
-                form.cleaned_data.get("text", "").strip()
-                or form.cleaned_data.get("image")
-                or (form.instance.pk and form.instance.image)
-            )
+               and (
+                       form.cleaned_data.get("text", "").strip()
+                       or form.cleaned_data.get("image")
+                       or (form.instance.pk and form.instance.image)
+               )
         ]
         correct_answers = [form for form in active_forms if form.cleaned_data.get("is_correct")]
 
