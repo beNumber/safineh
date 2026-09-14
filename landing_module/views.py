@@ -1,4 +1,8 @@
 from django.shortcuts import render
+from django.utils import timezone
+
+from blog_module.models import Post
+from news_module.models import Article
 
 def landing_home_view(request):
     """
@@ -49,49 +53,11 @@ def landing_home_view(request):
         }
     ]
 
-    # نمونه اخبار و اطلاعیه‌های اخیر مدرسه
-    school_news = [
-        {
-            'title': 'برنامه زمان‌بندی آزمون‌های میان‌ترم نیم‌سال اول',
-            'date': '۲۵ مهر ۱۴۰۳',
-            'category': 'آموزشی',
-            'desc': 'برنامه تفصیلی امتحانات میان‌ترم کلیه پایه‌ها در سامانه بارگذاری شد.'
-        },
-        {
-            'title': 'آغاز المپیادهای علمی و مسابقات پژوهشی',
-            'date': '۱۸ مهر ۱۴۰۳',
-            'category': 'پژوهش',
-            'desc': 'دانش‌آموزان علاقه‌مند به شرکت در المپیادها می‌توانند منابع آزمون را دریافت نمایند.'
-        },
-        {
-            'title': 'برگزاری نشست تعاملی اولیا و دبیران',
-            'date': '۱۰ مهر ۱۴۰۳',
-            'category': 'اطلاعیه',
-            'desc': 'جلسه هماهنگی روند تحصیلی و تربیتی دانش‌آموزان روز چهارشنبه برگزار می‌گردد.'
-        }
-    ]
-
-    # نمونه مقالات آموزشی و مشاوره‌ای
-    educational_articles = [
-    {
-        'title': 'روش‌های اصولی خلاصه‌نویسی برای دروس نهایی',
-        'category': 'مشاوره و برنامه‌ریزی',
-        'read_time': '۵ دقیقه ',
-        'author': 'واحد آموزش مدرسه',
-    },
-    {
-        'title': 'راهنمای گام‌به‌گام تحلیل آزمون‌های هفتگی',
-        'category': 'تکنیک‌های مطالعه',
-        'read_time': '۷ دقیقه ',
-        'author': 'واحد مشاوره تحصیلی',
-    },
-    {
-        'title': 'چگونه تمرکز خود را هنگام مطالعه فیزیک و ریاضی بالا ببریم؟',
-        'category': 'علوم پایه',
-        'read_time': '۶ دقیقه ',
-        'author': 'دپارتمان ریاضی و فیزیک',
-    },
-]
+    published_posts = Post.published.select_related('category', 'author').prefetch_related('tags')
+    published_news = Article.objects.filter(
+        status=Article.Status.PUBLISHED,
+        published_at__lte=timezone.now(),
+    ).select_related('category', 'author').prefetch_related('tags')
 
     # سوالات متداول سامانه
     school_faqs = [
@@ -115,8 +81,8 @@ def landing_home_view(request):
 
     context = {
         'stages': educational_stages,
-        'news': school_news,
-        'articles': educational_articles,
+        'news': published_news[:3],
+        'articles': published_posts[:3],
         'faqs': school_faqs,
     }
     return render(request, 'landing_module/index.html', context)
