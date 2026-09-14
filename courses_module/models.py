@@ -4,7 +4,8 @@ from django.db import models
 from django.db.models import Avg
 from django.utils import timezone
 from django.db.models import Q
-from auth_module.models import Subject,Grade,FieldOfStudy,School,Province
+from users_module.models import Subject,Grade,School
+from auth_module.models import FieldOfStudy,Province
 class ApprovalStatus(models.TextChoices):
     PENDING = "PENDING", "در انتظار تأیید"
     APPROVED = "APPROVED", "تأیید شده"
