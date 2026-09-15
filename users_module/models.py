@@ -53,20 +53,20 @@ class Subject(models.Model):
 
     def __str__(self):
         return self.title
-
-
 class Access(models.Model):
-    name = models.CharField(max_length=200, choices=(
-        ('bank', 'بانک سوال'),
-        ('ticket', 'تیکت'),
-        ('quiz', 'آزمون'),
-        ('course', 'دوره')
-    ))
-    subject = models.ForeignKey(Subject, models.CASCADE)
+    class Code(models.TextChoices):
+        BANK = 'bank', 'بانک سوال'
+        TICKET = 'ticket', 'تیکت'
+        QUIZ = 'quiz', 'آزمون'
+        COURSE = 'course', 'دوره'
+        # مواردی که مربوط به سوالات هستند:
+        CREATE_QUESTION = 'create_question', 'ثبت سوال'
+        EDIT_QUESTION = 'edit_question', 'ویرایش سوال'
+        DELETE_QUESTION = 'delete_question', 'حذف سوال'
+        # موارد جدید اضافه شده 👇
+        CREATE_CHAPTER = 'create_chapter', 'ایجاد فصل'
+        CREATE_SUBJECT = 'create_subject', 'ایجاد درس'
 
-    class Meta:
-        verbose_name = "دسترسی"
-        verbose_name_plural = "دسترسی‌ها"
-
-    def __str__(self):
-        return f"{self.get_name_display()} - {self.subject}"
+    name = models.CharField(max_length=200, choices=Code.choices)
+    # اگر دسترسی ایجاد درس عمومی است و مربوط به درس خاصی نیست، subject باید null پذیر باشد:
+    subject = models.ForeignKey(Subject, models.CASCADE, null=True, blank=True)
