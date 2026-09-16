@@ -300,6 +300,14 @@
                     <span>مجله آموزشی</span>
                 </a>
 
+                {% if user.is_authenticated %}
+                <a href="{% url 'quiz_module:quiz_list' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-file-circle-check"></i></span>
+                    <span>آزمون‌ها</span>
+                </a>
+                {% endif %}
+
             </div>
 
             <!-- Counselor Menu -->
