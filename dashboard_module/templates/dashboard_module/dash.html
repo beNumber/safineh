@@ -8,14 +8,31 @@
         <div class="relative z-10"><p class="text-xs text-blue-100">سلام {{ user.first_name|default:user.username }}، خوش آمدی</p><h1 class="mt-2 text-2xl font-black">امروز یک قدم به هدفت نزدیک‌تر شو</h1></div><div class="absolute -left-12 -top-16 h-56 w-56 rounded-full bg-white/10 blur-xl"></div>
     </section>
     {% if user.role == 'STUDENT' %}
+    <section class="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-l from-indigo-50 via-white to-cyan-50 p-5 shadow-soft" data-aos="fade-up">
+        <div class="absolute -left-10 -top-12 h-36 w-36 rounded-full bg-cyan-200/30 blur-2xl"></div>
+        <div class="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-4">
+                <span class="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-indigo-600 to-cyan-500 text-xl text-white shadow-lg shadow-indigo-200"><i class="fa-solid fa-calendar-check"></i></span>
+                <div><p class="text-[10px] font-black text-indigo-500">برنامه شخصی امروز</p><h2 class="mt-1 text-base font-black text-slate-800">{{ today_plans_count|default:0 }} فعالیت برای امروز داری</h2><p class="mt-1 text-[10px] text-slate-400">{{ today_completed_count|default:0 }} مورد را انجام داده‌ای؛ با تمرکز ادامه بده.</p></div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                {% for item in today_plans %}<span class="rounded-xl border border-white bg-white/80 px-3 py-2 text-[10px] font-bold text-slate-600 shadow-sm">{{ item.start_hour }}:۰۰ · {{ item.display_title }}</span>{% empty %}<span class="text-[10px] text-slate-400">امروز هنوز برنامه‌ای ثبت نشده است.</span>{% endfor %}
+                <a href="{% url 'plans_module:board' %}" class="rounded-xl bg-indigo-600 px-4 py-2 text-[10px] font-black text-white shadow-lg shadow-indigo-200">باز کردن برنامه <i class="fa-solid fa-arrow-left mr-1"></i></a>
+            </div>
+        </div>
+    </section>
     <section class="rounded-3xl border border-white/80 bg-white/70 p-5 shadow-soft backdrop-blur-xl" data-aos="fade-up">
         <div class="flex items-center justify-between"><div><h2 class="text-sm font-black text-slate-800"><i class="fa-solid fa-bookmark ml-2 text-blue-600"></i>دوره‌های من</h2><p class="mt-1 text-[10px] text-slate-400">{{ my_courses_count }} دوره ثبت‌نام‌شده</p></div><a href="{% url 'courses_module:my_courses' %}" class="rounded-xl bg-blue-50 px-3 py-2 text-[11px] font-black text-blue-600">مشاهده همه <i class="fa-solid fa-chevron-left mr-1"></i></a></div>
         <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{% for enrollment in my_course_enrollments %}<a href="{% url 'courses_module:course_detail' enrollment.course.slug %}" class="group rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:bg-blue-50/70"><span class="grid h-9 w-9 place-items-center rounded-xl bg-white text-blue-600 shadow-sm"><i class="fa-solid fa-play"></i></span><h3 class="mt-3 truncate text-xs font-black text-slate-700">{{ enrollment.course.title }}</h3><p class="mt-1 truncate text-[10px] text-slate-400">{{ enrollment.course.author.get_full_name|default:enrollment.course.author.username }}</p></a>{% empty %}<div class="col-span-full rounded-2xl border border-dashed border-slate-200 p-7 text-center"><p class="text-xs text-slate-500">هنوز در دوره‌ای شرکت نکرده‌ای.</p><a href="{% url 'courses_module:course_list' %}" class="mt-3 inline-flex rounded-xl bg-blue-600 px-4 py-2 text-[11px] font-bold text-white">پیدا کردن دوره</a></div>{% endfor %}</div>
     </section>
     {% elif user.role == 'CONSULTANT' %}
+    <a href="{% url 'plans_module:board' %}" class="mb-4 block rounded-3xl border border-indigo-100 bg-gradient-to-l from-indigo-600 to-cyan-600 p-6 text-white shadow-xl shadow-indigo-100"><i class="fa-solid fa-calendar-plus ml-2"></i><b>چیدن برنامه شخصی و گروهی دانش‌آموزان</b><p class="mt-2 text-xs text-indigo-100">انتخاب چند دانش‌آموز، تخصیص ساعتی و مشاهده پیشرفت هفتگی</p></a>
     <a href="{% url 'courses_module:course_create' %}" class="block rounded-3xl border border-blue-100 bg-blue-50/70 p-6 text-blue-800 shadow-soft"><i class="fa-solid fa-plus ml-2"></i><b>ساخت دوره جدید و ارسال برای تأیید</b></a>
     {% elif user.role == 'PROVINCE_TRUSTEE' %}
     <a href="{% url 'courses_module:my_courses' %}" class="block rounded-3xl border border-amber-100 bg-amber-50/70 p-6 text-amber-800 shadow-soft"><i class="fa-solid fa-shield-check ml-2"></i><b>دوره‌های تأییدنشده</b></a>
+    {% endif %}
+    {% if user.role == 'ADMIN' or user.is_superuser %}
+    <a href="{% url 'plans_module:board' %}" class="block rounded-3xl border border-indigo-100 bg-gradient-to-l from-slate-900 to-indigo-800 p-6 text-white shadow-xl"><i class="fa-solid fa-users-gear ml-2"></i><b>مدیریت برنامه همه دانش‌آموزان</b><p class="mt-2 text-xs text-indigo-100">ثبت برنامه عمومی، گروهی یا اختصاصی از یک پنل</p></a>
     {% endif %}
 </div>
 {% endblock %}

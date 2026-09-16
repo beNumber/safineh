@@ -17,6 +17,7 @@ urlpatterns = [
     path('questions/', include('questions_module.urls')),
     path('', include("landing_module.urls")),
     path('courses/', include('courses_module.urls', namespace='courses_module')),
+    path('plans/', include('plans_module.urls', namespace='plans_module')),
 ]
 
 if settings.DEBUG:

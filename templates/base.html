@@ -242,13 +242,21 @@
 
             <div class="space-y-1">
 
-                <a href=""
+                <a href="{% url 'dashboard' %}"
                    class="sidebar-link active flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-grid-2"></i>
                     </span>
                     <span>داشبورد</span>
                 </a>
+
+                {% if user.is_authenticated and user.role == 'STUDENT' %}
+                <a href="{% url 'plans_module:board' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-indigo-400"><i class="fa-solid fa-calendar-days"></i></span>
+                    <span>برنامه شخصی من</span>
+                </a>
+                {% endif %}
 
                 <a href=""
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
@@ -324,7 +332,7 @@
                         <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-plus"></i></span>
                         <span>ساخت دوره جدید</span>
                     </a>
-                    <a href=""
+                    <a href="{% url 'plans_module:board' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-inbox"></i>
@@ -345,7 +353,7 @@
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-clock"></i>
                         </span>
-                        <span>برنامه کاری</span>
+                        <span>برنامه دانش‌آموزان</span>
                     </a>
                 </div>
             {% endif %}
@@ -367,6 +375,10 @@
                 <a href="{% url 'courses_module:course_list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-lock"></i></span>
                     <span>بستن یا حذف دوره‌ها</span>
+                </a>
+                <a href="{% url 'plans_module:board' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-indigo-400"><i class="fa-solid fa-calendar-plus"></i></span>
+                    <span>مدیریت برنامه‌ها</span>
                 </a>
             {% endif %}
             {% if user.is_authenticated and user.is_superuser and user.role != 'ADMIN' %}
