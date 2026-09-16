@@ -37,6 +37,10 @@
     <a href="{% url 'courses_module:my_courses' %}" class="block rounded-3xl border border-amber-100 bg-amber-50/70 p-6 text-amber-800 shadow-soft"><i class="fa-solid fa-shield-check ml-2"></i><b>دوره‌های تأییدنشده</b></a>
     {% endif %}
     {% if user.role == 'ADMIN' or user.is_superuser %}
+    <a href="{% url 'reports_module:people_activity' %}" class="group relative mb-4 block overflow-hidden rounded-3xl border border-white/20 bg-gradient-to-l from-slate-950 via-indigo-950 to-violet-700 p-6 text-white shadow-2xl shadow-indigo-200 transition hover:-translate-y-1">
+        <div class="relative z-10 flex items-center gap-4"><span class="grid h-14 w-14 place-items-center rounded-2xl border border-white/20 bg-white/10 text-xl backdrop-blur-xl"><i class="fa-solid fa-chart-simple"></i></span><div class="flex-1"><p class="text-[10px] font-bold text-violet-200">مرکز هوشمند گزارش‌ها</p><b class="mt-1 block">فعالیت افراد</b><p class="mt-1 text-xs text-indigo-100">عملکرد مشاوران، معتمدان استانی و دانش‌آموزان در یک نمای جامع</p></div><i class="fa-solid fa-arrow-left transition group-hover:-translate-x-1"></i></div>
+        <div class="absolute -left-12 -top-16 h-48 w-48 rounded-full bg-cyan-400/20 blur-3xl"></div>
+    </a>
     <a href="{% url 'counseling:manage' %}" class="mb-4 block rounded-3xl border border-white/70 bg-gradient-to-l from-blue-700 via-indigo-600 to-emerald-500 p-6 text-white shadow-xl shadow-blue-100"><i class="fa-solid fa-people-arrows-left-right ml-2"></i><b>مدیریت مشاور دانش‌آموزان</b><p class="mt-2 text-xs text-blue-100">{{ all_unassigned_count|default:0 }} دانش‌آموز از {{ all_students_count|default:0 }} نفر هنوز مشاور اختصاصی ندارند.</p></a>
     <a href="{% url 'plans_module:board' %}" class="block rounded-3xl border border-indigo-100 bg-gradient-to-l from-slate-900 to-indigo-800 p-6 text-white shadow-xl"><i class="fa-solid fa-users-gear ml-2"></i><b>مدیریت برنامه همه دانش‌آموزان</b><p class="mt-2 text-xs text-indigo-100">ثبت برنامه عمومی، گروهی یا اختصاصی از یک پنل</p></a>
     {% endif %}

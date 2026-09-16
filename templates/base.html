@@ -364,8 +364,17 @@
                 </div>
             {% endif %}
 
-            {% if user.is_authenticated and user.role == 'ADMIN' %}
+            {% if user.is_authenticated and user.role == 'ADMIN' or user.is_superuser %}
                 <div class="my-6 border-t border-slate-100"></div>
+                <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">گزارش‌های مدیریتی</p>
+                <a href="{% url 'reports_module:people_activity' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/reports/activities/' in request.path %}bg-violet-50 text-violet-700{% else %}text-slate-600{% endif %}">
+                    <span class="sidebar-icon text-violet-500"><i class="fa-solid fa-chart-simple"></i></span>
+                    <span>فعالیت افراد</span>
+                    <span class="mr-auto rounded-full bg-violet-100 px-2 py-0.5 text-[8px] font-black text-violet-600">LIVE</span>
+                </a>
+            {% endif %}
+
+            {% if user.is_authenticated and user.role == 'ADMIN' %}
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">مدیریت دوره‌ها</p>
                 <a href="{% url 'courses_module:course_list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-lock"></i></span>
