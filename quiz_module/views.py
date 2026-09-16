@@ -9,6 +9,7 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from auth_module.models import UserRole
@@ -16,13 +17,15 @@ from questions_module.models import Question
 
 from .forms import BankImportForm, ManualGradeForm, QuizChoiceFormSet, QuizForm, QuizQuestionForm
 from .models import Quiz, QuizAnswer, QuizAttempt, QuizChoice, QuizQuestion
-from .permissions import can_create_quiz, can_manage_quiz, can_review_quiz, can_view_results, is_quiz_admin, trustee_province_ids
+from .permissions import can_create_quiz, can_edit_quiz_questions, can_manage_quiz, can_review_quiz, can_view_results, is_quiz_admin, trustee_province_ids
 from .services import create_attempt, enqueue_quiz_questions, finalize_attempt, log_tab_event, recalculate_attempt
 
 
 def _student_can_take(user, quiz):
     if user.role != UserRole.STUDENT or quiz.status != Quiz.Status.APPROVED:
         return False
+    if quiz.all_students:
+        return True
     assigned = quiz.assigned_students.exists()
     if assigned:
         return quiz.assigned_students.filter(pk=user.pk).exists()
@@ -52,7 +55,7 @@ def _quiz_queryset_for(user):
         profile_schools = user.student_profiles.values_list("field__grade__school_id", flat=True)
         profile_provinces = user.student_profiles.values_list("field__grade__school__province_id", flat=True)
         return qs.filter(status=Quiz.Status.APPROVED).filter(
-            Q(assigned_students=user) |
+            Q(all_students=True) | Q(assigned_students=user) |
             (Q(assigned_students__isnull=True) &
              (Q(field__isnull=True) | Q(field_id__in=profile_fields)) &
              (Q(grade__isnull=True) | Q(grade_id__in=profile_grades)) &
@@ -60,6 +63,15 @@ def _quiz_queryset_for(user):
              (Q(province__isnull=True) | Q(province_id__in=profile_provinces)))
         ).distinct()
     return qs.none()
+
+
+def _mark_consultant_quiz_changed(user, quiz):
+    if user.role == UserRole.CONSULTANT and quiz.status != Quiz.Status.DRAFT:
+        quiz.status = Quiz.Status.DRAFT
+        quiz.approved_by = None
+        quiz.approved_at = None
+        quiz.approval_note = ""
+        quiz.save(update_fields=["status", "approved_by", "approved_at", "approval_note"])
 
 
 @login_required
@@ -99,6 +111,7 @@ def quiz_edit(request, pk):
     form = QuizForm(request.POST or None, instance=quiz)
     if request.method == "POST" and form.is_valid():
         form.save()
+        _mark_consultant_quiz_changed(request.user, quiz)
         messages.success(request, "تنظیمات آزمون به‌روزرسانی شد.")
         return redirect("quiz_module:quiz_builder", pk=quiz.pk)
     return render(request, "quiz_module/quiz_form.html", {"form": form, "quiz": quiz, "title": "ویرایش آزمون"})
@@ -107,7 +120,7 @@ def quiz_edit(request, pk):
 @login_required
 def quiz_builder(request, pk):
     quiz = get_object_or_404(Quiz.objects.prefetch_related("questions__choices"), pk=pk)
-    if not can_manage_quiz(request.user, quiz):
+    if not can_edit_quiz_questions(request.user, quiz):
         raise Http404
     quiz.sync_question_count()
     return render(request, "quiz_module/quiz_builder.html", {"quiz": quiz})
@@ -116,7 +129,7 @@ def quiz_builder(request, pk):
 @login_required
 def question_create(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
-    if not can_manage_quiz(request.user, quiz):
+    if not can_edit_quiz_questions(request.user, quiz):
         raise Http404
     question = QuizQuestion(quiz=quiz, order=quiz.questions.count())
     form = QuizQuestionForm(request.POST or None, request.FILES or None, instance=question)
@@ -131,6 +144,7 @@ def question_create(request, pk):
                 if question.question_type == QuizQuestion.Type.MCQ:
                     formset.save()
                 quiz.sync_question_count()
+                _mark_consultant_quiz_changed(request.user, quiz)
             messages.success(request, "سؤال جدید به آزمون اضافه شد.")
             return redirect("quiz_module:quiz_builder", pk=quiz.pk)
     return render(request, "quiz_module/question_form.html", {"quiz": quiz, "form": form, "formset": formset, "title": "سؤال جدید"})
@@ -139,7 +153,7 @@ def question_create(request, pk):
 @login_required
 def question_edit(request, pk, question_id):
     quiz = get_object_or_404(Quiz, pk=pk)
-    if not can_manage_quiz(request.user, quiz):
+    if not can_edit_quiz_questions(request.user, quiz):
         raise Http404
     question = get_object_or_404(QuizQuestion, pk=question_id, quiz=quiz)
     form = QuizQuestionForm(request.POST or None, request.FILES or None, instance=question)
@@ -151,6 +165,7 @@ def question_edit(request, pk, question_id):
                 formset.save()
             else:
                 question.choices.all().delete()
+            _mark_consultant_quiz_changed(request.user, quiz)
         messages.success(request, "سؤال ویرایش شد.")
         return redirect("quiz_module:quiz_builder", pk=quiz.pk)
     return render(request, "quiz_module/question_form.html", {"quiz": quiz, "form": form, "formset": formset, "title": "ویرایش سؤال"})
@@ -160,10 +175,11 @@ def question_edit(request, pk, question_id):
 @require_POST
 def question_delete(request, pk, question_id):
     quiz = get_object_or_404(Quiz, pk=pk)
-    if not can_manage_quiz(request.user, quiz):
+    if not can_edit_quiz_questions(request.user, quiz):
         raise Http404
     get_object_or_404(QuizQuestion, pk=question_id, quiz=quiz).delete()
     quiz.sync_question_count()
+    _mark_consultant_quiz_changed(request.user, quiz)
     messages.success(request, "سؤال حذف شد.")
     return redirect("quiz_module:quiz_builder", pk=quiz.pk)
 
@@ -171,7 +187,7 @@ def question_delete(request, pk, question_id):
 @login_required
 def bank_import(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
-    if not can_manage_quiz(request.user, quiz):
+    if not can_edit_quiz_questions(request.user, quiz):
         raise Http404
     form = BankImportForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
@@ -187,6 +203,7 @@ def bank_import(request, pk):
                     QuizChoice.objects.create(question=item, text=choice.text, image=choice.image, is_correct=choice.is_correct, order=index)
                 order += 1
             quiz.sync_question_count()
+            _mark_consultant_quiz_changed(request.user, quiz)
         messages.success(request, "سؤال‌های انتخاب‌شده از بانک سؤال افزوده شدند.")
         return redirect("quiz_module:quiz_builder", pk=quiz.pk)
     return render(request, "quiz_module/bank_import.html", {"quiz": quiz, "form": form})
@@ -269,6 +286,7 @@ def _attempt_for_student(request, attempt_id):
 
 
 @login_required
+@never_cache
 def attempt_view(request, attempt_id):
     attempt = _attempt_for_student(request, attempt_id)
     if attempt.status != QuizAttempt.Status.IN_PROGRESS:

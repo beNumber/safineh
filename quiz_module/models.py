@@ -32,6 +32,7 @@ class Quiz(models.Model):
     shuffle_questions = models.BooleanField("چیدمان تصادفی سؤال‌ها", default=True)
     shuffle_choices = models.BooleanField("چیدمان تصادفی گزینه‌ها", default=True)
     publish_results = models.BooleanField("نمایش نتیجه به دانش‌آموز", default=True)
+    all_students = models.BooleanField("همه دانش‌آموزان", default=False)
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name="quizzes")
     grade = models.ForeignKey(Grade, on_delete=models.SET_NULL, null=True, blank=True, related_name="quizzes")
     field = models.ForeignKey(FieldOfStudy, on_delete=models.SET_NULL, null=True, blank=True, related_name="quizzes")

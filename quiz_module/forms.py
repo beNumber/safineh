@@ -36,9 +36,9 @@ class QuizForm(forms.ModelForm):
 
     class Meta:
         model = Quiz
-        fields = ["title", "description", "province", "school", "grade", "field", "assigned_students", "duration_minutes", "max_attempts", "negative_marking", "negative_ratio", "shuffle_questions", "shuffle_choices", "publish_results"]
+        fields = ["title", "description", "all_students", "province", "school", "grade", "field", "assigned_students", "duration_minutes", "max_attempts", "negative_marking", "negative_ratio", "shuffle_questions", "shuffle_choices", "publish_results"]
         widgets = {
-            "description": CKEditorUploadingWidget(), "negative_marking": forms.CheckboxInput(),
+            "description": CKEditorUploadingWidget(), "all_students": forms.CheckboxInput(), "negative_marking": forms.CheckboxInput(),
             "shuffle_questions": forms.CheckboxInput(), "shuffle_choices": forms.CheckboxInput(),
             "publish_results": forms.CheckboxInput(),
         }
@@ -49,7 +49,7 @@ class QuizForm(forms.ModelForm):
             if not isinstance(field.widget, (forms.CheckboxInput, CKEditorUploadingWidget)):
                 field.widget.attrs["class"] = CONTROL
         for name in ("opens_date", "closes_date", "release_date"):
-            self.fields[name].widget.attrs.update({"data-jdp": "", "autocomplete": "off", "placeholder": "1405/06/25"})
+            self.fields[name].widget.attrs.update({"data-jdp": "", "autocomplete": "off", "placeholder": "برای انتخاب تاریخ کلیک کنید", "readonly": "readonly"})
         self.fields["assigned_students"].widget.attrs["size"] = "8"
         self.fields["assigned_students"].queryset = get_user_model().objects.filter(role=UserRole.STUDENT, is_active=True).order_by("last_name", "first_name", "username")
         if self.instance.pk:
@@ -75,6 +75,8 @@ class QuizForm(forms.ModelForm):
             raise forms.ValidationError("انتشار پاسخ‌نامه باید پس از پایان آزمون باشد.")
         data["opens_at_value"], data["closes_at_value"], data["answer_release_at_value"] = opens, closes, release
         school, grade, field = data.get("school"), data.get("grade"), data.get("field")
+        if data.get("all_students"):
+            data["assigned_students"] = get_user_model().objects.none()
         if school and data.get("province") and school.province_id != data["province"].id:
             self.add_error("school", "مدرسه متعلق به استان انتخاب‌شده نیست.")
         if grade and school and grade.school_id != school.id:
@@ -91,6 +93,8 @@ class QuizForm(forms.ModelForm):
         if commit:
             item.save()
             self.save_m2m()
+            if item.all_students:
+                item.assigned_students.clear()
         return item
 
 

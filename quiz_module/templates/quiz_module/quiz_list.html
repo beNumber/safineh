@@ -1,6 +1,70 @@
-{% extends "quiz_module/_base.html" %}{% load shamsi %}
-{% block title %}آزمون‌ها{% endblock %}{% block page_title %}مدیریت آزمون‌ها{% endblock %}{% block breadcrumb %}آزمون‌ها{% endblock %}
-{% block page_actions %}<div class="flex gap-2">{% if user.role == 'PROVINCE_TRUSTEE' or user.role == 'ADMIN' or user.is_superuser %}<a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:approval_queue' %}"><i class="fa-solid fa-shield-check"></i> صف تأیید</a>{% endif %}{% if can_create %}<a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:quiz_create' %}"><i class="fa-solid fa-plus"></i> آزمون جدید</a>{% endif %}</div>{% endblock %}
-{% block content %}<div class="quiz-shell space-y-5">
-<section class="quiz-card overflow-hidden p-6"><div class="flex flex-col justify-between gap-4 md:flex-row md:items-center"><div><span class="quiz-chip bg-blue-50 text-blue-700">مرکز آزمون آنلاین</span><h1 class="mt-3 text-2xl font-black text-slate-900">آزمون‌ها، یکپارچه و قابل پیگیری</h1><p class="mt-2 text-sm text-slate-500">زمان‌بندی شمسی، ذخیره خودکار پاسخ‌ها، تصحیح و گزارش تحلیلی در یک مسیر.</p></div><div class="grid grid-cols-3 gap-2 text-center"><div class="rounded-2xl bg-slate-50 p-3"><b class="block text-lg text-slate-800">{{ quizzes|length }}</b><span class="text-[10px] text-slate-400">آزمون</span></div><div class="rounded-2xl bg-emerald-50 p-3"><i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i><span class="mt-1 block text-[10px] text-emerald-700">ذخیره آنی</span></div><div class="rounded-2xl bg-indigo-50 p-3"><i class="fa-solid fa-chart-line text-indigo-600"></i><span class="mt-1 block text-[10px] text-indigo-700">گزارش زنده</span></div></div></div></section>
-<div class="grid gap-4 lg:grid-cols-2">{% for quiz in quizzes %}<article class="quiz-card p-5 transition duration-300 hover:-translate-y-1"><div class="flex items-start justify-between gap-3"><div><span class="quiz-chip {% if quiz.status == 'approved' %}bg-emerald-50 text-emerald-700{% elif quiz.status == 'pending' %}bg-amber-50 text-amber-700{% elif quiz.status == 'rejected' %}bg-rose-50 text-rose-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ quiz.get_status_display }}</span><h2 class="mt-3 text-base font-black text-slate-800">{{ quiz.title }}</h2><p class="mt-1 text-xs text-slate-400">{{ quiz.creator.get_full_name|default:quiz.creator.username }}</p></div><div class="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600"><i class="fa-solid fa-file-circle-check"></i></div></div><div class="my-4 grid grid-cols-3 gap-2 text-center text-[11px]"><div class="rounded-xl bg-slate-50 p-2"><b class="block text-slate-700">{{ quiz.question_count }}</b>سؤال</div><div class="rounded-xl bg-slate-50 p-2"><b class="block text-slate-700">{{ quiz.duration_minutes }}</b>دقیقه</div><div class="rounded-xl bg-slate-50 p-2"><b class="block text-slate-700">{{ quiz.attempt_count }}</b>شرکت‌کننده</div></div><div class="space-y-1 text-xs text-slate-500"><p><i class="fa-regular fa-clock ml-2 text-blue-500"></i>شروع: {{ quiz.opens_at|shamsi }}</p><p><i class="fa-regular fa-hourglass-half ml-2 text-rose-500"></i>پایان: {{ quiz.closes_at|shamsi }}</p></div><div class="mt-5 flex flex-wrap gap-2">{% if user.role == 'STUDENT' %}<a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:start_quiz' quiz.pk %}">ورود به آزمون</a>{% else %}{% if quiz.status == 'draft' or quiz.status == 'rejected' %}<a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_builder' quiz.pk %}">طراحی سؤال‌ها</a><a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_edit' quiz.pk %}">تنظیمات</a>{% endif %}<a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_results' quiz.pk %}">نتایج</a>{% endif %}</div></article>{% empty %}<div class="quiz-card col-span-full p-12 text-center text-sm text-slate-400"><i class="fa-regular fa-folder-open mb-3 block text-4xl text-slate-300"></i>آزمونی برای نمایش وجود ندارد.</div>{% endfor %}</div></div>{% endblock %}
+{% extends "quiz_module/_base.html" %}
+{% load shamsi %}
+{% block title %}آزمون‌ها{% endblock %}
+{% block page_title %}مدیریت آزمون‌ها{% endblock %}
+{% block breadcrumb %}آزمون‌ها{% endblock %}
+
+{% block page_actions %}
+<div class="flex flex-wrap gap-2">
+    {% if user.role == 'PROVINCE_TRUSTEE' or user.role == 'ADMIN' or user.is_superuser %}
+    <a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:approval_queue' %}"><span class="quiz-btn-icon soft"><i class="fa-solid fa-shield-halved"></i></span>صف تأیید</a>
+    {% endif %}
+    {% if can_create %}
+    <a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:quiz_create' %}"><span class="quiz-btn-icon"><i class="fa-solid fa-file-circle-plus"></i></span>آزمون جدید</a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="quiz-shell space-y-6">
+    <section class="quiz-glass-hero overflow-hidden rounded-[28px] p-6 text-white sm:p-8">
+        <div class="relative z-10 flex flex-col justify-between gap-5 md:flex-row md:items-center">
+            <div><span class="quiz-chip border border-white/20 bg-white/15 text-white backdrop-blur-md"><i class="fa-solid fa-graduation-cap ml-2"></i>مرکز آزمون آنلاین</span><h1 class="mt-4 text-2xl font-black sm:text-3xl">آزمون‌ها، یکپارچه و قابل پیگیری</h1><p class="mt-2 text-sm text-blue-50/90">زمان‌بندی شمسی، ذخیره خودکار پاسخ‌ها، تصحیح و گزارش تحلیلی در یک مسیر.</p></div>
+            <div class="grid grid-cols-3 gap-2 text-center"><div class="hero-stat"><b>{{ quizzes|length }}</b><span>آزمون</span></div><div class="hero-stat"><i class="fa-solid fa-cloud-arrow-up"></i><span>ذخیره آنی</span></div><div class="hero-stat"><i class="fa-solid fa-chart-line"></i><span>گزارش زنده</span></div></div>
+        </div>
+    </section>
+
+    <div class="grid gap-5 lg:grid-cols-2">
+        {% for quiz in quizzes %}
+        <article class="quiz-card quiz-list-card {% if quiz.status == 'approved' %}approved-quiz-card{% endif %} overflow-hidden p-5 sm:p-6">
+            {% if quiz.status == 'approved' %}<div class="approved-ribbon"><i class="fa-solid fa-circle-check"></i> تأیید شده</div>{% endif %}
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap gap-1.5">
+                        <span class="quiz-chip {% if quiz.status == 'approved' %}bg-emerald-100 text-emerald-700{% elif quiz.status == 'pending' %}bg-amber-50 text-amber-700{% elif quiz.status == 'rejected' %}bg-rose-50 text-rose-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ quiz.get_status_display }}</span>
+                        {% if quiz.all_students %}<span class="quiz-chip bg-blue-50 text-blue-700"><i class="fa-solid fa-users ml-1"></i>همه دانش‌آموزان</span>{% endif %}
+                    </div>
+                    <h2 class="mt-3 truncate text-lg font-black text-slate-800">{{ quiz.title }}</h2>
+                    <p class="mt-1 text-xs text-slate-400"><i class="fa-regular fa-user ml-1"></i>{{ quiz.creator.get_full_name|default:quiz.creator.username }}</p>
+                </div>
+                <span class="quiz-card-icon {% if quiz.status == 'approved' %}approved{% endif %}"><i class="fa-solid {% if quiz.status == 'approved' %}fa-award{% else %}fa-clipboard-question{% endif %}"></i></span>
+            </div>
+
+            <div class="my-5 grid grid-cols-3 gap-2 text-center text-[11px]">
+                <div class="quiz-mini-stat"><i class="fa-solid fa-list-ol text-blue-500"></i><b>{{ quiz.question_count }}</b><span>سؤال</span></div>
+                <div class="quiz-mini-stat"><i class="fa-regular fa-clock text-violet-500"></i><b>{{ quiz.duration_minutes }}</b><span>دقیقه</span></div>
+                <div class="quiz-mini-stat"><i class="fa-solid fa-user-check text-emerald-500"></i><b>{{ quiz.attempt_count }}</b><span>شرکت‌کننده</span></div>
+            </div>
+
+            <div class="quiz-time-panel"><p><span class="time-icon start"><i class="fa-solid fa-play"></i></span><span>شروع آزمون</span><b>{{ quiz.opens_at|shamsi }}</b></p><p><span class="time-icon end"><i class="fa-solid fa-flag-checkered"></i></span><span>پایان آزمون</span><b>{{ quiz.closes_at|shamsi }}</b></p></div>
+
+            <div class="mt-5 flex flex-wrap gap-2">
+                {% if user.role == 'STUDENT' %}
+                <a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:start_quiz' quiz.pk %}"><span class="quiz-btn-icon"><i class="fa-solid fa-arrow-left-to-bracket"></i></span>ورود به آزمون</a>
+                {% else %}
+                    {% if user.role == 'ADMIN' or user.is_superuser or quiz.creator_id == user.id %}
+                    <a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:quiz_edit' quiz.pk %}"><span class="quiz-btn-icon"><i class="fa-solid fa-pen"></i></span>ویرایش آزمون</a>
+                    <a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_builder' quiz.pk %}"><i class="fa-solid fa-list-check"></i>سؤال‌ها</a>
+                    {% elif user.role == 'PROVINCE_TRUSTEE' and quiz.status == 'approved' %}
+                    <a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:quiz_builder' quiz.pk %}"><span class="quiz-btn-icon"><i class="fa-solid fa-pen-to-square"></i></span>ویرایش سؤال‌ها</a>
+                    {% endif %}
+                    <a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_results' quiz.pk %}"><i class="fa-solid fa-chart-pie"></i>نتایج</a>
+                {% endif %}
+            </div>
+        </article>
+        {% empty %}
+        <div class="quiz-card col-span-full p-12 text-center text-sm text-slate-400"><span class="quiz-empty-icon"><i class="fa-regular fa-folder-open"></i></span><b class="mt-4 block text-slate-600">آزمونی برای نمایش وجود ندارد</b><p class="mt-1">اولین آزمون خود را ایجاد کنید.</p></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

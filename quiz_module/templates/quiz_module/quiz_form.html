@@ -1,4 +1,224 @@
-{% extends "quiz_module/_base.html" %}{% load static %}
-{% block title %}{{ title }}{% endblock %}{% block page_title %}{{ title }}{% endblock %}{% block breadcrumb %}{{ title }}{% endblock %}
-{% block content %}<form method="post" class="quiz-shell quiz-card mx-auto max-w-6xl p-6" enctype="multipart/form-data">{% csrf_token %}<div class="mb-6"><h1 class="text-xl font-black text-slate-900">{{ title }}</h1><p class="mt-1 text-xs text-slate-500">اطلاعات، مخاطبان و بازه دقیق آزمون را مشخص کنید.</p></div>{% if form.non_field_errors %}<div class="mb-4 rounded-xl bg-rose-50 p-3 text-xs text-rose-700">{{ form.non_field_errors }}</div>{% endif %}<div class="grid gap-5 md:grid-cols-2">{% for field in form %}<div class="{% if field.name == 'description' or field.name == 'assigned_students' %}md:col-span-2{% endif %}"><label class="mb-2 block text-xs font-black text-slate-700">{{ field.label }}</label>{{ field }}{% if field.help_text %}<p class="mt-1 text-[10px] text-slate-400">{{ field.help_text }}</p>{% endif %}{% for error in field.errors %}<p class="mt-1 text-xs text-rose-600">{{ error }}</p>{% endfor %}</div>{% endfor %}</div><div class="mt-7 flex gap-2"><button class="quiz-btn quiz-btn-primary" type="submit"><i class="fa-solid fa-check"></i> ذخیره و ادامه</button><a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_list' %}">انصراف</a></div></form>{% endblock %}
-{% block quiz_js %}<link rel="stylesheet" href="{% static 'jalalidatepicker/jalalidatepicker.css' %}"><script src="{% static 'jalalidatepicker/jalalidatepicker.js' %}"></script><script>document.addEventListener('DOMContentLoaded',()=>{if(window.jalaliDatepicker)jalaliDatepicker.startWatch({time:false,autoHide:true});const ids=['id_province','id_school','id_grade','id_field'];ids.forEach(id=>document.getElementById(id)?.addEventListener('change',refreshStudents));async function refreshStudents(){const p=new URLSearchParams({school:document.getElementById('id_school')?.value||'',grade:document.getElementById('id_grade')?.value||'',field:document.getElementById('id_field')?.value||''});const r=await fetch('{% url "quiz_module:filter_students" %}?'+p);if(!r.ok)return;const data=await r.json(),box=document.getElementById('id_assigned_students'),selected=new Set([...box.selectedOptions].map(o=>o.value));box.innerHTML='';data.results.forEach(x=>box.add(new Option(x.text,x.id,false,selected.has(String(x.id))))}}</script>{% endblock %}
+{% extends "quiz_module/_base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block breadcrumb %}{{ title }}{% endblock %}
+
+{% block quiz_css %}
+<link rel="stylesheet" href="{% static 'jalalidatepicker/jalalidatepicker.css' %}">
+{% endblock %}
+
+{% block content %}
+<form method="post" class="quiz-shell mx-auto max-w-6xl space-y-5" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {{ form.media }}
+
+    <section class="quiz-glass-hero rounded-[28px] p-6 text-white sm:p-8">
+        <div class="relative z-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+            <div>
+                <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-[11px] font-bold backdrop-blur-md">
+                    <i class="fa-solid {% if quiz %}fa-pen-to-square{% else %}fa-wand-magic-sparkles{% endif %}"></i>
+                    {% if quiz %}ویرایش و به‌روزرسانی آزمون{% else %}ساخت آزمون تازه{% endif %}
+                </span>
+                <h1 class="mt-4 text-2xl font-black sm:text-3xl">{{ title }}</h1>
+                <p class="mt-2 max-w-2xl text-sm leading-7 text-blue-50/90">اطلاعات آزمون، بازه برگزاری و دانش‌آموزان مخاطب را مشخص کنید.</p>
+            </div>
+            <div class="hidden h-20 w-20 place-items-center rounded-3xl border border-white/20 bg-white/15 text-3xl shadow-xl backdrop-blur-md sm:grid">
+                <i class="fa-solid fa-file-signature"></i>
+            </div>
+        </div>
+    </section>
+
+    {% if form.non_field_errors %}
+    <div class="quiz-card border-rose-200/80 p-4 text-sm text-rose-700">
+        <div class="flex gap-3"><i class="fa-solid fa-circle-exclamation mt-1"></i><div>{{ form.non_field_errors }}</div></div>
+    </div>
+    {% endif %}
+
+    <section class="quiz-card p-5 sm:p-7">
+        <div class="quiz-section-title">
+            <span class="quiz-section-icon"><i class="fa-solid fa-align-right"></i></span>
+            <div><h2 class="font-black text-slate-800">مشخصات آزمون</h2><p class="mt-1 text-[11px] text-slate-400">عنوان و توضیحی که دانش‌آموز مشاهده می‌کند</p></div>
+        </div>
+        <div class="grid gap-5">
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="quiz-label">{{ form.title.label }}</label>
+                {{ form.title }}
+                {% for error in form.title.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+            </div>
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="quiz-label">{{ form.description.label }}</label>
+                <div class="quiz-editor">{{ form.description }}</div>
+                {% for error in form.description.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="quiz-card p-5 sm:p-7">
+        <div class="quiz-section-title">
+            <span class="quiz-section-icon"><i class="fa-solid fa-users"></i></span>
+            <div><h2 class="font-black text-slate-800">مخاطبان آزمون</h2><p class="mt-1 text-[11px] text-slate-400">همه دانش‌آموزان یا گروه و افراد مشخص را انتخاب کنید</p></div>
+        </div>
+
+        <div id="audience-filters" class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {% for field in form %}
+                {% if field.name == 'province' or field.name == 'school' or field.name == 'grade' or field.name == 'field' %}
+                <div><label for="{{ field.id_for_label }}" class="quiz-label">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <div id="student-picker" class="mt-5">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <label for="{{ form.assigned_students.id_for_label }}" class="quiz-label mb-0">{{ form.assigned_students.label }}</label>
+                <span class="text-[10px] text-slate-400"><i class="fa-solid fa-circle-info ml-1"></i>برای انتخاب چند نفر، کلید Ctrl را نگه دارید</span>
+            </div>
+            <label class="audience-all mb-3 flex cursor-pointer items-center gap-3 rounded-2xl p-3.5">
+                <span class="quiz-switch">{{ form.all_students }}<span></span></span>
+                <span class="quiz-modern-icon quiz-modern-icon-blue"><i class="fa-solid fa-users"></i></span>
+                <span class="min-w-0 flex-1"><b class="block text-sm text-slate-800">انتخاب همه دانش‌آموزان</b><small class="mt-1 block text-[11px] leading-5 text-slate-500">با فعال‌کردن این تیک، نیازی به انتخاب افراد از فهرست نیست.</small></span>
+            </label>
+            {% for error in form.all_students.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+            <div id="student-list">
+                {{ form.assigned_students }}
+                <p id="student-count" class="mt-2 text-[11px] font-bold text-blue-600"></p>
+                {% for error in form.assigned_students.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <section class="quiz-card p-5 sm:p-7">
+        <div class="quiz-section-title">
+            <span class="quiz-section-icon"><i class="fa-regular fa-calendar-check"></i></span>
+            <div><h2 class="font-black text-slate-800">زمان‌بندی آزمون</h2><p class="mt-1 text-[11px] text-slate-400">برای انتخاب تاریخ روی کادر یا آیکن تقویم بزنید</p></div>
+        </div>
+        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {% for field in form %}
+                {% if field.name == 'opens_date' or field.name == 'closes_date' or field.name == 'release_date' %}
+                <div class="quiz-date-wrap">
+                    <label for="{{ field.id_for_label }}" class="quiz-label">{{ field.label }}</label>
+                    {{ field }}
+                    <button class="quiz-calendar-btn" type="button" data-calendar-for="{{ field.id_for_label }}" aria-label="باز کردن تقویم"><i class="fa-solid fa-calendar-days"></i></button>
+                    {% for error in field.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+                </div>
+                {% elif field.name == 'opens_time' or field.name == 'closes_time' or field.name == 'release_time' %}
+                <div><label for="{{ field.id_for_label }}" class="quiz-label">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="quiz-card p-5 sm:p-7">
+        <div class="quiz-section-title">
+            <span class="quiz-section-icon"><i class="fa-solid fa-sliders"></i></span>
+            <div><h2 class="font-black text-slate-800">تنظیمات برگزاری</h2><p class="mt-1 text-[11px] text-slate-400">مدت، دفعات شرکت و شیوه نمایش سؤال‌ها</p></div>
+        </div>
+        <div class="grid gap-5 md:grid-cols-3">
+            {% for field in form %}
+                {% if field.name == 'duration_minutes' or field.name == 'max_attempts' or field.name == 'negative_ratio' %}
+                <div id="wrap-{{ field.name }}"><label for="{{ field.id_for_label }}" class="quiz-label">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {% for field in form %}
+                {% if field.name == 'negative_marking' or field.name == 'shuffle_questions' or field.name == 'shuffle_choices' or field.name == 'publish_results' %}
+                <label class="quiz-option-card"><span class="quiz-switch">{{ field }}<span></span></span><span>{{ field.label }}</span></label>
+                {% for error in field.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+                {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="quiz-card sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 p-4">
+        <p class="hidden text-xs text-slate-500 sm:block"><i class="fa-solid fa-shield-halved ml-2 text-emerald-500"></i>تغییرات پس از ثبت ذخیره می‌شوند.</p>
+        <div class="flex gap-2">
+            <button class="quiz-btn quiz-btn-primary" type="submit"><i class="fa-solid fa-check"></i>{% if quiz %}ذخیره تغییرات{% else %}ذخیره و ادامه{% endif %}</button>
+            <a class="quiz-btn quiz-btn-soft" href="{% if quiz %}{% url 'quiz_module:quiz_builder' quiz.pk %}{% else %}{% url 'quiz_module:quiz_list' %}{% endif %}">انصراف</a>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block quiz_js %}
+<script src="{% static 'jalalidatepicker/jalalidatepicker.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (window.jalaliDatepicker) {
+        jalaliDatepicker.startWatch({time: false, autoHide: true, zIndex: 1000});
+    }
+
+    document.querySelectorAll('[data-calendar-for]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const input = document.getElementById(button.dataset.calendarFor);
+            if (input) {
+                input.focus();
+                input.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+            }
+        });
+    });
+
+    const allStudents = document.getElementById('id_all_students');
+    const audienceFilters = document.getElementById('audience-filters');
+    const studentPicker = document.getElementById('student-list');
+    const studentBox = document.getElementById('id_assigned_students');
+    const studentCount = document.getElementById('student-count');
+
+    function syncAudience() {
+        const disabled = Boolean(allStudents && allStudents.checked);
+        [audienceFilters, studentPicker].forEach(function (section) {
+            section?.classList.toggle('audience-disabled', disabled);
+        });
+        audienceFilters?.querySelectorAll('select').forEach(function (field) { field.disabled = disabled; });
+        if (studentBox) studentBox.disabled = disabled;
+    }
+
+    function updateStudentCount() {
+        if (!studentCount || !studentBox) return;
+        const count = studentBox.selectedOptions.length;
+        studentCount.textContent = count ? count + ' دانش‌آموز انتخاب شده' : 'انتخاب فردی انجام نشده است';
+    }
+
+    async function refreshStudents() {
+        if (!studentBox || allStudents?.checked) return;
+        const params = new URLSearchParams({
+            school: document.getElementById('id_school')?.value || '',
+            grade: document.getElementById('id_grade')?.value || '',
+            field: document.getElementById('id_field')?.value || ''
+        });
+        try {
+            const response = await fetch('{% url "quiz_module:filter_students" %}?' + params);
+            if (!response.ok) return;
+            const data = await response.json();
+            const selected = new Set(Array.from(studentBox.selectedOptions).map(function (option) { return option.value; }));
+            studentBox.innerHTML = '';
+            data.results.forEach(function (item) {
+                studentBox.add(new Option(item.text, item.id, false, selected.has(String(item.id))));
+            });
+            updateStudentCount();
+        } catch (error) {
+            console.warn('Student list could not be refreshed.', error);
+        }
+    }
+
+    allStudents?.addEventListener('change', syncAudience);
+    studentBox?.addEventListener('change', updateStudentCount);
+    ['id_province', 'id_school', 'id_grade', 'id_field'].forEach(function (id) {
+        document.getElementById(id)?.addEventListener('change', refreshStudents);
+    });
+    syncAudience();
+    updateStudentCount();
+
+    const negativeMarking = document.getElementById('id_negative_marking');
+    const negativeRatio = document.getElementById('wrap-negative_ratio');
+    function syncNegativeRatio() {
+        negativeRatio?.classList.toggle('setting-disabled', !negativeMarking?.checked);
+        const input = document.getElementById('id_negative_ratio');
+        if (input) input.readOnly = !negativeMarking?.checked;
+    }
+    negativeMarking?.addEventListener('change', syncNegativeRatio);
+    syncNegativeRatio();
+});
+</script>
+{% endblock %}

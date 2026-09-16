@@ -21,7 +21,19 @@ def trustee_province_ids(user):
 def can_manage_quiz(user, quiz):
     if is_quiz_admin(user):
         return True
-    return can_create_quiz(user) and quiz.creator_id == user.id and quiz.status in {quiz.Status.DRAFT, quiz.Status.REJECTED}
+    return can_create_quiz(user) and quiz.creator_id == user.id
+
+
+def can_edit_quiz_questions(user, quiz):
+    """Question editing is also available to the trustee of an approved quiz."""
+    if can_manage_quiz(user, quiz):
+        return True
+    return (
+        user.is_authenticated
+        and user.role == UserRole.PROVINCE_TRUSTEE
+        and quiz.status == quiz.Status.APPROVED
+        and quiz.province_id in trustee_province_ids(user)
+    )
 
 
 def can_review_quiz(user, quiz):

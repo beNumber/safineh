@@ -5,8 +5,9 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
 
-from auth_module.models import UserRole
-from users_module.models import Access, FieldOfStudy, Grade, Province, School
+from auth_module.models import ProvinceTrustee, UserRole
+from questions_module.models import Chapter, Question, Topic
+from users_module.models import Access, FieldOfStudy, Grade, Province, School, Subject
 
 from .forms import QuizForm
 from .models import Quiz, QuizAnswer, QuizChoice, QuizQuestion
@@ -63,6 +64,11 @@ class QuizFeatureTests(TestCase):
         self.assertEqual(result.wrong_count, 1)
         self.assertEqual(result.score, Decimal("0"))
         self.assertEqual(result.answers.get().points_earned, Decimal("-1"))
+        self.client.force_login(self.student)
+        response = self.client.get(f"/quizzes/attempt/{attempt.pk}/")
+        self.assertRedirects(response, f"/quizzes/attempt/{attempt.pk}/result/")
+        response = self.client.get(f"/quizzes/attempt/{attempt.pk}/result/")
+        self.assertContains(response, "بازگشت به آزمون‌ها")
 
     def test_admin_quiz_pages_render(self):
         self.client.force_login(self.admin)
@@ -72,3 +78,50 @@ class QuizFeatureTests(TestCase):
         response = self.client.get("/quizzes/create/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "ساعت شروع")
+        self.assertContains(response, "همه دانش‌آموزان")
+        self.assertContains(response, "data-calendar-for")
+
+    def test_all_students_quiz_is_visible_and_editable(self):
+        now = timezone.now()
+        quiz = Quiz.objects.create(
+            title="آزمون همگانی", creator=self.admin, status=Quiz.Status.APPROVED,
+            opens_at=now - timedelta(minutes=5), closes_at=now + timedelta(hours=1),
+            all_students=True,
+        )
+        self.client.force_login(self.student)
+        response = self.client.get("/quizzes/")
+        self.assertContains(response, quiz.title)
+
+        self.client.force_login(self.admin)
+        response = self.client.get("/quizzes/")
+        self.assertContains(response, "ویرایش آزمون")
+        self.assertContains(response, f'/quizzes/{quiz.pk}/edit/')
+
+    def test_province_trustee_can_edit_approved_quiz_questions(self):
+        trustee = self.User.objects.create_user(username="trustee-q", password="x", role=UserRole.PROVINCE_TRUSTEE)
+        ProvinceTrustee.objects.create(user=trustee, province=self.province)
+        now = timezone.now()
+        quiz = Quiz.objects.create(
+            title="آزمون تأییدشده استان", creator=self.consultant, province=self.province,
+            status=Quiz.Status.APPROVED, opens_at=now, closes_at=now + timedelta(hours=1),
+        )
+        question = QuizQuestion.objects.create(quiz=quiz, text="سؤال قابل ویرایش")
+        self.client.force_login(trustee)
+        self.assertEqual(self.client.get(f"/quizzes/{quiz.pk}/builder/").status_code, 200)
+        self.assertEqual(self.client.get(f"/quizzes/{quiz.pk}/questions/{question.pk}/edit/").status_code, 200)
+
+    def test_province_trustee_can_edit_approved_bank_question(self):
+        trustee = self.User.objects.create_user(username="trustee-bank", password="x", role=UserRole.PROVINCE_TRUSTEE)
+        ProvinceTrustee.objects.create(user=trustee, province=self.province)
+        subject = Subject.objects.create(title="ریاضی آزمون", field=self.field)
+        chapter = Chapter.objects.create(subject=subject, name="فصل اول")
+        topic = Topic.objects.create(chapter=chapter, name="مبحث اول")
+        question = Question.objects.create(
+            creator=self.consultant, topic=topic, text="سؤال تأیید شده",
+            approval_status=Question.ApprovalStatus.APPROVED,
+        )
+        self.client.force_login(trustee)
+        response = self.client.get("/questions/approval/")
+        self.assertContains(response, "سؤال‌های تأییدشده")
+        self.assertContains(response, f'/questions/{question.pk}/edit/')
+        self.assertEqual(self.client.get(f"/questions/{question.pk}/edit/").status_code, 200)
