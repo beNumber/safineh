@@ -59,29 +59,47 @@ document.addEventListener('DOMContentLoaded', function () {
     activitySelect?.addEventListener('change', syncSubjectField);
     syncSubjectField();
 
+    const mainStudentInputs = Array.from(document.querySelectorAll('[data-main-student]'));
+    const modalStudentInputs = Array.from(document.querySelectorAll('.target-list [name="target_students"]'));
+    const selectedCounter = document.querySelector('[data-selected-count]');
+    const selectionSnapshot = document.querySelector('[data-selection-snapshot]');
+
+    function paintStudentSelection(selected) {
+        mainStudentInputs.forEach(input => {
+            input.checked = selected.has(input.value);
+            input.closest('.student-glass-card')?.classList.toggle('is-selected', input.checked);
+        });
+        if (selectedCounter) selectedCounter.textContent = selected.size.toLocaleString('fa-IR');
+        if (selectionSnapshot) selectionSnapshot.value = Array.from(selected).join(',');
+    }
+
+    function syncFromMainStudents() {
+        const selected = new Set(mainStudentInputs.filter(input => input.checked).map(input => input.value));
+        modalStudentInputs.forEach(input => { input.checked = selected.has(input.value); });
+        paintStudentSelection(selected);
+    }
+
+    function syncFromModalStudents() {
+        const selected = new Set(modalStudentInputs.filter(input => input.checked).map(input => input.value));
+        paintStudentSelection(selected);
+    }
+
     document.querySelector('[data-toggle-students]')?.addEventListener('click', function () {
-        const checkboxes = Array.from(document.querySelectorAll('[name="target_students"]'));
+        const checkboxes = modalStudentInputs;
         const shouldCheck = checkboxes.some(input => !input.checked);
         checkboxes.forEach(input => { input.checked = shouldCheck; });
         this.textContent = shouldCheck ? 'لغو انتخاب همه' : 'انتخاب همه';
+        syncFromModalStudents();
     });
 
-    const mainStudentInputs = Array.from(document.querySelectorAll('[data-main-student]'));
-    const modalStudentInputs = Array.from(document.querySelectorAll('[name="target_students"]'));
-    const selectedCounter = document.querySelector('[data-selected-count]');
-
-    function syncStudentSelection() {
-        const selected = new Set(mainStudentInputs.filter(input => input.checked).map(input => input.value));
-        modalStudentInputs.forEach(input => { input.checked = selected.has(input.value); });
-        mainStudentInputs.forEach(input => input.closest('.student-glass-card')?.classList.toggle('is-selected', input.checked));
-        if (selectedCounter) selectedCounter.textContent = selected.size.toLocaleString('fa-IR');
-    }
-
-    mainStudentInputs.forEach(input => input.addEventListener('change', syncStudentSelection));
+    mainStudentInputs.forEach(input => input.addEventListener('change', syncFromMainStudents));
+    modalStudentInputs.forEach(input => input.addEventListener('change', syncFromModalStudents));
     document.querySelectorAll('[data-open-plan-modal]').forEach(button => {
-        button.addEventListener('click', syncStudentSelection);
+        button.addEventListener('click', syncFromMainStudents);
     });
-    syncStudentSelection();
+    document.getElementById('plan-entry-form')?.addEventListener('submit', syncFromModalStudents);
+    if (modal?.dataset.hasFormErrors === 'true') syncFromModalStudents();
+    else syncFromMainStudents();
 
     document.querySelectorAll('[data-completion-form]').forEach(form => {
         form.addEventListener('submit', async function (event) {

@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "users_module",
     "questions_module",
     "plans_module",
+    "counseling_module",
 ]
 
 

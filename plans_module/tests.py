@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from auth_module.models import Consultant, Student, User, UserRole
+from counseling_module.models import StudentConsultantAssignment
 from users_module.models import Access, FieldOfStudy, Grade, Province, School, Subject
 
 from .models import ActivityType, PlanCompletion, PlanEntry, PlanSource
@@ -47,6 +48,12 @@ class PlansModuleTests(TestCase):
 
         cls.admin_user = User.objects.create_user(
             username="plan-admin", password="pass12345", role=UserRole.ADMIN
+        )
+        StudentConsultantAssignment.objects.create(
+            student=cls.student, consultant=cls.consultant_user, assigned_by=cls.admin_user
+        )
+        StudentConsultantAssignment.objects.create(
+            student=cls.second_student, consultant=cls.consultant_user, assigned_by=cls.admin_user
         )
 
     def plan_payload(self, **overrides):
@@ -105,11 +112,11 @@ class PlansModuleTests(TestCase):
         with self.assertRaises(ValidationError):
             overlapping.full_clean()
 
-    def test_consultant_sees_all_active_students_for_plan_assignment(self):
+    def test_consultant_sees_only_assigned_students_for_plan_assignment(self):
         visible = visible_students_for(self.consultant_user)
         self.assertIn(self.student, visible)
         self.assertIn(self.second_student, visible)
-        self.assertIn(self.other_student, visible)
+        self.assertNotIn(self.other_student, visible)
 
     def test_consultant_cannot_assign_subject_from_another_students_field(self):
         self.client.force_login(self.consultant_user)
@@ -131,6 +138,14 @@ class PlansModuleTests(TestCase):
         self.assertEqual(entries.count(), 2)
         self.assertEqual(len(set(entries.values_list("batch_id", flat=True))), 1)
         self.assertTrue(all(entry.source == PlanSource.CONSULTANT for entry in entries))
+
+    def test_selection_snapshot_keeps_selected_student_when_checkbox_post_is_missing(self):
+        self.client.force_login(self.consultant_user)
+        payload = self.plan_payload(selection_snapshot=str(self.second_student.pk))
+        response = self.client.post(reverse("plans_module:board"), payload)
+        self.assertEqual(response.status_code, 302)
+        entry = PlanEntry.objects.get()
+        self.assertEqual(entry.student, self.second_student)
 
     def test_admin_can_assign_non_subject_activity_to_all_students(self):
         self.client.force_login(self.admin_user)

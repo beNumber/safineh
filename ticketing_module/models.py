@@ -70,6 +70,9 @@ class Ticket(models.Model):
         choices=TicketStatus.choices,
         default=TicketStatus.PENDING_APPROVAL,
     )
+    is_private_consultation = models.BooleanField(
+        "گفت‌وگوی خصوصی با مشاور اختصاصی", default=False, db_index=True
+    )
     closed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

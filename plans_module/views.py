@@ -199,8 +199,17 @@ def plan_board(request):
         all_visible_students = visible_students_for(request.user)
         available_subjects = subjects_for_actor(request.user)
         initial_targets = [selected_student.pk] if selected_student else []
+        form_data = request.POST.copy() if request.method == "POST" else None
+        if form_data is not None and not form_data.getlist("target_students"):
+            snapshot_ids = [
+                value for value in form_data.get("selection_snapshot", "").split(",") if value.isdigit()
+            ]
+            if snapshot_ids:
+                form_data.setlist("target_students", snapshot_ids)
+            elif selected_student:
+                form_data.setlist("target_students", [str(selected_student.pk)])
         form = StaffPlanEntryForm(
-            request.POST or None,
+            form_data,
             actor=request.user,
             subjects=available_subjects,
             students=all_visible_students,

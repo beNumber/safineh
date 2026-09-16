@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from auth_module.models import Student, UserRole
+from counseling_module.models import StudentConsultantAssignment
 from users_module.models import Subject
 
 
@@ -30,8 +31,15 @@ def consultant_subject_ids(user):
 
 def visible_students_for(user):
     students = Student.objects.select_related("user", "field__grade__school__province")
-    if user.is_superuser or user.role in {UserRole.ADMIN, UserRole.CONSULTANT}:
+    if user.is_superuser or user.role == UserRole.ADMIN:
         return students.filter(user__is_active=True).order_by("user__last_name", "user__first_name")
+    if user.role == UserRole.CONSULTANT:
+        assigned_ids = StudentConsultantAssignment.objects.filter(
+            consultant=user
+        ).values_list("student_id", flat=True)
+        return students.filter(pk__in=assigned_ids, user__is_active=True).order_by(
+            "user__last_name", "user__first_name"
+        )
     return students.none()
 
 

@@ -1,0 +1,41 @@
+.counseling-shell {
+    --glass-border: rgba(255, 255, 255, .72);
+    position: relative;
+    isolation: isolate;
+}
+.counseling-shell::before,
+.counseling-shell::after {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    width: 24rem;
+    height: 24rem;
+    border-radius: 999px;
+    filter: blur(80px);
+    opacity: .2;
+    pointer-events: none;
+}
+.counseling-shell::before { top: 8rem; right: 18rem; background: #38bdf8; }
+.counseling-shell::after { bottom: 2rem; left: 3rem; background: #fb7185; }
+.counseling-glass {
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(145deg, rgba(255,255,255,.9), rgba(255,255,255,.58));
+    box-shadow: 0 24px 70px rgba(15, 23, 42, .10), inset 0 1px 0 rgba(255,255,255,.85);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+.counseling-hero {
+    background:
+        radial-gradient(circle at 12% 15%, rgba(255,255,255,.28), transparent 24%),
+        radial-gradient(circle at 88% 90%, rgba(52,211,153,.25), transparent 28%),
+        linear-gradient(125deg, #071a45 0%, #1556c0 47%, #0ea5a8 100%);
+}
+.counseling-card { transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease; }
+.counseling-card:hover { transform: translateY(-4px); box-shadow: 0 24px 55px rgba(30, 64, 175, .13); border-color: rgba(147,197,253,.85); }
+.counseling-avatar {
+    box-shadow: 0 0 0 5px rgba(255,255,255,.62), 0 13px 30px rgba(37,99,235,.20);
+}
+.status-dot { box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
+.glass-check { appearance: none; width: 1.25rem; height: 1.25rem; border-radius: .45rem; border: 1px solid rgba(148,163,184,.55); background: rgba(255,255,255,.75); transition: .2s ease; }
+.glass-check:checked { border-color: transparent; background: #16a34a; box-shadow: inset 0 0 0 4px rgba(255,255,255,.92), 0 5px 14px rgba(22,163,74,.28); }
+@media (prefers-reduced-motion: reduce) { .counseling-card { transition: none; } }

@@ -54,8 +54,9 @@
     {% if selected_student %}
     <section class="plan-overview-grid" data-aos="fade-up">
         <article class="overview-card student-overview">
-            <div class="student-avatar">{{ selected_student.user.first_name|first|default:selected_student.user.username|first }}</div>
-            <div><small>{% if is_student_view %}برنامه فعال من{% else %}برنامه انتخاب‌شده{% endif %}</small><h2>{{ selected_student.user.get_full_name|default:selected_student.user.username }}</h2><p>{{ selected_student.field.grade.title }} · رشته {{ selected_student.field.title }}</p></div>
+            <div class="student-avatar-wrap"><div class="student-avatar">{{ selected_student.user.first_name|first|default:selected_student.user.username|first }}</div><i></i></div>
+            <div class="student-overview-copy"><h2>{{ selected_student.user.get_full_name|default:selected_student.user.username }}</h2><div class="student-meta"><span><i class="fa-solid fa-graduation-cap"></i>{{ selected_student.field.grade.title }}</span><span><i class="fa-solid fa-book-open"></i>{{ selected_student.field.title }}</span></div></div>
+            <span class="student-glass-mark"><i class="fa-solid fa-sparkles"></i></span>
         </article>
         <article class="overview-card"><span class="stat-icon blue"><i class="fa-regular fa-calendar-check"></i></span><div><b>{{ total_entries }}</b><small>آیتم هفتگی</small></div></article>
         <article class="overview-card"><span class="stat-icon amber"><i class="fa-regular fa-clock"></i></span><div><b>{{ total_hours }}</b><small>ساعت برنامه‌ریزی</small></div></article>
@@ -135,12 +136,13 @@
     {% endif %}
 </div>
 
-<div class="plan-modal {% if form.errors %}is-open{% endif %}" id="plan-modal" aria-hidden="{% if form.errors %}false{% else %}true{% endif %}">
+<div class="plan-modal {% if form.errors %}is-open{% endif %}" id="plan-modal" aria-hidden="{% if form.errors %}false{% else %}true{% endif %}" data-has-form-errors="{% if form.errors %}true{% else %}false{% endif %}">
     <div class="plan-modal-backdrop" data-close-plan-modal></div>
     <div class="plan-modal-card">
         <button class="modal-close" type="button" data-close-plan-modal><i class="fa-solid fa-xmark"></i></button>
         <div class="modal-title"><span><i class="fa-solid fa-wand-magic-sparkles"></i></span><div><h2>{% if is_student_view %}آیتم جدید برنامه من{% else %}تخصیص برنامه به دانش‌آموزان{% endif %}</h2><p>زمان و نوع فعالیت را دقیق مشخص کن.</p></div></div>
-        <form method="post" class="plan-form">{% csrf_token %}
+        <form method="post" class="plan-form" id="plan-entry-form">{% csrf_token %}
+            {% if not is_student_view %}<input type="hidden" name="selection_snapshot" data-selection-snapshot value="{% if selected_student %}{{ selected_student.pk }}{% endif %}">{% endif %}
             {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
             {% if not is_student_view %}
             <div class="target-box">
