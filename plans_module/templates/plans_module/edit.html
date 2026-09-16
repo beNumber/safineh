@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}ویرایش برنامه | راه‌دان{% endblock %}
+{% block page_title %}ویرایش برنامه{% endblock %}
+{% block breadcrumb %}برنامه هفتگی / ویرایش{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'jalalidatepicker/jalalidatepicker.css' %}"><link rel="stylesheet" href="{% static 'plans_module/plans.css' %}">{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-3xl">
+    <section class="plans-hero mb-6"><div class="relative z-10"><span class="plans-eyebrow"><i class="fa-solid fa-pen"></i> ویرایش آیتم</span><h1>{{ entry.display_title }}</h1><p>{{ entry.student.user.get_full_name|default:entry.student.user.username }} · {{ entry.get_weekday_display }} · {{ entry.start_hour }} تا {{ entry.end_hour }}</p></div></section>
+    <section class="glass-panel p-6 sm:p-8">
+        <form method="post" class="plan-form">{% csrf_token %}
+            {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="form-grid">
+                <div class="field-wrap"><label>{{ form.activity_type.label }}</label>{{ form.activity_type }}{{ form.activity_type.errors }}</div>
+                <div class="field-wrap" data-subject-field><label>{{ form.subject.label }}</label>{{ form.subject }}{{ form.subject.errors }}</div>
+                <div class="field-wrap full"><label>{{ form.title.label }}</label>{{ form.title }}{{ form.title.errors }}</div>
+                <div class="field-wrap date-field"><label>{{ form.scheduled_date.label }}</label><div class="date-input-shell"><i class="fa-regular fa-calendar"></i>{{ form.scheduled_date }}</div>{{ form.scheduled_date.errors }}</div>
+                <div class="field-wrap"><label>{{ form.color.label }}</label>{{ form.color }}{{ form.color.errors }}</div>
+                <div class="field-wrap"><label>{{ form.start_hour.label }}</label>{{ form.start_hour }}{{ form.start_hour.errors }}</div>
+                <div class="field-wrap"><label>{{ form.end_hour.label }}</label>{{ form.end_hour }}{{ form.end_hour.errors }}</div>
+                <div class="field-wrap full"><label>{{ form.notes.label }}</label>{{ form.notes }}{{ form.notes.errors }}</div>
+            </div>
+            <div class="modal-footer"><a href="{% url 'plans_module:board' %}{% if user.role != 'STUDENT' or user.is_superuser %}?student={{ entry.student_id }}{% endif %}" class="button-secondary">انصراف</a><button class="button-submit"><i class="fa-solid fa-check"></i>ذخیره تغییرات</button></div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'jalalidatepicker/jalalidatepicker.js' %}"></script><script src="{% static 'plans_module/plans.js' %}"></script>{% endblock %}

@@ -242,7 +242,7 @@
 
             <div class="space-y-1">
 
-                <a href=""
+                <a href="{% url 'dashboard' %}"
                    class="sidebar-link active flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-grid-2"></i>
@@ -250,18 +250,28 @@
                     <span>داشبورد</span>
                 </a>
 
-                <a href=""
+                {% if user.is_authenticated and user.role == 'STUDENT' %}
+                <a href="{% url 'counseling:my_consultant' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-emerald-500"><i class="fa-solid fa-user-shield"></i></span>
+                    <span>مشاور من</span>
+                </a>
+                <a href="{% url 'plans_module:board' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-indigo-400"><i class="fa-solid fa-calendar-days"></i></span>
+                    <span>برنامه شخصی من</span>
+                </a>
+                {% endif %}
+
+                <a href="{% url 'ticketing:list' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-comments"></i>
                     </span>
                     <span class="flex-1">تیکت‌های من</span>
-                    <span class="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                        ۳
-                    </span>
                 </a>
 
-                <a href=""
+                <a href="{% url 'courses_module:course_list' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-book-open-reader"></i>
@@ -269,21 +279,6 @@
                     <span>دوره‌ها و درس‌ها</span>
                 </a>
 
-                <a href=""
-                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
-                    <span class="sidebar-icon text-slate-400">
-                        <i class="fa-solid fa-newspaper"></i>
-                    </span>
-                    <span>اخبار و اطلاعیه‌ها</span>
-                </a>
-
-                <a href=""
-                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
-                    <span class="sidebar-icon text-slate-400">
-                        <i class="fa-solid fa-blog"></i>
-                    </span>
-                    <span>مجله آموزشی</span>
-                </a>
                 <a href="{% url 'news_module:article_list' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
     <span class="sidebar-icon text-slate-400">
@@ -311,6 +306,11 @@
                 </p>
 
                 <div class="space-y-1">
+                    <a href="{% url 'counseling:my_students' %}"
+                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                        <span class="sidebar-icon text-emerald-500"><i class="fa-solid fa-user-group"></i></span>
+                        <span>دانش‌آموزان من</span>
+                    </a>
                     <a href="{% url 'questions_module:question_list' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
@@ -324,7 +324,7 @@
                         <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-plus"></i></span>
                         <span>ساخت دوره جدید</span>
                     </a>
-                    <a href=""
+                    <a href="{% url 'ticketing:list' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-inbox"></i>
@@ -340,12 +340,12 @@
                         <span>درس‌های من</span>
                     </a>
 
-                    <a href=""
+                    <a href="{% url 'plans_module:board' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
-                            <i class="fa-solid fa-clock"></i>
+                            <i class="fa-solid fa-calendar-plus"></i>
                         </span>
-                        <span>برنامه کاری</span>
+                        <span>برنامه دانش‌آموزان</span>
                     </a>
                 </div>
             {% endif %}
@@ -354,6 +354,9 @@
                 <div class="my-6 border-t border-slate-100"></div>
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">دوره‌های من</p>
                 <div class="rounded-2xl bg-amber-50/60 p-2">
+                    <a href="{% url 'counseling:manage' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700">
+                        <span class="sidebar-icon text-emerald-500"><i class="fa-solid fa-people-arrows-left-right"></i></span><span>تخصیص مشاور</span>
+                    </a>
                     <a href="{% url 'courses_module:my_courses' %}" class="sidebar-link flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold {% if request.path == '/courses/my/' %}bg-white text-amber-700 shadow-sm{% else %}text-slate-700{% endif %}">
                         <span class="flex items-center gap-3"><span class="sidebar-icon text-amber-500"><i class="fa-solid fa-shield-check"></i></span><span>دوره‌های تأییدنشده</span></span>
                         <i class="fa-solid fa-chevron-left text-[10px] text-amber-500"></i>
@@ -367,6 +370,14 @@
                 <a href="{% url 'courses_module:course_list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-lock"></i></span>
                     <span>بستن یا حذف دوره‌ها</span>
+                </a>
+                <a href="{% url 'plans_module:board' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-indigo-400"><i class="fa-solid fa-calendar-plus"></i></span>
+                    <span>مدیریت برنامه‌ها</span>
+                </a>
+                <a href="{% url 'counseling:manage' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                    <span class="sidebar-icon text-emerald-500"><i class="fa-solid fa-people-arrows-left-right"></i></span>
+                    <span>تخصیص مشاور</span>
                 </a>
             {% endif %}
             {% if user.is_authenticated and user.is_superuser and user.role != 'ADMIN' %}
