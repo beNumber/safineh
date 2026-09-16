@@ -18,6 +18,10 @@ urlpatterns = [
     path('quizzes/', include('quiz_module.urls')),
     path('', include("landing_module.urls")),
     path('courses/', include('courses_module.urls', namespace='courses_module')),
+    path('plans/', include('plans_module.urls', namespace='plans_module')),
+    path('tickets/', include('ticketing_module.urls', namespace='ticketing')),
+    path('counseling/', include('counseling_module.urls', namespace='counseling')),
+    path('reports/', include('reports_module.urls', namespace='reports_module')),
 ]
 
 if settings.DEBUG:

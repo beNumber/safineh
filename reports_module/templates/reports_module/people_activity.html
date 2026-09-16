@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static shamsi %}
+
+{% block title %}فعالیت افراد | راه‌دان{% endblock %}
+{% block page_title %}مرکز فعالیت افراد{% endblock %}
+{% block breadcrumb %}گزارش‌ها / فعالیت افراد{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'reports_module/people_activity.css' %}">
+{% endblock %}
+
+{% block content %}
+<main class="activity-report" data-accent="{{ section_meta.accent }}">
+    <section class="activity-hero" data-aos="fade-up">
+        <div class="hero-orb hero-orb-one"></div>
+        <div class="hero-orb hero-orb-two"></div>
+        <div class="hero-grid"></div>
+        <div class="relative z-10 flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+            <div class="max-w-3xl">
+                <div class="hero-kicker"><span class="live-dot"></span> نمای مدیریتی زنده و تجمیعی</div>
+                <h1>نبض فعالیت آدم‌های راه‌دان،<br><span>شفاف و یک‌جا.</span></h1>
+                <p>بدون تاریخچه ریز تغییرات؛ فقط تصویری دقیق از خروجی واقعی هر فرد در بازه‌ای که انتخاب می‌کنید.</p>
+            </div>
+            <div class="hero-meta">
+                <div><span>آخرین بروزرسانی</span><strong>{{ generated_at|shamsi:"%H:%M" }}</strong></div>
+                <i class="fa-solid fa-wave-square"></i>
+            </div>
+        </div>
+    </section>
+
+    <nav class="role-switcher" aria-label="انتخاب گروه کاربران" data-aos="fade-up" data-aos-delay="70">
+        {% for key, meta in sections.items %}
+        <a href="?section={{ key }}&period={{ active_period.key }}" class="role-option {% if active_section == key %}is-active{% endif %}">
+            <span class="role-icon"><i class="fa-solid {{ meta.icon }}"></i></span>
+            <span class="role-copy"><strong>{{ meta.label }}</strong><small>{{ meta.description }}</small></span>
+            <span class="role-arrow"><i class="fa-solid fa-arrow-left"></i></span>
+        </a>
+        {% endfor %}
+    </nav>
+
+    <section class="summary-grid" data-aos="fade-up" data-aos-delay="110">
+        <article class="summary-card primary">
+            <span class="summary-icon"><i class="fa-solid fa-bolt"></i></span>
+            <div><small>مجموع فعالیت در بازه</small><strong>{{ summary.activity }}</strong><p>{{ active_period.label }}</p></div>
+        </article>
+        <article class="summary-card">
+            <span class="summary-icon"><i class="fa-solid fa-users"></i></span>
+            <div><small>تعداد {{ section_meta.label }}</small><strong>{{ summary.people }}</strong><p>مطابق فیلتر فعلی</p></div>
+        </article>
+        <article class="summary-card">
+            <span class="summary-icon"><i class="fa-solid fa-signal"></i></span>
+            <div><small>حساب فعال</small><strong>{{ summary.active }}</strong><p>قابل ورود به سامانه</p></div>
+        </article>
+        <article class="summary-card">
+            <span class="summary-icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+            <div><small>ورود در بازه</small><strong>{{ summary.logged_in }}</strong><p>کاربر با ورود ثبت‌شده</p></div>
+        </article>
+    </section>
+
+    <section class="report-panel" data-aos="fade-up" data-aos-delay="150">
+        <div class="panel-heading">
+            <div>
+                <span class="eyebrow"><i class="fa-solid {{ section_meta.icon }}"></i> گزارش {{ section_meta.label }}</span>
+                <h2>عملکرد فردی در {{ active_period.label }}</h2>
+            </div>
+            <div class="panel-badge"><i class="fa-solid fa-shield-halved"></i> فقط مدیر کل</div>
+        </div>
+
+        <form method="get" class="filter-bar" id="activity-filters">
+            <input type="hidden" name="section" value="{{ active_section }}">
+            <label class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input name="q" value="{{ query }}" placeholder="جست‌وجوی نام، نام کاربری یا موبایل..." autocomplete="off">
+                {% if query %}<a href="?section={{ active_section }}&period={{ active_period.key }}" aria-label="پاک کردن جست‌وجو"><i class="fa-solid fa-xmark"></i></a>{% endif %}
+            </label>
+            <label class="select-box"><i class="fa-regular fa-calendar"></i>
+                <select name="period" data-auto-submit>
+                    {% for period in periods %}<option value="{{ period.key }}" {% if active_period.key == period.key %}selected{% endif %}>{{ period.label }}</option>{% endfor %}
+                </select>
+            </label>
+            <label class="select-box"><i class="fa-solid fa-toggle-on"></i>
+                <select name="state" data-auto-submit>
+                    <option value="all" {% if state == 'all' %}selected{% endif %}>همه وضعیت‌ها</option>
+                    <option value="active" {% if state == 'active' %}selected{% endif %}>فقط فعال‌ها</option>
+                    <option value="inactive" {% if state == 'inactive' %}selected{% endif %}>فقط غیرفعال‌ها</option>
+                </select>
+            </label>
+            <label class="select-box"><i class="fa-solid fa-arrow-down-wide-short"></i>
+                <select name="order" data-auto-submit>
+                    <option value="activity" {% if order == 'activity' %}selected{% endif %}>بیشترین فعالیت</option>
+                    <option value="recent" {% if order == 'recent' %}selected{% endif %}>آخرین ورود</option>
+                    <option value="name" {% if order == 'name' %}selected{% endif %}>نام افراد</option>
+                    <option value="quiet" {% if order == 'quiet' %}selected{% endif %}>کمترین فعالیت</option>
+                </select>
+            </label>
+            <button class="filter-button" type="submit"><i class="fa-solid fa-sliders"></i><span>اعمال</span></button>
+        </form>
+
+        <div class="people-grid">
+            {% for person in page_obj %}
+            <article class="person-card" style="--rank: {{ forloop.counter }}">
+                <div class="person-top">
+                    <div class="identity">
+                        <span class="avatar">{{ person.initial }}<i class="status-dot {% if person.is_active %}online{% endif %}"></i></span>
+                        <div><h3>{{ person.display_name }}</h3><p>@{{ person.username }} · {{ person.context_label }}</p></div>
+                    </div>
+                    <span class="score"><small>امتیاز فعالیت</small><strong>{{ person.activity_score }}</strong></span>
+                </div>
+
+                <div class="login-strip">
+                    <span><i class="fa-regular fa-clock"></i> آخرین ورود</span>
+                    {% if person.last_login %}<strong>{{ person.last_login|shamsi:"%Y/%m/%d · %H:%M" }}</strong>{% else %}<strong class="never">هنوز وارد نشده</strong>{% endif %}
+                </div>
+
+                <div class="metric-grid">
+                    {% for metric in person.report_metrics %}
+                    <div class="metric-item">
+                        <i class="fa-solid {{ metric.icon }}"></i>
+                        <strong>{{ metric.value }}</strong>
+                        <span>{{ metric.label }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <footer class="person-footer">
+                    <span class="account-state {% if person.is_active %}active{% endif %}"><i class="fa-solid fa-circle"></i>{% if person.is_active %}حساب فعال{% else %}حساب غیرفعال{% endif %}</span>
+                    <span>عضویت: {{ person.date_joined|shamsi:"%Y/%m/%d" }}</span>
+                </footer>
+            </article>
+            {% empty %}
+            <div class="empty-state">
+                <span><i class="fa-solid fa-user-slash"></i></span>
+                <h3>نتیجه‌ای پیدا نشد</h3>
+                <p>فیلترها یا عبارت جست‌وجو را تغییر دهید.</p>
+                <a href="?section={{ active_section }}&period=30">پاک کردن فیلترها</a>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="pagination" aria-label="صفحه‌بندی">
+            {% if page_obj.has_previous %}<a href="?section={{ active_section }}&period={{ active_period.key }}&state={{ state }}&order={{ order }}&q={{ query|urlencode }}&page={{ page_obj.previous_page_number }}"><i class="fa-solid fa-chevron-right"></i></a>{% endif %}
+            <span>صفحه <b>{{ page_obj.number }}</b> از {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}<a href="?section={{ active_section }}&period={{ active_period.key }}&state={{ state }}&order={{ order }}&q={{ query|urlencode }}&page={{ page_obj.next_page_number }}"><i class="fa-solid fa-chevron-left"></i></a>{% endif %}
+        </nav>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'reports_module/people_activity.js' %}"></script>{% endblock %}

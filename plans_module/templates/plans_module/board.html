@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}برنامه شخصی | راه‌دان{% endblock %}
+{% block page_title %}{% if is_student_view %}برنامه شخصی من{% else %}مدیریت برنامه‌ها{% endif %}{% endblock %}
+{% block breadcrumb %}برنامه هفتگی{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'jalalidatepicker/jalalidatepicker.css' %}"><link rel="stylesheet" href="{% static 'plans_module/plans.css' %}">{% endblock %}
+
+{% block content %}
+<div class="plans-shell space-y-6">
+    <section class="plans-hero" data-aos="fade-up">
+        <div class="plans-orb plans-orb-one"></div><div class="plans-orb plans-orb-two"></div>
+        <div class="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+                <span class="plans-eyebrow"><i class="fa-solid fa-sparkles"></i> مسیر هوشمند هفته</span>
+                <h1>{% if is_student_view %}هفته‌ات را با تمرکز طراحی کن{% else %}برنامه‌ای دقیق برای مسیر هر دانش‌آموز{% endif %}</h1>
+                <p>{% if is_student_view %}درس، استراحت و زمان آزاد را کنار هم بچین و هر قدم انجام‌شده را علامت بزن.{% else %}یک برنامه را برای یک نفر، چند نفر یا همه دانش‌آموزان ثبت و پیگیری کن.{% endif %}</p>
+            </div>
+            <button type="button" class="plans-primary-button liquid-action" data-open-plan-modal {% if not selected_student and is_student_view %}disabled{% endif %}>
+                <i class="fa-solid fa-plus"></i><span>{% if is_student_view %}افزودن به برنامه{% else %}ساخت برنامه جدید{% endif %}</span>
+            </button>
+        </div>
+    </section>
+
+    {% if not is_student_view %}
+    <section class="student-manager glass-panel" data-aos="fade-up">
+        <div class="manager-heading">
+            <div><span class="mini-icon violet"><i class="fa-solid fa-users"></i></span><div><span class="step-kicker">مرحله ۱</span><h2>دانش‌آموزها را انتخاب کن</h2><p>یک یا چند نفر را تیک بزن؛ دکمه ساخت برنامه، انتخاب‌ها را نگه می‌دارد.</p></div></div>
+            <form method="get" class="student-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input name="q" value="{{ search_query }}" placeholder="نام، پایه یا رشته...">
+                <button>جستجو</button>
+            </form>
+        </div>
+        <div class="selection-action-bar">
+            <div><span class="selection-pulse"></span><b data-selected-count>{% if selected_student %}۱{% else %}۰{% endif %}</b><span>دانش‌آموز انتخاب شده</span></div>
+            <button type="button" class="selection-create-button" data-open-plan-modal><i class="fa-solid fa-wand-magic-sparkles"></i> برنامه برای انتخاب‌شده‌ها</button>
+        </div>
+        <div class="student-gallery">
+            {% for student in visible_students %}
+            <article class="student-glass-card {% if selected_student.pk == student.pk %}active{% endif %}">
+                <label class="student-select-control" title="انتخاب برای برنامه گروهی">
+                    <input type="checkbox" value="{{ student.pk }}" data-main-student {% if selected_student.pk == student.pk %}checked{% endif %}>
+                    <span><i class="fa-solid fa-check"></i></span>
+                </label>
+                <div class="student-card-avatar">{{ student.user.first_name|first|default:student.user.username|first }}</div>
+                <div class="student-card-info"><b>{{ student.user.get_full_name|default:student.user.username }}</b><small>{{ student.field.grade.title }} · {{ student.field.title }}</small></div>
+                <a href="?student={{ student.pk }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="student-view-action" title="دیدن برنامه"><i class="fa-solid fa-arrow-left"></i></a>
+            </article>
+            {% empty %}<div class="empty-inline"><i class="fa-solid fa-user-slash"></i>دانش‌آموزی در محدوده دسترسی شما پیدا نشد.</div>{% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    {% if selected_student %}
+    <section class="plan-overview-grid" data-aos="fade-up">
+        <article class="overview-card student-overview">
+            <div class="student-avatar-wrap"><div class="student-avatar">{{ selected_student.user.first_name|first|default:selected_student.user.username|first }}</div><i></i></div>
+            <div class="student-overview-copy"><h2>{{ selected_student.user.get_full_name|default:selected_student.user.username }}</h2><div class="student-meta"><span><i class="fa-solid fa-graduation-cap"></i>{{ selected_student.field.grade.title }}</span><span><i class="fa-solid fa-book-open"></i>{{ selected_student.field.title }}</span></div></div>
+            <span class="student-glass-mark"><i class="fa-solid fa-sparkles"></i></span>
+        </article>
+        <article class="overview-card"><span class="stat-icon blue"><i class="fa-regular fa-calendar-check"></i></span><div><b>{{ total_entries }}</b><small>آیتم هفتگی</small></div></article>
+        <article class="overview-card"><span class="stat-icon amber"><i class="fa-regular fa-clock"></i></span><div><b>{{ total_hours }}</b><small>ساعت برنامه‌ریزی</small></div></article>
+        <article class="overview-card progress-card"><div class="progress-ring" style="--progress: {{ completion_percent }}"><span>{{ completion_percent }}٪</span></div><div><b>{{ completed_count }} از {{ total_entries }}</b><small>انجام‌شده این هفته</small></div></article>
+    </section>
+
+    <section class="jalali-calendar glass-panel" data-aos="fade-up" aria-labelledby="jalali-calendar-title">
+        <div class="calendar-topbar">
+            <div class="calendar-title">
+                <span><i class="fa-regular fa-calendar"></i></span>
+                <div>
+                    <small>تقویم فارسی{% if is_current_week %} · هفته جاری{% endif %}</small>
+                    <h2 id="jalali-calendar-title">تقویم برنامه‌ریزی</h2>
+                    <p>{{ week_range_title }}</p>
+                </div>
+            </div>
+            <nav class="calendar-navigation" aria-label="جابجایی بین هفته‌ها">
+                <a href="?week={{ previous_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" title="هفته قبل" aria-label="هفته قبل"><i class="fa-solid fa-chevron-right"></i></a>
+                <span>{{ week_month_title }}</span>
+                <a href="?week={{ next_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" title="هفته بعد" aria-label="هفته بعد"><i class="fa-solid fa-chevron-left"></i></a>
+                {% if not is_current_week %}<a href="?week={{ current_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="calendar-today">هفته جاری</a>{% endif %}
+            </nav>
+        </div>
+        <div class="calendar-week" role="list" aria-label="روزهای هفته {{ week_range_title }}">
+            {% for day in calendar_days %}
+            <article class="calendar-day{% if day.is_today %} is-today{% endif %}{% if day.is_friday %} friday{% endif %}" role="listitem">
+                <span>{{ day.label }}</span>
+                <b>{{ day.jalali_day }}</b>
+                <small>{{ day.jalali_month }}</small>
+                {% if day.is_today %}<i>امروز</i>{% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="schedule-panel glass-panel" data-aos="fade-up">
+        <div class="schedule-heading">
+            <div><span class="mini-icon blue"><i class="fa-solid fa-calendar-days"></i></span><div><span class="step-kicker">مرحله ۲</span><h2>برنامه هفتگی {{ selected_student.user.get_full_name|default:selected_student.user.username }}</h2><p>از شنبه تا پنجشنبه، ساعت ۸ صبح تا ۲۴</p></div></div>
+            <div class="schedule-week-control">
+                <span><i class="fa-regular fa-calendar-check"></i></span>
+                <div><small>بازه نمایش</small><b>{{ week_range_title }}</b></div>
+            </div>
+        </div>
+        <div class="schedule-scroll">
+            <div class="schedule-grid">
+                <div class="schedule-header schedule-label-cell">روز / ساعت</div>
+                {% for hour in slot_hours %}<div class="schedule-header">{{ hour|stringformat:"02d" }}:۰۰</div>{% endfor %}
+                {% for day in board_days %}
+                <div class="day-label {% if day.is_today %}today{% endif %}" style="grid-row: {{ day.grid_row }};"><b>{{ day.label }}</b><small>{{ day.jalali_full }}</small>{% if day.is_today %}<span>امروز</span>{% endif %}</div>
+                {% for hour in slot_hours %}<div class="hour-cell {% if day.is_today %}today-row{% endif %}" style="grid-row: {{ day.grid_row }};"></div>{% endfor %}
+                {% for entry in day.entries %}
+                <article class="plan-block color-{{ entry.color }} {% if entry.is_completed_this_week %}is-completed{% endif %}" style="grid-column: {{ entry.start_column }} / {{ entry.end_column }}; grid-row: {{ day.grid_row }};" data-entry-id="{{ entry.pk }}">
+                    <div class="plan-block-content">
+                        <span class="plan-type-icon">
+                            {% if entry.activity_type == 'SUBJECT' %}<i class="fa-solid fa-book-open"></i>{% elif entry.activity_type == 'FREE' %}<i class="fa-solid fa-mug-hot"></i>{% elif entry.activity_type == 'ENTERTAINMENT' %}<i class="fa-solid fa-gamepad"></i>{% elif entry.activity_type == 'LEARNING' %}<i class="fa-solid fa-lightbulb"></i>{% elif entry.activity_type == 'REST' %}<i class="fa-solid fa-bed"></i>{% else %}<i class="fa-solid fa-star"></i>{% endif %}
+                        </span>
+                        <div class="plan-block-text"><b>{{ entry.display_title }}</b><small>{{ entry.start_hour|stringformat:"02d" }}:۰۰ تا {{ entry.end_hour|stringformat:"02d" }}:۰۰ · {{ entry.get_source_display }}</small>{% if entry.notes %}<p>{{ entry.notes|truncatechars:65 }}</p>{% endif %}</div>
+                    </div>
+                    <div class="plan-actions">
+                        {% if is_student_view %}
+                        <form method="post" action="{% url 'plans_module:toggle_completion' entry.pk %}" data-completion-form>{% csrf_token %}<input type="hidden" name="week_start" value="{{ week_start|date:'Y-m-d' }}"><button type="submit" title="تغییر وضعیت انجام"><i class="fa-solid fa-check"></i></button></form>
+                        {% endif %}
+                        {% if user.is_superuser or user.role == 'ADMIN' or entry.assigned_by_id == user.id and user.role == 'CONSULTANT' or is_student_view and entry.source == 'SELF' %}
+                        <a href="{% url 'plans_module:edit' entry.pk %}" title="ویرایش"><i class="fa-solid fa-pen"></i></a>
+                        <form method="post" action="{% url 'plans_module:delete' entry.pk %}" onsubmit="return confirm('این آیتم از برنامه حذف شود؟')">{% csrf_token %}<button type="submit" title="حذف"><i class="fa-solid fa-trash"></i></button></form>
+                        {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="schedule-legend"><span><i class="dot blue"></i>درس</span><span><i class="dot violet"></i>یادگیری</span><span><i class="dot emerald"></i>زمان آزاد</span><span><i class="fa-solid fa-check-circle text-emerald-500"></i>انجام‌شده</span><small>برای دیدن ساعت‌های بعد، جدول را افقی حرکت بده.</small></div>
+    </section>
+    {% else %}
+    <section class="glass-panel empty-state"><span><i class="fa-regular fa-calendar-xmark"></i></span><h2>هنوز جدولی برای نمایش نیست</h2><p>{% if is_student_view %}ابتدا پروفایل تحصیلی شما باید تکمیل شود.{% else %}دانش‌آموزی در محدوده شما وجود ندارد.{% endif %}</p></section>
+    {% endif %}
+</div>
+
+<div class="plan-modal {% if form.errors %}is-open{% endif %}" id="plan-modal" aria-hidden="{% if form.errors %}false{% else %}true{% endif %}" data-has-form-errors="{% if form.errors %}true{% else %}false{% endif %}">
+    <div class="plan-modal-backdrop" data-close-plan-modal></div>
+    <div class="plan-modal-card">
+        <button class="modal-close" type="button" data-close-plan-modal><i class="fa-solid fa-xmark"></i></button>
+        <div class="modal-title"><span><i class="fa-solid fa-wand-magic-sparkles"></i></span><div><h2>{% if is_student_view %}آیتم جدید برنامه من{% else %}تخصیص برنامه به دانش‌آموزان{% endif %}</h2><p>زمان و نوع فعالیت را دقیق مشخص کن.</p></div></div>
+        <form method="post" class="plan-form" id="plan-entry-form">{% csrf_token %}
+            {% if not is_student_view %}<input type="hidden" name="selection_snapshot" data-selection-snapshot value="{% if selected_student %}{{ selected_student.pk }}{% endif %}">{% endif %}
+            {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
+            {% if not is_student_view %}
+            <div class="target-box">
+                <div class="target-head"><div><b>انتخاب دانش‌آموزان</b><small>می‌توانی چند نفر را هم‌زمان انتخاب کنی.</small></div><button type="button" data-toggle-students>انتخاب همه</button></div>
+                <div class="target-list">{% for choice in form.target_students %}<label class="target-option">{{ choice.tag }}<span class="fake-check"><i class="fa-solid fa-check"></i></span><span>{{ choice.choice_label }}</span></label>{% empty %}<small>دانش‌آموزی قابل انتخاب نیست.</small>{% endfor %}</div>
+                {{ form.target_students.errors }}
+                {% if user.is_superuser or user.role == 'ADMIN' %}<label class="apply-all">{{ form.apply_to_all }}<span><b>اعمال برای همه دانش‌آموزان سایت</b><small>مناسب جلسات عمومی و اطلاعیه‌های آموزشی</small></span></label>{{ form.apply_to_all.errors }}{% endif %}
+            </div>
+            {% endif %}
+            <div class="form-grid">
+                <div class="field-wrap"><label>{{ form.activity_type.label }}</label>{{ form.activity_type }}{{ form.activity_type.errors }}</div>
+                <div class="field-wrap" data-subject-field><label>{{ form.subject.label }}</label>{{ form.subject }}{{ form.subject.errors }}<small>فقط درس‌های تعریف‌شده برای پایه و رشته مجازند.</small></div>
+                <div class="field-wrap full"><label>{{ form.title.label }}</label>{{ form.title }}{{ form.title.errors }}</div>
+                <div class="field-wrap date-field"><label>{{ form.scheduled_date.label }}</label><div class="date-input-shell"><i class="fa-regular fa-calendar"></i>{{ form.scheduled_date }}</div>{{ form.scheduled_date.errors }}<small>هر تاریخی از هفته‌های آینده یا گذشته قابل انتخاب است.</small></div>
+                <div class="field-wrap"><label>{{ form.color.label }}</label>{{ form.color }}{{ form.color.errors }}</div>
+                <div class="field-wrap"><label>{{ form.start_hour.label }}</label>{{ form.start_hour }}{{ form.start_hour.errors }}</div>
+                <div class="field-wrap"><label>{{ form.end_hour.label }}</label>{{ form.end_hour }}{{ form.end_hour.errors }}</div>
+                <div class="field-wrap full"><label>{{ form.notes.label }}</label>{{ form.notes }}{{ form.notes.errors }}</div>
+            </div>
+            <div class="modal-footer"><button type="button" class="button-secondary" data-close-plan-modal>انصراف</button><button type="submit" class="button-submit"><i class="fa-solid fa-check"></i>ثبت در برنامه</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="{% static 'jalalidatepicker/jalalidatepicker.js' %}"></script><script src="{% static 'plans_module/plans.js' %}"></script>{% endblock %}

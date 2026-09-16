@@ -40,7 +40,7 @@
                 <tbody class="divide-y divide-slate-100">
                     {% for ticket in tickets %}
                     <tr class="transition hover:bg-blue-50/40">
-                        <td class="p-4"><a class="font-bold text-blue-700 hover:underline" href="{% url 'ticketing:detail' ticket.pk %}">#{{ ticket.pk }} — {{ ticket.title }}</a></td>
+                        <td class="p-4"><a class="font-bold text-blue-700 hover:underline" href="{% url 'ticketing:detail' ticket.pk %}">#{{ ticket.pk }} — {{ ticket.title }}</a>{% if ticket.is_private_consultation %}<span class="mr-2 rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black text-emerald-600"><i class="fa-solid fa-lock ml-1"></i> خصوصی</span>{% endif %}</td>
                         <td class="p-4 text-slate-600">{{ ticket.student.user.get_full_name|default:ticket.student.user.username }}</td>
                         <td class="p-4">{{ ticket.get_ticket_type_display }}{% if ticket.subject %} / {{ ticket.subject }}{% endif %}</td>
                         <td class="p-4">{{ ticket.get_current_queue_display }}{% if ticket.current_assignee_user %}<span class="block text-xs text-slate-400">{{ ticket.current_assignee_user }}</span>{% endif %}</td>

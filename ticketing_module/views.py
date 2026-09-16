@@ -143,15 +143,15 @@ def ticket_detail(request, pk):
         UserRole.CONTENT_MODERATOR,
         UserRole.ADMIN,
     }
-    can_edit = request.user.is_superuser or request.user.role in {
+    can_edit = not ticket.is_private_consultation and (request.user.is_superuser or request.user.role in {
         UserRole.PROVINCE_TRUSTEE,
         UserRole.ADMIN,
-    }
-    can_refer = request.user.is_superuser or request.user.role in {
+    })
+    can_refer = not ticket.is_private_consultation and (request.user.is_superuser or request.user.role in {
         UserRole.CONSULTANT,
         UserRole.PROVINCE_TRUSTEE,
         UserRole.ADMIN,
-    }
+    })
     return render(
         request,
         "ticketing_module/ticket_detail.html",
