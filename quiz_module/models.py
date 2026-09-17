@@ -6,7 +6,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-from questions_module.models import Question, Topic
 from users_module.models import FieldOfStudy, Grade, Province, School
 
 
@@ -80,8 +79,8 @@ class QuizQuestion(models.Model):
         DESCRIPTIVE = "DES", "تشریحی"
 
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="questions")
-    source_question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True, blank=True, related_name="quiz_copies")
-    bank_topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True, related_name="quiz_questions")
+    source_question = models.ForeignKey("questions_module.Question", on_delete=models.SET_NULL, null=True, blank=True, related_name="quiz_copies")
+    bank_topic = models.ForeignKey("questions_module.Chapter", on_delete=models.SET_NULL, null=True, blank=True, related_name="quiz_questions")
     question_type = models.CharField("نوع سؤال", max_length=3, choices=Type.choices, default=Type.MCQ)
     text = RichTextUploadingField("متن سؤال", blank=True)
     image = models.ImageField("تصویر سؤال", upload_to="quizzes/questions/%Y/%m/", blank=True)
@@ -90,7 +89,7 @@ class QuizQuestion(models.Model):
     points = models.DecimalField("بارم", max_digits=6, decimal_places=2, default=1)
     order = models.PositiveIntegerField(default=0)
     submit_to_bank = models.BooleanField("ارسال به صف بانک سؤال پس از آزمون", default=True)
-    bank_question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True, blank=True, related_name="origin_quiz_questions")
+    bank_question = models.ForeignKey("questions_module.Question", on_delete=models.SET_NULL, null=True, blank=True, related_name="origin_quiz_questions")
 
     class Meta:
         ordering = ["order", "id"]

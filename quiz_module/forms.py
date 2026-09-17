@@ -8,7 +8,7 @@ from django.forms import inlineformset_factory
 from django.utils import timezone
 
 from auth_module.models import UserRole
-from questions_module.models import Question, Topic
+from questions_module.models import Question, Chapter
 
 from .models import Quiz, QuizChoice, QuizQuestion
 
