@@ -295,6 +295,18 @@ def _pending_questions_for_trustee(user):
     return qs.filter(chapter__subject__field__grade__school__province_id__in=province_ids)
 
 
+def _approved_questions_for_trustee(user):
+    qs = Question.objects.filter(
+        approval_status=Question.ApprovalStatus.APPROVED,
+    ).select_related('chapter__subject__field__grade__school', 'creator').prefetch_related('choices')
+    if user.is_superuser or user.role == UserRole.ADMIN:
+        return qs.order_by('-approved_at', '-id')[:100]
+    province_ids = ProvinceTrustee.objects.filter(user=user).values_list('province_id', flat=True)
+    return qs.filter(
+        chapter__subject__field__grade__school__province_id__in=province_ids,
+    ).order_by('-approved_at', '-id')[:100]
+
+
 def _performance_data(user, course_ids=None):
     """خلاصه عملکرد ذخیره‌شده کاربر به تفکیک درس."""
     courses = Subject.objects.all()
@@ -469,10 +481,12 @@ def question_create(request):
 
 @login_required
 def question_edit(request, pk):
-    if not _can_manage_questions(request.user):
+    if not (_can_manage_questions(request.user) or request.user.role == UserRole.PROVINCE_TRUSTEE):
         messages.error(request, "شما اجازه ویرایش سؤال ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
-    question = get_object_or_404(Question, pk=pk)
+    question = get_object_or_404(
+        Question.objects.select_related('chapter__subject__field__grade__school'), pk=pk,
+    )
     if (
         request.user.role == UserRole.CONSULTANT
         and (question.creator_id != request.user.pk
@@ -480,7 +494,12 @@ def question_edit(request, pk):
     ):
         messages.error(request, "فقط سؤال‌های خودتان که هنوز بررسی نشده‌اند قابل ویرایش هستند.")
         return redirect(f"{APP_NS}:choose_mode")
-    if not question.chapter_id or not _can_manage_subject(request.user, question.chapter.subject_id):
+    trustee_edit = (
+        request.user.role == UserRole.PROVINCE_TRUSTEE
+        and question.approval_status == Question.ApprovalStatus.APPROVED
+        and _trustee_can_review(request.user, question)
+    )
+    if not question.chapter_id or not (trustee_edit or _can_manage_subject(request.user, question.chapter.subject_id)):
         messages.error(request, "برای ویرایش سؤال این درس دسترسی ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
     form = QuestionForm(request.POST or None, request.FILES or None, instance=question, user=request.user)
@@ -532,6 +551,7 @@ def approval_queue(request):
         return redirect(f"{APP_NS}:choose_mode")
     return render(request, "questions_module/approval_queue.html", {
         "questions": _pending_questions_for_trustee(request.user),
+        "approved_questions": _approved_questions_for_trustee(request.user),
     })
 
 

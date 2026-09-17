@@ -38,7 +38,10 @@ class QuestionForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         subjects = Subject.objects.filter(is_active=True).select_related("field__grade")
-        if user is not None and not user.is_superuser and user.role != "ADMIN":
+        if user is not None and user.role == "PROVINCE_TRUSTEE" and not user.is_superuser:
+            province_ids = user.trustee_provinces.values_list("province_id", flat=True)
+            subjects = subjects.filter(field__grade__school__province_id__in=province_ids)
+        elif user is not None and not user.is_superuser and user.role != "ADMIN":
             accesses = user.accesses.filter(name=Access.Code.BANK)
             if not accesses.filter(subject__isnull=True).exists():
                 subjects = subjects.filter(pk__in=accesses.values_list("subject_id", flat=True))

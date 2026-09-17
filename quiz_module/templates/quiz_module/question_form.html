@@ -1,0 +1,95 @@
+{% extends "quiz_module/_base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block breadcrumb %}{{ quiz.title }}{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="quiz-shell mx-auto max-w-6xl space-y-5">
+    {% csrf_token %}
+    {{ form.media }}
+
+    <section class="quiz-glass-hero rounded-[28px] p-6 text-white sm:p-8">
+        <div class="relative z-10 flex items-center justify-between gap-5">
+            <div>
+                <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-[11px] font-bold backdrop-blur-md"><i class="fa-solid fa-pen-ruler"></i> طراحی محتوای آزمون</span>
+                <h1 class="mt-4 text-2xl font-black">{{ title }}</h1>
+                <p class="mt-2 text-sm text-blue-50/90">متن، پاسخ، بارم و گزینه‌های سؤال را با دقت وارد کنید.</p>
+            </div>
+            <span class="quiz-hero-icon hidden sm:grid"><i class="fa-solid fa-circle-question"></i></span>
+        </div>
+    </section>
+
+    {% if form.non_field_errors %}<div class="quiz-card border-rose-200 p-4 text-sm text-rose-700">{{ form.non_field_errors }}</div>{% endif %}
+
+    <section class="quiz-card p-5 sm:p-7">
+        <div class="quiz-section-title"><span class="quiz-section-icon"><i class="fa-solid fa-sliders"></i></span><div><h2 class="font-black text-slate-800">تنظیمات سؤال</h2><p class="mt-1 text-[11px] text-slate-400">نوع، مبحث و بارم سؤال</p></div></div>
+        <div class="grid gap-5 md:grid-cols-3">
+            <div><label class="quiz-label" for="{{ form.question_type.id_for_label }}">{{ form.question_type.label }}</label>{{ form.question_type }}{% for error in form.question_type.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+            <div><label class="quiz-label" for="{{ form.bank_topic.id_for_label }}">{{ form.bank_topic.label }}</label>{{ form.bank_topic }}{% for error in form.bank_topic.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+            <div><label class="quiz-label" for="{{ form.points.id_for_label }}">{{ form.points.label }}</label>{{ form.points }}{% for error in form.points.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+        </div>
+    </section>
+
+    <section class="quiz-card p-5 sm:p-7">
+        <div class="quiz-section-title"><span class="quiz-section-icon"><i class="fa-solid fa-file-pen"></i></span><div><h2 class="font-black text-slate-800">صورت سؤال و پاسخ تشریحی</h2><p class="mt-1 text-[11px] text-slate-400">متن را با ابزارهای ویرایشگر کامل و خوانا کنید</p></div></div>
+        <div>
+            <label class="quiz-label" for="{{ form.text.id_for_label }}">{{ form.text.label }}</label>
+            <div class="quiz-editor">{{ form.text }}</div>{% for error in form.text.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="mt-5"><label class="quiz-upload"><span class="quiz-modern-icon quiz-modern-icon-blue"><i class="fa-solid fa-image"></i></span><span><b>تصویر صورت سؤال</b><small>در صورت نیاز یک تصویر واضح بارگذاری کنید</small></span>{{ form.image }}</label>{% for error in form.image.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+        <div class="mt-6">
+            <label class="quiz-label" for="{{ form.explanation.id_for_label }}">{{ form.explanation.label }}</label>
+            <div class="quiz-editor">{{ form.explanation }}</div>{% for error in form.explanation.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="mt-5"><label class="quiz-upload"><span class="quiz-modern-icon quiz-modern-icon-violet"><i class="fa-solid fa-image"></i></span><span><b>تصویر پاسخ تشریحی</b><small>تصویر راه‌حل یا پاسخ معیار</small></span>{{ form.explanation_image }}</label>{% for error in form.explanation_image.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}</div>
+    </section>
+
+    <section class="quiz-card overflow-hidden p-5 sm:p-7">
+        <label class="bank-option-card">
+            <span class="quiz-switch">{{ form.submit_to_bank }}<span></span></span>
+            <span class="quiz-modern-icon quiz-modern-icon-emerald"><i class="fa-solid fa-box-archive"></i></span>
+            <span class="min-w-0 flex-1"><b class="block text-sm text-slate-800">افزودن سؤال به بانک سؤال</b><small class="mt-1 block text-[11px] leading-5 text-slate-500">پس از پایان آزمون، این سؤال برای بررسی و استفاده دوباره وارد صف بانک سؤال شود.</small></span>
+            <span class="hidden rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700 sm:inline">پیشنهاد می‌شود</span>
+        </label>
+        {% for error in form.submit_to_bank.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+    </section>
+
+    <section id="choices-section" class="quiz-card p-5 sm:p-7">
+        <div class="quiz-section-title"><span class="quiz-section-icon"><i class="fa-solid fa-list-check"></i></span><div><h2 class="font-black text-slate-800">گزینه‌های پاسخ</h2><p class="mt-1 text-[11px] text-slate-400">چهار گزینه بنویسید و فقط یک پاسخ صحیح انتخاب کنید</p></div></div>
+        {{ formset.management_form }}
+        {% if formset.non_form_errors %}<div class="mb-4 rounded-2xl bg-rose-50 p-4 text-xs text-rose-700">{{ formset.non_form_errors }}</div>{% endif %}
+        <div class="grid gap-4 md:grid-cols-2">
+            {% for choice_form in formset %}
+            <article class="quiz-choice-editor">
+                {{ choice_form.id }}{% if choice_form.DELETE %}<span class="hidden">{{ choice_form.DELETE }}</span>{% endif %}
+                <div class="mb-4 flex items-center justify-between"><div class="flex items-center gap-3"><span class="choice-number">{{ forloop.counter }}</span><b class="text-sm text-slate-700">گزینه {{ forloop.counter }}</b></div><label class="correct-choice"><span class="quiz-switch">{{ choice_form.is_correct }}<span></span></span><span>پاسخ صحیح</span></label></div>
+                <div class="quiz-editor compact">{{ choice_form.text }}</div>
+                {% for error in choice_form.text.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+                <div class="mt-4"><label class="quiz-upload compact-upload"><span class="quiz-modern-icon quiz-modern-icon-blue"><i class="fa-solid fa-image"></i></span><span><b>تصویر گزینه</b></span>{{ choice_form.image }}</label></div>
+                {% for error in choice_form.image.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+                {% for error in choice_form.is_correct.errors %}<p class="quiz-error">{{ error }}</p>{% endfor %}
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="quiz-card sticky bottom-4 z-20 flex flex-wrap items-center justify-between gap-3 p-4">
+        <p class="hidden text-xs text-slate-500 sm:block"><i class="fa-solid fa-circle-check ml-2 text-emerald-500"></i>پس از ذخیره می‌توانید سؤال‌های بعدی را اضافه کنید.</p>
+        <div class="flex gap-2"><button class="quiz-btn quiz-btn-primary" type="submit"><span class="quiz-btn-icon"><i class="fa-solid fa-floppy-disk"></i></span>ذخیره سؤال</button><a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_builder' quiz.pk %}"><i class="fa-solid fa-arrow-right"></i>بازگشت</a></div>
+    </div>
+</form>
+{% endblock %}
+
+{% block quiz_js %}
+<script>
+function toggleChoices() {
+    const section = document.getElementById('choices-section');
+    const type = document.getElementById('id_question_type');
+    if (section && type) section.hidden = type.value === 'DES';
+}
+document.addEventListener('DOMContentLoaded', function () {
+    toggleChoices();
+    document.getElementById('id_question_type')?.addEventListener('change', toggleChoices);
+});
+</script>
+{% endblock %}

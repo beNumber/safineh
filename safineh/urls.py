@@ -15,6 +15,7 @@ urlpatterns = [
     path('dashboard/',include('dashboard_module.urls')),
     path('auth/',include('auth_module.urls')),
     path('questions/', include('questions_module.urls')),
+    path('quizzes/', include('quiz_module.urls')),
     path('', include("landing_module.urls")),
     path('courses/', include('courses_module.urls', namespace='courses_module')),
     path('plans/', include('plans_module.urls', namespace='plans_module')),
