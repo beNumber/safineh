@@ -102,10 +102,8 @@ class Chapter(models.Model):
         return f'{subject_name} | {self.name}'
 
     def clean(self):
-        from django.core.exceptions import ValidationError
-
-        if not self.subject_id:
-            raise ValidationError({'subject': 'انتخاب درس ثبت‌شده الزامی است.'})
+        if not self.subject_id and not self.course_id:
+            raise ValidationError({'subject': 'انتخاب درس یا درس ثبت‌شده الزامی است.'})
 
 
 # ==============================================================================
@@ -116,6 +114,11 @@ class Question(models.Model):
 
     class Type(models.TextChoices):
         MCQ = 'MCQ', 'چهارگزینه‌ای'
+
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'pending', 'در انتظار تأیید'
+        APPROVED = 'approved', 'تأیید شده'
+        REJECTED = 'rejected', 'رد شده'
 
     question_type = models.CharField(
         'نوع سوال',
@@ -139,11 +142,6 @@ class Question(models.Model):
         null=True,
         blank=True,
     )
-    class ApprovalStatus(models.TextChoices):
-        PENDING = 'pending', 'در انتظار تأیید'
-        APPROVED = 'approved', 'تأیید شده'
-        REJECTED = 'rejected', 'رد شده'
-
     text = RichTextUploadingField('متن سوال', blank=True)
     image = models.ImageField(
         'تصویر سوال',
@@ -169,13 +167,18 @@ class Question(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     approval_status = models.CharField(
-        'وضعیت تأیید', max_length=20, choices=ApprovalStatus.choices,
+        'وضعیت تأیید',
+        max_length=20,
+        choices=ApprovalStatus.choices,
         default=ApprovalStatus.APPROVED,
     )
     approval_note = models.TextField('یادداشت تأیید/رد', blank=True)
     approved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name='approved_questions',
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='approved_questions',
         verbose_name='تأییدکننده',
     )
     approved_at = models.DateTimeField('زمان بررسی', null=True, blank=True)
@@ -192,11 +195,9 @@ class Question(models.Model):
         return f'Q{self.pk}: {self.text[:50] or "سؤال تصویری"}'
 
     def clean(self):
-        from django.core.exceptions import ValidationError
-
         if self.question_type != self.Type.MCQ:
             raise ValidationError({'question_type': 'تمام سؤال‌ها باید چهارگزینه‌ای باشند.'})
-        if not self.text.strip() and not self.image:
+        if not (self.text or '').strip() and not self.image:
             raise ValidationError('برای سؤال، متن یا تصویر وارد کنید.')
 
 
@@ -226,7 +227,7 @@ class Choice(models.Model):
         return self.text or 'گزینه تصویری'
 
     def clean(self):
-        if not self.text.strip() and not self.image:
+        if not (self.text or '').strip() and not self.image:
             raise ValidationError('برای گزینه، متن یا تصویر وارد کنید.')
 
 
