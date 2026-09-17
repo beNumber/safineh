@@ -19,6 +19,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
+    "panjeheaftab.ir"
 ]
 
 
@@ -187,3 +188,11 @@ MESSAGE_TAGS = {
     message_constants.WARNING: "warning",
     message_constants.INFO: "info",
 }
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://panjeheaftab.ir',
+    "http://127.0.0.1:8030",
+    "http://localhost:8030"
+]
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True

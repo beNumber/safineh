@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    container_name: safineh-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8030:80"
+    volumes:
+      - .:/code
+      - static_volume:/code/statics
+      - media_volume:/code/media
+
+volumes:
+  static_volume:
+  media_volume:
+
