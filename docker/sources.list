@@ -1,0 +1,3 @@
+deb http://debian.mirror.raf.ir/debian/ bookworm main
+deb http://debian.mirror.raf.ir/debian/ bookworm-updates main
+deb http://debian.mirror.raf.ir/debian-security bookworm-security main

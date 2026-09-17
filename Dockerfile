@@ -6,9 +6,12 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /code
 
 # نصب nginx و ابزارهای لازم
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
-    && rm -rf /var/lib/apt/lists/*
+RUN rm -rf /etc/apt/sources.list /etc/apt/sources.list.d/* && \
+    echo "deb http://mirror.shatel.ir/debian trixie main contrib non-free non-free-firmware" > /etc/apt/sources.list && \
+    echo "deb http://repo.iut.ac.ir/debian/ trixie main" >> /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends nginx && \
+    rm -rf /var/lib/apt/lists/*
 
 # نصب وابستگی‌های پایتون
 COPY requirements.txt /code/
