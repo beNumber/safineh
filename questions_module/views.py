@@ -5,7 +5,6 @@ import jdatetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models.deletion import ProtectedError
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -13,7 +12,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 from auth_module.models import UserRole
 from auth_module.models import ProvinceTrustee
-from users_module.models import Access, FieldOfStudy, Grade, Subject
+from users_module.models import Access, Subject
 
 from .models import (
     Chapter,
@@ -24,9 +23,8 @@ from .models import (
     PracticeAnswer,
     PracticeSession,
     Question,
-    Topic,
 )
-from .forms import ChapterForm, ChoiceFormSet, FieldForm, GradeForm, QuestionForm, SubjectForm, TopicForm
+from .forms import ChapterForm, ChoiceFormSet, QuestionForm, SubjectForm
 
 # هماهنگ با app_name در urls.py و پوشه‌بندی پروژه
 APP_NS = "questions_module"
@@ -34,10 +32,8 @@ VALID_MODES = ("practice", "exam")
 MINUTES_PER_EXAM_QUESTION = 3
 
 SESSION_MODE_KEY = "qb_mode"
-SESSION_QUESTION_TYPE_KEY = "qb_question_type"
 SESSION_COURSES_KEY = "qb_course_ids"
 SESSION_CHAPTERS_KEY = "qb_chapter_ids"
-SESSION_TOPICS_KEY = "qb_topic_ids"
 SESSION_DIFFICULTY_KEY = "qb_difficulty"
 SESSION_QUESTION_COUNT_KEY = "qb_question_count"
 SESSION_DIFFICULTY_COUNTS_KEY = "qb_difficulty_counts"
@@ -56,10 +52,8 @@ def _save_session(request):
 def _reset_wizard(request):
     """پاک کردن اطلاعات انتخاب‌های مرحله‌ای کاربر از سشن."""
     request.session.pop(SESSION_MODE_KEY, None)
-    request.session.pop(SESSION_QUESTION_TYPE_KEY, None)
     request.session.pop(SESSION_COURSES_KEY, None)
     request.session.pop(SESSION_CHAPTERS_KEY, None)
-    request.session.pop(SESSION_TOPICS_KEY, None)
     request.session.pop(SESSION_DIFFICULTY_KEY, None)
     request.session.pop(SESSION_QUESTION_COUNT_KEY, None)
     request.session.pop(SESSION_DIFFICULTY_COUNTS_KEY, None)
@@ -81,27 +75,29 @@ def _parse_integer_list(values):
     return result
 
 
-def _usable_question_qs(question_type=Question.Type.MCQ):
-    """سؤال‌های تأییدشده و قابل استفاده برای نوع انتخابی."""
-    qs = Question.objects.filter(
-        is_active=True, question_type=question_type,
-        approval_status=Question.ApprovalStatus.APPROVED,
-        topic__is_active=True,
-    )
-    if question_type == Question.Type.MCQ:
-        qs = qs.annotate(
+def _usable_question_qs():
+    """سؤال‌های فعال با دقیقاً چهار گزینه و دقیقاً یک پاسخ صحیح."""
+    return (
+        Question.objects
+        .filter(
+            is_active=True,
+            question_type=Question.Type.MCQ,
+            approval_status=Question.ApprovalStatus.APPROVED,
+        )
+        .annotate(
             choice_count=Count("choices", distinct=True),
-            correct_choice_count=Count("choices", filter=Q(choices__is_correct=True), distinct=True),
-        ).filter(choice_count=4, correct_choice_count=1)
-    else:
-        qs = qs.exclude(explanation="")
-    return qs
+            correct_choice_count=Count(
+                "choices", filter=Q(choices__is_correct=True), distinct=True
+            ),
+        )
+        .filter(choice_count=4, correct_choice_count=1)
+    )
 
 
-def _usable_chapters(course_ids=None, question_type=Question.Type.MCQ):
-    """فصل‌هایی که حداقل یک سؤال معتبر از نوع انتخابی دارند."""
+def _usable_chapters(course_ids=None):
+    """فصل‌هایی که حداقل یک سوال تستی معتبر دارند."""
     valid_chapter_ids = (
-        _usable_question_qs(question_type)
+        _usable_question_qs()
         .values_list("chapter_id", flat=True)
         .distinct()
     )
@@ -114,19 +110,10 @@ def _usable_chapters(course_ids=None, question_type=Question.Type.MCQ):
     return chapters.filter(subject__is_active=True).select_related("subject").order_by("subject__title", "name", "id")
 
 
-def _usable_topics(course_ids=None, question_type=Question.Type.MCQ):
-    valid_topic_ids = _usable_question_qs(question_type).values_list("topic_id", flat=True).distinct()
-    topics = Topic.objects.filter(id__in=valid_topic_ids, is_active=True, chapter__subject__is_active=True)
-    course_ids = _parse_integer_list(course_ids)
-    if course_ids:
-        topics = topics.filter(chapter__subject_id__in=course_ids)
-    return topics.select_related("chapter__subject").order_by("chapter__subject__title", "chapter__name", "name")
-
-
-def _usable_courses(question_type=Question.Type.MCQ):
+def _usable_courses():
     """درس‌هایی که فصل دارای سوال معتبر دارند."""
     valid_course_ids = (
-        _usable_chapters(question_type=question_type)
+        _usable_chapters()
         .values_list("subject_id", flat=True)
         .distinct()
     )
@@ -138,21 +125,12 @@ def _get_wizard_mode(request):
     return mode if mode in VALID_MODES else None
 
 
-def _get_wizard_question_type(request):
-    value = request.session.get(SESSION_QUESTION_TYPE_KEY)
-    return value if value in Question.Type.values else None
-
-
 def _get_wizard_course_ids(request):
     return _parse_integer_list(request.session.get(SESSION_COURSES_KEY, []))
 
 
 def _get_wizard_chapter_ids(request):
     return _parse_integer_list(request.session.get(SESSION_CHAPTERS_KEY, []))
-
-
-def _get_wizard_topic_ids(request):
-    return _parse_integer_list(request.session.get(SESSION_TOPICS_KEY, []))
 
 
 def _get_difficulty_counts(request):
@@ -195,12 +173,12 @@ def _difficulty_options(selected_counts):
     ]
 
 
-def _select_questions(topic_ids, difficulty_counts, question_type):
+def _select_questions(chapter_ids, difficulty_counts):
     questions = []
     for difficulty, requested_count in difficulty_counts.items():
         selected = list(
-            _usable_question_qs(question_type)
-            .filter(topic_id__in=topic_ids, difficulty=difficulty)
+            _usable_question_qs()
+            .filter(chapter_id__in=chapter_ids, difficulty=difficulty)
             .prefetch_related("choices")
             .order_by("?")[:requested_count]
         )
@@ -219,28 +197,28 @@ def _validate_selected_ids(selected_ids, queryset):
 
 
 def _can_manage_questions(user):
-    if not user.is_authenticated:
-        return False
-    if user.is_superuser or user.role == UserRole.ADMIN:
-        return True
-    return user.role in {UserRole.CONSULTANT, UserRole.PROVINCE_TRUSTEE} and user.has_project_access(Access.Code.BANK)
+    return user.is_authenticated and user.has_project_access(Access.Code.CREATE_QUESTION)
 
 
 def _can_manage_subject(user, subject_id):
-    return user.is_superuser or user.role == UserRole.ADMIN or user.has_project_access(Access.Code.BANK, subject_id)
-
-
-def _is_curriculum_admin(user):
-    return user.is_authenticated and (user.is_superuser or user.role == UserRole.ADMIN)
+    return user.has_project_access(Access.Code.CREATE_QUESTION, subject_id)
 
 
 def _can_create_chapter(user, subject_id=None):
-    return _is_curriculum_admin(user)
+    return user.is_authenticated and user.has_project_access(Access.Code.CREATE_CHAPTER, subject_id)
 
 
 def _can_create_subject(user):
-    return _is_curriculum_admin(user)
-
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if user.role == UserRole.STUDENT:
+        return False
+    return user.accesses.filter(
+        name=Access.Code.CREATE_SUBJECT,
+        subject__isnull=True,
+    ).exists()
 
 
 def _can_view_question_overview(user):
@@ -257,7 +235,7 @@ def _question_overview(user=None):
     if user is not None and user.role == UserRole.CONSULTANT and not user.is_superuser:
         base_qs = base_qs.filter(creator=user)
     questions = base_qs.select_related(
-        'creator', 'chapter__subject', 'topic', 'approved_by'
+        'creator', 'chapter__subject', 'approved_by'
     ).order_by('-created_at', '-pk')
     counts = {
         status: base_qs.filter(approval_status=status).count()
@@ -293,18 +271,6 @@ def _pending_questions_for_trustee(user):
         return qs
     province_ids = ProvinceTrustee.objects.filter(user=user).values_list('province_id', flat=True)
     return qs.filter(chapter__subject__field__grade__school__province_id__in=province_ids)
-
-
-def _approved_questions_for_trustee(user):
-    qs = Question.objects.filter(
-        approval_status=Question.ApprovalStatus.APPROVED,
-    ).select_related('chapter__subject__field__grade__school', 'creator').prefetch_related('choices')
-    if user.is_superuser or user.role == UserRole.ADMIN:
-        return qs.order_by('-approved_at', '-id')[:100]
-    province_ids = ProvinceTrustee.objects.filter(user=user).values_list('province_id', flat=True)
-    return qs.filter(
-        chapter__subject__field__grade__school__province_id__in=province_ids,
-    ).order_by('-approved_at', '-id')[:100]
 
 
 def _performance_data(user, course_ids=None):
@@ -384,8 +350,8 @@ def _previous_answer_map(user, question_ids, *, practice_session_id=None, exam_s
         practice_answers = practice_answers.exclude(session_id=practice_session_id)
     if exam_session_id:
         exam_answers = exam_answers.exclude(session_id=exam_session_id)
-    attempts.extend(practice_answers.values('question_id', 'selected_choice_id', 'text_answer', 'is_correct', 'answered_at'))
-    attempts.extend(exam_answers.values('question_id', 'selected_choice_id', 'text_answer', 'is_correct', 'answered_at'))
+    attempts.extend(practice_answers.values('question_id', 'selected_choice_id', 'is_correct', 'answered_at'))
+    attempts.extend(exam_answers.values('question_id', 'selected_choice_id', 'is_correct', 'answered_at'))
 
     latest = {}
     for attempt in attempts:
@@ -395,30 +361,13 @@ def _previous_answer_map(user, question_ids, *, practice_session_id=None, exam_s
 
     result = {}
     for question_id, attempt in latest.items():
-        if attempt.get('text_answer'):
-            result[question_id] = {"label": "قبلاً پاسخ داده‌اید", "class": "correct"}
-        elif attempt['selected_choice_id'] is None:
+        if attempt['selected_choice_id'] is None:
             result[question_id] = {"label": "قبلاً نزده‌اید", "class": "skipped"}
         elif attempt['is_correct']:
             result[question_id] = {"label": "قبلاً درست زده‌اید", "class": "correct"}
         else:
             result[question_id] = {"label": "قبلاً غلط زده‌اید", "class": "wrong"}
     return result
-
-
-def _question_form_context(form, formset, editing, question):
-    """داده‌های لازم برای فیلتر زنجیره‌ای ساختار آموزشی در فرم سؤال."""
-    hierarchy = {
-        "fields": [{"id": item.pk, "title": item.title, "grade": item.grade_id} for item in form.fields["field"].queryset],
-        "subjects": [{"id": item.pk, "title": item.title, "field": item.field_id} for item in form.fields["subject"].queryset],
-        "chapters": [{"id": item.pk, "title": item.name, "subject": item.subject_id} for item in form.fields["chapter"].queryset],
-        "topics": [{"id": item.pk, "title": item.name, "chapter": item.chapter_id} for item in form.fields["topic"].queryset],
-    }
-    return {
-        "form": form, "formset": formset, "editing": editing, "question": question,
-        "is_descriptive": question.question_type == Question.Type.DESCRIPTIVE,
-        "hierarchy": hierarchy,
-    }
 
 
 # ============================================================
@@ -433,29 +382,22 @@ def question_list(request):
 
 @login_required
 def question_create(request):
-    """انتخاب نوع و ثبت سؤال تستی یا تشریحی توسط کاربران مجاز."""
+    """ثبت سؤال چهارگزینه‌ای توسط کاربران مجاز."""
     if not _can_manage_questions(request.user):
         messages.error(request, "شما اجازه ایجاد سؤال ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
 
-    requested_type = request.POST.get("question_type") or request.GET.get("type")
-    if requested_type not in Question.Type.values:
-        return render(request, "questions_module/choose_question_type.html")
-    question = Question(creator=request.user, question_type=requested_type)
+    question = Question(creator=request.user, question_type=Question.Type.MCQ)
     form = QuestionForm(request.POST or None, request.FILES or None, instance=question, user=request.user)
-    question.question_type = requested_type
     formset = ChoiceFormSet(request.POST or None, request.FILES or None, instance=question)
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         if not _can_manage_subject(request.user, form.cleaned_data["chapter"].subject_id):
             messages.error(request, "برای درس انتخاب‌شده دسترسی بانک سؤال ندارید.")
-            return render(
-                request, "questions_module/question_form.html",
-                _question_form_context(form, formset, False, question), status=403,
-            )
+            return render(request, "questions_module/question_form.html", {"form": form, "formset": formset, "editing": False}, status=403)
         with transaction.atomic():
             question = form.save(commit=False)
             question.creator = request.user
-            question.question_type = requested_type
+            question.question_type = Question.Type.MCQ
             if _question_requires_approval(request.user):
                 question.approval_status = Question.ApprovalStatus.PENDING
                 question.approved_by = None
@@ -465,28 +407,23 @@ def question_create(request):
                 question.approval_status = Question.ApprovalStatus.APPROVED
             question.save()
             formset.instance = question
-            if question.question_type == Question.Type.MCQ:
-                formset.save()
-            else:
-                question.choices.all().delete()
+            formset.save()
         messages.success(
             request,
             "سؤال ثبت شد و برای تأیید معتمد استان ارسال گردید."
             if _question_requires_approval(request.user)
-            else "سؤال با موفقیت وارد بانک سؤال شد.",
+            else "سؤال چهارگزینه‌ای با موفقیت وارد بانک سؤال شد.",
         )
         return redirect(f"{APP_NS}:question_create")
-    return render(request, "questions_module/question_form.html", _question_form_context(form, formset, False, question))
+    return render(request, "questions_module/question_form.html", {"form": form, "formset": formset, "editing": False})
 
 
 @login_required
 def question_edit(request, pk):
-    if not (_can_manage_questions(request.user) or request.user.role == UserRole.PROVINCE_TRUSTEE):
+    if not _can_manage_questions(request.user):
         messages.error(request, "شما اجازه ویرایش سؤال ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
-    question = get_object_or_404(
-        Question.objects.select_related('chapter__subject__field__grade__school'), pk=pk,
-    )
+    question = get_object_or_404(Question, pk=pk)
     if (
         request.user.role == UserRole.CONSULTANT
         and (question.creator_id != request.user.pk
@@ -494,32 +431,24 @@ def question_edit(request, pk):
     ):
         messages.error(request, "فقط سؤال‌های خودتان که هنوز بررسی نشده‌اند قابل ویرایش هستند.")
         return redirect(f"{APP_NS}:choose_mode")
-    trustee_edit = (
-        request.user.role == UserRole.PROVINCE_TRUSTEE
-        and question.approval_status == Question.ApprovalStatus.APPROVED
-        and _trustee_can_review(request.user, question)
-    )
-    if not question.chapter_id or not (trustee_edit or _can_manage_subject(request.user, question.chapter.subject_id)):
+    if not question.chapter_id or not _can_manage_subject(request.user, question.chapter.subject_id):
         messages.error(request, "برای ویرایش سؤال این درس دسترسی ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
     form = QuestionForm(request.POST or None, request.FILES or None, instance=question, user=request.user)
-    question.question_type = question.question_type
     formset = ChoiceFormSet(request.POST or None, request.FILES or None, instance=question)
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         with transaction.atomic():
             question = form.save(commit=False)
+            question.question_type = Question.Type.MCQ
             if _question_requires_approval(request.user):
                 question.approval_status = Question.ApprovalStatus.PENDING
                 question.approved_by = None
                 question.approved_at = None
             question.save()
-            if question.question_type == Question.Type.MCQ:
-                formset.save()
-            else:
-                question.choices.all().delete()
+            formset.save()
         messages.success(request, "تغییرات سؤال ذخیره شد.")
         return redirect(f"{APP_NS}:question_edit", pk=question.pk)
-    return render(request, "questions_module/question_form.html", _question_form_context(form, formset, True, question))
+    return render(request, "questions_module/question_form.html", {"form": form, "formset": formset, "editing": True, "question": question})
 
 
 @login_required
@@ -551,7 +480,6 @@ def approval_queue(request):
         return redirect(f"{APP_NS}:choose_mode")
     return render(request, "questions_module/approval_queue.html", {
         "questions": _pending_questions_for_trustee(request.user),
-        "approved_questions": _approved_questions_for_trustee(request.user),
     })
 
 
@@ -582,12 +510,15 @@ def chapter_create(request):
     if not _can_create_chapter(request.user):
         messages.error(request, "شما اجازه ایجاد فصل ندارید.")
         return redirect(f"{APP_NS}:choose_mode")
-    form = ChapterForm(request.POST or None)
+    form = ChapterForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         subject = form.cleaned_data["subject"]
+        if not _can_create_chapter(request.user, subject.pk):
+            messages.error(request, "برای درس انتخاب‌شده اجازه ایجاد فصل ندارید.")
+            return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": "ایجاد فصل"}, status=403)
         form.save()
         messages.success(request, "فصل جدید با موفقیت ایجاد شد.")
-        return redirect(f"{APP_NS}:curriculum_manage")
+        return redirect(f"{APP_NS}:chapter_create")
     return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": "ایجاد فصل", "entity_help": "فصل را برای یکی از درس‌های مجاز خود ثبت کنید."})
 
 
@@ -601,78 +532,8 @@ def subject_create(request):
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "درس جدید با موفقیت ایجاد شد.")
-        return redirect(f"{APP_NS}:curriculum_manage")
+        return redirect(f"{APP_NS}:subject_create")
     return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": "ایجاد درس", "entity_help": "درس به ساختار پایه، رشته و مدرسه موجود در سامانه متصل می‌شود."})
-
-
-CURRICULUM_ENTITIES = {
-    "grade": (Grade, GradeForm, "پایه"),
-    "field": (FieldOfStudy, FieldForm, "رشته"),
-    "subject": (Subject, SubjectForm, "درس"),
-    "chapter": (Chapter, ChapterForm, "فصل"),
-    "topic": (Topic, TopicForm, "مبحث"),
-}
-
-
-@login_required
-def curriculum_manage(request):
-    if not _is_curriculum_admin(request.user):
-        messages.error(request, "مدیریت ساختار آموزشی فقط برای مدیر سیستم مجاز است.")
-        return redirect(f"{APP_NS}:choose_mode")
-    return render(request, "questions_module/curriculum_manage.html", {
-        "grades": Grade.objects.select_related("school").order_by("school__name", "title"),
-        "fields": FieldOfStudy.objects.select_related("grade__school").order_by("grade__title", "title"),
-        "subjects": Subject.objects.select_related("field__grade").order_by("field__grade__title", "field__title", "title"),
-        "chapters": Chapter.objects.select_related("subject__field__grade").order_by("subject__title", "name"),
-        "topics": Topic.objects.select_related("chapter__subject").order_by("chapter__subject__title", "chapter__name", "name"),
-    })
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def curriculum_entity_create(request, kind):
-    if not _is_curriculum_admin(request.user) or kind not in CURRICULUM_ENTITIES:
-        messages.error(request, "دسترسی مجاز نیست.")
-        return redirect(f"{APP_NS}:choose_mode")
-    _model, form_class, label = CURRICULUM_ENTITIES[kind]
-    form = form_class(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, f"{label} با موفقیت ایجاد شد.")
-        return redirect(f"{APP_NS}:curriculum_manage")
-    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": f"ایجاد {label}"})
-
-
-@login_required
-@require_http_methods(["GET", "POST"])
-def curriculum_entity_edit(request, kind, pk):
-    if not _is_curriculum_admin(request.user) or kind not in CURRICULUM_ENTITIES:
-        messages.error(request, "دسترسی مجاز نیست.")
-        return redirect(f"{APP_NS}:choose_mode")
-    model, form_class, label = CURRICULUM_ENTITIES[kind]
-    instance = get_object_or_404(model, pk=pk)
-    form = form_class(request.POST or None, instance=instance)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, f"{label} با موفقیت ویرایش شد.")
-        return redirect(f"{APP_NS}:curriculum_manage")
-    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": f"ویرایش {label}"})
-
-
-@login_required
-@require_POST
-def curriculum_entity_delete(request, kind, pk):
-    if not _is_curriculum_admin(request.user) or kind not in CURRICULUM_ENTITIES:
-        messages.error(request, "دسترسی مجاز نیست.")
-        return redirect(f"{APP_NS}:choose_mode")
-    model, _form_class, label = CURRICULUM_ENTITIES[kind]
-    instance = get_object_or_404(model, pk=pk)
-    try:
-        instance.delete()
-        messages.success(request, f"{label} حذف شد.")
-    except ProtectedError:
-        messages.error(request, f"این {label} استفاده شده است و تا زمانی که وابستگی‌هایش حذف نشوند قابل حذف نیست.")
-    return redirect(f"{APP_NS}:curriculum_manage")
 
 
 # ============================================================
@@ -682,13 +543,12 @@ def curriculum_entity_delete(request, kind, pk):
 @login_required
 @require_http_methods(["GET", "POST"])
 def choose_mode(request):
-    """مرحله ۱: انتخاب حالت جلسه و نوع سؤال."""
+    """مرحله ۱: انتخاب حالت تمرین یا آزمون."""
     if request.method == "POST":
         mode = request.POST.get("mode", "").strip()
-        question_type = request.POST.get("question_type", "").strip()
 
-        if mode not in VALID_MODES or question_type not in Question.Type.values:
-            messages.error(request, "لطفاً نوع جلسه و نوع سؤال را انتخاب کنید.")
+        if mode not in VALID_MODES:
+            messages.error(request, "لطفاً یکی از حالت‌های تمرین یا آزمون را انتخاب کنید.")
             return render(
                 request,
                 "questions_module/question_list.html",
@@ -697,10 +557,8 @@ def choose_mode(request):
             )
 
         request.session[SESSION_MODE_KEY] = mode
-        request.session[SESSION_QUESTION_TYPE_KEY] = question_type
         request.session.pop(SESSION_COURSES_KEY, None)
         request.session.pop(SESSION_CHAPTERS_KEY, None)
-        request.session.pop(SESSION_TOPICS_KEY, None)
         request.session.pop(SESSION_DIFFICULTY_KEY, None)
         request.session.pop(SESSION_QUESTION_COUNT_KEY, None)
         request.session.pop(SESSION_DIFFICULTY_COUNTS_KEY, None)
@@ -713,9 +571,9 @@ def choose_mode(request):
         "questions_module/question_list.html",
         {
             "selected_mode": _get_wizard_mode(request),
-            "selected_question_type": _get_wizard_question_type(request),
             "can_create_question": _can_manage_questions(request.user),
-            "can_manage_curriculum": _is_curriculum_admin(request.user),
+            "can_create_chapter": _can_create_chapter(request.user),
+            "can_create_subject": _can_create_subject(request.user),
             "can_review_questions": request.user.is_superuser or request.user.role in {UserRole.ADMIN, UserRole.PROVINCE_TRUSTEE},
             "can_view_question_overview": _can_view_question_overview(request.user),
             "question_overview": _question_overview(request.user) if _can_view_question_overview(request.user) else None,
@@ -730,12 +588,11 @@ def choose_mode(request):
 def select_courses(request):
     """مرحله ۲: انتخاب درس‌ها."""
     mode = _get_wizard_mode(request)
-    question_type = _get_wizard_question_type(request)
-    if not mode or not question_type:
+    if not mode:
         messages.warning(request, "ابتدا حالت تمرین یا آزمون را انتخاب کنید.")
         return redirect(f"{APP_NS}:choose_mode")
 
-    courses = _usable_courses(question_type)
+    courses = _usable_courses()
     selected_course_ids = _get_wizard_course_ids(request)
 
     if request.method == "POST":
@@ -749,7 +606,6 @@ def select_courses(request):
         else:
             request.session[SESSION_COURSES_KEY] = valid_selected_ids
             request.session.pop(SESSION_CHAPTERS_KEY, None)
-            request.session.pop(SESSION_TOPICS_KEY, None)
             _save_session(request)
             return redirect(f"{APP_NS}:select_chapters")
 
@@ -758,7 +614,6 @@ def select_courses(request):
         "questions_module/select_courses.html",
         {
             "mode": mode,
-            "question_type": question_type,
             "courses": courses,
             "selected_course_ids": selected_course_ids,
         },
@@ -768,12 +623,11 @@ def select_courses(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def select_chapters(request):
-    """مرحله ۳: نمایش فصل‌ها و انتخاب مباحث."""
+    """مرحله ۳: انتخاب فصل‌ها."""
     mode = _get_wizard_mode(request)
-    question_type = _get_wizard_question_type(request)
     course_ids = _get_wizard_course_ids(request)
 
-    if not mode or not question_type:
+    if not mode:
         messages.warning(request, "ابتدا حالت تمرین یا آزمون را مشخص کنید.")
         return redirect(f"{APP_NS}:choose_mode")
 
@@ -781,19 +635,13 @@ def select_chapters(request):
         messages.warning(request, "ابتدا باید درس(های) مورد نظرتان را انتخاب کنید.")
         return redirect(f"{APP_NS}:select_courses")
 
-    chapters = _usable_chapters(course_ids, question_type)
-    topics = _usable_topics(course_ids, question_type)
-    selected_topic_ids = _get_wizard_topic_ids(request)
-    topics_by_chapter = {}
-    for topic in topics:
-        topics_by_chapter.setdefault(topic.chapter_id, []).append(topic)
-    chapter_items = [{"chapter": chapter, "topics": topics_by_chapter.get(chapter.pk, [])} for chapter in chapters]
+    chapters = _usable_chapters(course_ids)
+    selected_chapter_ids = _get_wizard_chapter_ids(request)
     selected_counts = _get_difficulty_counts(request) or {Difficulty.MEDIUM: 10}
 
     if request.method == "POST":
-        posted_topic_ids = request.POST.getlist("topics")
-        valid_topic_ids = _validate_selected_ids(posted_topic_ids, topics)
-        valid_chapter_ids = list(topics.filter(pk__in=valid_topic_ids).values_list("chapter_id", flat=True).distinct())
+        posted_chapter_ids = request.POST.getlist("chapters")
+        valid_selected_ids = _validate_selected_ids(posted_chapter_ids, chapters)
 
         valid_difficulties = {value for value, _label in Difficulty.choices}
         selected_difficulties = request.POST.getlist("difficulties")
@@ -821,18 +669,18 @@ def select_chapters(request):
         total_count = sum(selected_counts.values())
         shortage = None
         for difficulty, count in selected_counts.items():
-            available = _usable_question_qs(question_type).filter(
-                topic_id__in=valid_topic_ids,
+            available = _usable_question_qs().filter(
+                chapter_id__in=valid_selected_ids,
                 difficulty=difficulty,
             ).count()
             if count > available:
                 shortage = (dict(Difficulty.choices)[difficulty], available)
                 break
 
-        if not posted_topic_ids:
-            messages.error(request, "لطفاً حداقل یک مبحث را انتخاب کنید.")
-        elif not valid_topic_ids:
-            messages.error(request, "مبحث انتخابی فاقد سؤال فعال از نوع انتخاب‌شده است.")
+        if not posted_chapter_ids:
+            messages.error(request, "لطفاً حداقل یک فصل را انتخاب کنید.")
+        elif not valid_selected_ids:
+            messages.error(request, "فصل انتخابی فاقد سوال فعال تستی است.")
         elif not selected_counts:
             messages.error(request, "لطفاً حداقل یک سطح سؤال را انتخاب کنید.")
         elif invalid_count:
@@ -842,8 +690,7 @@ def select_chapters(request):
         elif shortage:
             messages.error(request, f"برای سطح {shortage[0]} فقط {shortage[1]} سؤال موجود است.")
         else:
-            request.session[SESSION_CHAPTERS_KEY] = valid_chapter_ids
-            request.session[SESSION_TOPICS_KEY] = valid_topic_ids
+            request.session[SESSION_CHAPTERS_KEY] = valid_selected_ids
             request.session[SESSION_DIFFICULTY_COUNTS_KEY] = selected_counts
             request.session[SESSION_DIFFICULTY_KEY] = next(iter(selected_counts)) if len(selected_counts) == 1 else ""
             request.session[SESSION_QUESTION_COUNT_KEY] = total_count
@@ -858,9 +705,8 @@ def select_chapters(request):
         "questions_module/select_chapters.html",
         {
             "mode": mode,
-            "question_type": question_type,
-            "chapter_items": chapter_items,
-            "selected_topic_ids": selected_topic_ids,
+            "chapters": chapters,
+            "selected_chapter_ids": selected_chapter_ids,
             "difficulty_options": _difficulty_options(selected_counts),
         },
     )
@@ -885,15 +731,13 @@ def start_practice(request):
     """ایجاد جلسه تمرین جدید و هدایت به صفحه پاسخگویی."""
     mode = _get_wizard_mode(request)
     chapter_ids = _get_wizard_chapter_ids(request)
-    topic_ids = _get_wizard_topic_ids(request)
-    question_type = _get_wizard_question_type(request)
     difficulty_counts = _get_difficulty_counts(request)
 
-    if mode != "practice" or not topic_ids or not difficulty_counts or not question_type:
+    if mode != "practice" or not chapter_ids or not difficulty_counts:
         messages.warning(request, "لطفاً فرآیند انتخاب را کامل کنید.")
         return redirect(f"{APP_NS}:choose_mode")
 
-    questions, missing_difficulty = _select_questions(topic_ids, difficulty_counts, question_type)
+    questions, missing_difficulty = _select_questions(chapter_ids, difficulty_counts)
 
     if not questions:
         label = dict(Difficulty.choices).get(missing_difficulty, "انتخاب‌شده")
@@ -906,10 +750,8 @@ def start_practice(request):
             total_questions=len(questions),
             requested_difficulty=next(iter(difficulty_counts)) if len(difficulty_counts) == 1 else "",
             difficulty_breakdown=difficulty_counts,
-            question_type=question_type,
         )
         practice_session.chapters.set(Chapter.objects.filter(id__in=chapter_ids))
-        practice_session.topics.set(Topic.objects.filter(id__in=topic_ids))
         practice_session.questions.set(questions)
 
     _reset_wizard(request)
@@ -965,8 +807,6 @@ def practice_answer(request, pk, question_id):
     """ثبت پاسخ همان لحظه و برگرداندن بازخورد رنگی."""
     practice_session = get_object_or_404(PracticeSession, pk=pk, user=request.user, status=PracticeSession.Status.IN_PROGRESS)
     question = get_object_or_404(practice_session.questions.prefetch_related("choices"), pk=question_id)
-    if question.question_type != Question.Type.MCQ:
-        return JsonResponse({"error": "پاسخ تشریحی همراه پایان تمرین ثبت می‌شود."}, status=400)
     existing = PracticeAnswer.objects.filter(session=practice_session, question=question).first()
     if existing and (existing.revealed or existing.selected_choice_id):
         return JsonResponse({"error": "پاسخ این سؤال قبلاً ثبت یا مشاهده شده است."}, status=409)
@@ -991,13 +831,6 @@ def practice_reveal(request, pk, question_id):
     practice_session = get_object_or_404(PracticeSession, pk=pk, user=request.user, status=PracticeSession.Status.IN_PROGRESS)
     question = get_object_or_404(practice_session.questions.prefetch_related("choices"), pk=question_id)
     answer, _ = PracticeAnswer.objects.get_or_create(session=practice_session, question=question)
-    if question.question_type == Question.Type.DESCRIPTIVE:
-        answer.selected_choice = None
-        answer.text_answer = ""
-        answer.revealed = True
-        answer.is_correct = None
-        answer.save(update_fields=["selected_choice", "text_answer", "revealed", "is_correct", "answered_at"])
-        return JsonResponse({"descriptive": True, "explanation": question.explanation})
     if answer.selected_choice_id:
         return JsonResponse({"error": "این سؤال قبلاً پاسخ داده شده است."}, status=409)
     answer.revealed = True
@@ -1023,12 +856,6 @@ def practice_submit(request, pk):
 
     with transaction.atomic():
         for q in questions:
-            if q.question_type == Question.Type.DESCRIPTIVE:
-                PracticeAnswer.objects.update_or_create(
-                    session=practice_session, question=q,
-                    defaults={"selected_choice": None, "text_answer": "", "is_correct": None},
-                )
-                continue
             selected_val = request.POST.get(f"question_{q.pk}")
             existing = PracticeAnswer.objects.filter(session=practice_session, question=q).first()
             selected_choice = existing.selected_choice if existing else None
@@ -1043,7 +870,6 @@ def practice_submit(request, pk):
                 question=q,
                 defaults={
                     "selected_choice": selected_choice,
-                    "text_answer": "",
                     "is_correct": is_correct,
                     "revealed": existing.revealed if existing else False,
                 },
@@ -1057,7 +883,7 @@ def practice_submit(request, pk):
                 wrong_count += 1
 
         total = practice_session.total_questions
-        percent = round((correct_count / total) * 100, 1) if total and practice_session.question_type == Question.Type.MCQ else 0
+        percent = round((correct_count / total) * 100, 1) if total else 0
 
         practice_session.correct_count = correct_count
         practice_session.wrong_count = wrong_count
@@ -1097,7 +923,6 @@ def practice_result(request, pk):
             "answer": ans,
             "selected_choice": ans.selected_choice if ans else None,
             "is_correct": ans.is_correct if ans else False,
-            "text_answer": ans.text_answer if ans else "",
         })
 
     return render(
@@ -1122,15 +947,13 @@ def start_exam(request):
     """شروع جلسه آزمون با محاسبه تایمر زمانی."""
     mode = _get_wizard_mode(request)
     chapter_ids = _get_wizard_chapter_ids(request)
-    topic_ids = _get_wizard_topic_ids(request)
-    question_type = _get_wizard_question_type(request)
     difficulty_counts = _get_difficulty_counts(request)
 
-    if mode != "exam" or not topic_ids or not difficulty_counts or not question_type:
+    if mode != "exam" or not chapter_ids or not difficulty_counts:
         messages.warning(request, "لطفاً ابتدا تنظیمات آزمون را تکمیل کنید.")
         return redirect(f"{APP_NS}:choose_mode")
 
-    questions, missing_difficulty = _select_questions(topic_ids, difficulty_counts, question_type)
+    questions, missing_difficulty = _select_questions(chapter_ids, difficulty_counts)
 
     if not questions:
         label = dict(Difficulty.choices).get(missing_difficulty, "انتخاب‌شده")
@@ -1146,10 +969,8 @@ def start_exam(request):
             ends_at=timezone.now() + duration,
             requested_difficulty=next(iter(difficulty_counts)) if len(difficulty_counts) == 1 else "",
             difficulty_breakdown=difficulty_counts,
-            question_type=question_type,
         )
         exam_session.chapters.set(Chapter.objects.filter(id__in=chapter_ids))
-        exam_session.topics.set(Topic.objects.filter(id__in=topic_ids))
         exam_session.questions.set(questions)
 
     _reset_wizard(request)
@@ -1224,12 +1045,6 @@ def _finish_exam(exam_session, submitted_data, auto_submitted=False):
         for q in questions:
             key = f"question_{q.pk}"
             existing = ExamAnswer.objects.filter(session=locked_session, question=q).first()
-            if q.question_type == Question.Type.DESCRIPTIVE:
-                ExamAnswer.objects.update_or_create(
-                    session=locked_session, question=q,
-                    defaults={"selected_choice": None, "text_answer": "", "is_correct": None},
-                )
-                continue
             selected_val = submitted_data.get(key) if key in submitted_data else None
             selected_choice = existing.selected_choice if existing else None
 
@@ -1243,7 +1058,6 @@ def _finish_exam(exam_session, submitted_data, auto_submitted=False):
                 question=q,
                 defaults={
                     "selected_choice": selected_choice,
-                    "text_answer": "",
                     "is_correct": is_correct,
                 },
             )
@@ -1256,7 +1070,7 @@ def _finish_exam(exam_session, submitted_data, auto_submitted=False):
                 wrong_count += 1
 
         total = locked_session.total_questions
-        percent = round((correct_count / total) * 100, 1) if total and locked_session.question_type == Question.Type.MCQ else 0
+        percent = round((correct_count / total) * 100, 1) if total else 0
 
         locked_session.correct_count = correct_count
         locked_session.wrong_count = wrong_count
@@ -1289,13 +1103,11 @@ def exam_save_answer(request, pk, question_id):
         _finish_exam(exam_session, {}, auto_submitted=True)
         return JsonResponse({"expired": True}, status=409)
     question = get_object_or_404(exam_session.questions.all(), pk=question_id)
-    if question.question_type == Question.Type.DESCRIPTIVE:
-        return JsonResponse({"error": "سؤال تشریحی در این حالت نیاز به ثبت پاسخ ندارد."}, status=400)
     choice = get_object_or_404(question.choices, pk=request.POST.get("choice"))
     ExamAnswer.objects.update_or_create(
         session=exam_session,
         question=question,
-        defaults={"selected_choice": choice, "text_answer": "", "is_correct": choice.is_correct},
+        defaults={"selected_choice": choice, "is_correct": choice.is_correct},
     )
     return JsonResponse({"saved": True})
 
@@ -1337,7 +1149,6 @@ def exam_result(request, pk):
             "answer": ans,
             "selected_choice": ans.selected_choice if ans else None,
             "is_correct": ans.is_correct if ans else False,
-            "text_answer": ans.text_answer if ans else "",
         })
 
     return render(
