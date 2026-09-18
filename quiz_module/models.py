@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-from questions_module.models import Question, Topic
+from questions_module.models import Question, Chapter
 from users_module.models import FieldOfStudy, Grade, Province, School
 
 
@@ -81,7 +81,7 @@ class QuizQuestion(models.Model):
 
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="questions")
     source_question = models.ForeignKey(Question, on_delete=models.SET_NULL, null=True, blank=True, related_name="quiz_copies")
-    bank_topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True, related_name="quiz_questions")
+    bank_topic = models.ForeignKey(Chapter, on_delete=models.SET_NULL, null=True, blank=True, related_name="quiz_questions", verbose_name="فصل مرتبط")
     question_type = models.CharField("نوع سؤال", max_length=3, choices=Type.choices, default=Type.MCQ)
     text = RichTextUploadingField("متن سؤال", blank=True)
     image = models.ImageField("تصویر سؤال", upload_to="quizzes/questions/%Y/%m/", blank=True)
