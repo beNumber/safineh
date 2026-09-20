@@ -19,7 +19,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "panjeheaftab.ir"
+    "fanooslms.ir"
 ]
 
 
@@ -190,7 +190,7 @@ MESSAGE_TAGS = {
 }
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://panjeheaftab.ir',
+    "https://fanooslms.ir",
     "http://127.0.0.1:8030",
     "http://localhost:8030"
 ]
