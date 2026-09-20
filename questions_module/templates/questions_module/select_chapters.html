@@ -1,13 +1,12 @@
 {% extends "base.html" %}{% load static %}
-{% block title %}تنظیمات جلسه{% endblock %}{% block page_title %}فصل‌ها و تنظیمات{% endblock %}{% block breadcrumb %}مرحله سوم{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/questions.css' %}"><link rel="stylesheet" href="{% static 'css/questions-modern.css' %}">{% endblock %}
+{% block title %}تنظیمات جلسه{% endblock %}{% block page_title %}فصل‌ها، مباحث و تنظیمات{% endblock %}{% block breadcrumb %}مرحله سوم{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/questions.css' %}"><link rel="stylesheet" href="{% static 'css/questions-modern.css' %}">{% include "questions_module/_assets.html" %}{% endblock %}
 {% block content %}
 <div class="qb-shell">
   {% include "questions_module/_wizard_steps.html" with step=3 %}
   <form method="post" class="qb-card p-6 sm:p-8" id="session-settings-form">{% csrf_token %}
-    <h1 class="text-xl font-black text-slate-800">فصل‌های موردنظر را انتخاب کنید</h1>
-    <p class="mt-2 text-sm text-slate-500">می‌توانید فصل‌هایی از چند درس را در یک جلسه ترکیب کنید.</p>
-    <div class="mt-6 grid gap-3 sm:grid-cols-2">{% for chapter in chapters %}<label class="qb-check-card flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-slate-200 p-4"><input class="h-5 w-5 accent-blue-600" type="checkbox" name="chapters" value="{{ chapter.id }}" {% if chapter.id in selected_chapter_ids %}checked{% endif %}><span><strong class="block text-sm text-slate-700">{{ chapter.name }}</strong><small class="mt-1 block text-slate-400">{{ chapter.subject.title }}</small></span></label>{% empty %}<p class="text-sm text-slate-500">فصل قابل استفاده‌ای یافت نشد.</p>{% endfor %}</div>
+    <div class="flex flex-wrap items-start justify-between gap-3"><div><span class="qb-chip {% if question_type == 'DES' %}bg-violet-100 text-violet-700{% else %}bg-blue-100 text-blue-700{% endif %}">{{ question_type|yesno:"سؤال,سؤال" }} {% if question_type == 'DES' %}تشریحی{% else %}تستی{% endif %}</span><h1 class="mt-3 text-xl font-black text-slate-800">مباحث موردنظر را انتخاب کنید</h1><p class="mt-2 text-sm text-slate-500">هر فصل به‌صورت یک کارت نمایش داده شده و مباحث همان فصل درون آن قابل انتخاب است.</p></div></div>
+    <div class="mt-6 grid gap-5 lg:grid-cols-2">{% for item in chapter_items %}<article class="qb-topic-panel"><header><span class="qb-topic-icon"><i class="fa-solid fa-book-open"></i></span><div><small>{{ item.chapter.subject.title }}</small><h2>{{ item.chapter.name }}</h2></div><span class="qb-topic-count">{{ item.topics|length }} مبحث</span></header><div class="qb-topic-list">{% for topic in item.topics %}<label><input type="checkbox" name="topics" value="{{ topic.pk }}" {% if topic.pk in selected_topic_ids %}checked{% endif %}><span><i class="fa-solid fa-check"></i>{{ topic.name }}</span></label>{% endfor %}</div></article>{% empty %}<div class="col-span-full rounded-2xl bg-amber-50 p-5 text-sm text-amber-700">برای درس‌های انتخاب‌شده، مبحث دارای سؤال فعال یافت نشد.</div>{% endfor %}</div>
 
     <div class="my-8 border-t border-slate-100"></div>
     <div class="mb-5"><h2 class="text-lg font-black text-slate-800">ترکیب سطح سؤال‌ها</h2><p class="mt-1 text-sm text-slate-500">یک یا چند سطح را فعال کنید و تعداد سؤال هر سطح را جداگانه بنویسید.</p></div>

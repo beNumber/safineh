@@ -4,6 +4,7 @@ from django.urls import reverse
 from auth_module.models import ProvinceTrustee, Student, User, UserRole
 from ticketing_module.models import ModerationStatus, Ticket, TicketQueue
 from users_module.models import FieldOfStudy, Grade, Province, School
+from questions_module.models import ExamSession
 
 from .models import StudentConsultantAssignment
 from .services import manageable_students_for
@@ -91,6 +92,29 @@ class CounselingFlowTests(TestCase):
         self.assertContains(response, "علی دانش‌آموز")
         self.client.force_login(self.other_consultant)
         self.assertNotContains(self.client.get(reverse("counseling:my_students")), "علی دانش‌آموز")
+
+    def test_only_assigned_consultant_can_see_student_exam_performance(self):
+        StudentConsultantAssignment.objects.create(
+            student=self.student, consultant=self.consultant, assigned_by=self.admin_user
+        )
+        ExamSession.objects.create(
+            user=self.student_user,
+            total_questions=10,
+            correct_count=8,
+            wrong_count=2,
+            percent=80,
+            status=ExamSession.Status.DONE,
+        )
+        url = reverse("counseling:student_performance", args=[self.student.pk])
+
+        self.client.force_login(self.consultant)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "80.0٪")
+        self.assertContains(response, "نمودار عملکرد آزمون‌ها")
+
+        self.client.force_login(self.other_consultant)
+        self.assertEqual(self.client.get(url).status_code, 404)
 
     def test_private_ticket_is_moderated_then_sent_only_to_assigned_consultant(self):
         StudentConsultantAssignment.objects.create(

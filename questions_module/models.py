@@ -102,23 +102,48 @@ class Chapter(models.Model):
         return f'{subject_name} | {self.name}'
 
     def clean(self):
-        if not self.subject_id and not self.course_id:
-            raise ValidationError({'subject': 'انتخاب درس یا درس ثبت‌شده الزامی است.'})
+        from django.core.exceptions import ValidationError
+
+        if not self.subject_id:
+            raise ValidationError({'subject': 'انتخاب درس ثبت‌شده الزامی است.'})
+
+
+class Topic(models.Model):
+    """مبحث آموزشی متعلق به یک فصل."""
+    chapter = models.ForeignKey(
+        Chapter,
+        on_delete=models.PROTECT,
+        related_name='topics',
+        verbose_name='فصل',
+    )
+    name = models.CharField('نام مبحث', max_length=200)
+    is_active = models.BooleanField('فعال', default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'مبحث'
+        verbose_name_plural = 'مباحث'
+        ordering = ['chapter__subject__title', 'chapter__name', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['chapter', 'name'],
+                name='unique_topic_per_chapter',
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.chapter} | {self.name}'
 
 
 # ==============================================================================
 # ۳. سوالات و گزینه‌ها
 # ==============================================================================
 class Question(models.Model):
-    """سؤال چهارگزینه‌ای متصل به درس و فصل."""
+    """سؤال تستی یا تشریحی متصل به مبحث آموزشی."""
 
     class Type(models.TextChoices):
         MCQ = 'MCQ', 'چهارگزینه‌ای'
-
-    class ApprovalStatus(models.TextChoices):
-        PENDING = 'pending', 'در انتظار تأیید'
-        APPROVED = 'approved', 'تأیید شده'
-        REJECTED = 'rejected', 'رد شده'
+        DESCRIPTIVE = 'DES', 'تشریحی'
 
     question_type = models.CharField(
         'نوع سوال',
@@ -142,6 +167,19 @@ class Question(models.Model):
         null=True,
         blank=True,
     )
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.PROTECT,
+        related_name='questions',
+        verbose_name='مبحث',
+        null=True,
+        blank=True,
+    )
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'pending', 'در انتظار تأیید'
+        APPROVED = 'approved', 'تأیید شده'
+        REJECTED = 'rejected', 'رد شده'
+
     text = RichTextUploadingField('متن سوال', blank=True)
     image = models.ImageField(
         'تصویر سوال',
@@ -167,18 +205,13 @@ class Question(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     approval_status = models.CharField(
-        'وضعیت تأیید',
-        max_length=20,
-        choices=ApprovalStatus.choices,
+        'وضعیت تأیید', max_length=20, choices=ApprovalStatus.choices,
         default=ApprovalStatus.APPROVED,
     )
     approval_note = models.TextField('یادداشت تأیید/رد', blank=True)
     approved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='approved_questions',
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='approved_questions',
         verbose_name='تأییدکننده',
     )
     approved_at = models.DateTimeField('زمان بررسی', null=True, blank=True)
@@ -195,10 +228,19 @@ class Question(models.Model):
         return f'Q{self.pk}: {self.text[:50] or "سؤال تصویری"}'
 
     def clean(self):
-        if self.question_type != self.Type.MCQ:
-            raise ValidationError({'question_type': 'تمام سؤال‌ها باید چهارگزینه‌ای باشند.'})
+        from django.core.exceptions import ValidationError
+
         if not (self.text or '').strip() and not self.image:
             raise ValidationError('برای سؤال، متن یا تصویر وارد کنید.')
+        if self.topic_id:
+            self.chapter = self.topic.chapter
+        if self.question_type == self.Type.DESCRIPTIVE and not (self.explanation or '').strip():
+            raise ValidationError({'explanation': 'ثبت پاسخ تشریحی الزامی است.'})
+
+    def save(self, *args, **kwargs):
+        if self.topic_id:
+            self.chapter_id = self.topic.chapter_id
+        super().save(*args, **kwargs)
 
 
 class Choice(models.Model):
@@ -246,7 +288,9 @@ class PracticeSession(models.Model):
         verbose_name='کاربر',
     )
     chapters = models.ManyToManyField(Chapter, related_name='practice_sessions', verbose_name='فصل‌ها')
+    topics = models.ManyToManyField(Topic, related_name='practice_sessions', verbose_name='مباحث', blank=True)
     questions = models.ManyToManyField(Question, related_name='practice_sessions', verbose_name='سوالات')
+    question_type = models.CharField('نوع سؤال', max_length=3, choices=Question.Type.choices, default=Question.Type.MCQ)
     started_at = models.DateTimeField('زمان شروع', auto_now_add=True)
     finished_at = models.DateTimeField('زمان پایان', null=True, blank=True)
     total_questions = models.PositiveIntegerField('تعداد کل سوالات', default=0)
@@ -285,6 +329,7 @@ class PracticeAnswer(models.Model):
         related_name='+',
         verbose_name='گزینه انتخابی',
     )
+    text_answer = models.TextField('پاسخ تشریحی کاربر', blank=True)
     is_correct = models.BooleanField('پاسخ درست', null=True, blank=True)
     revealed = models.BooleanField('مشاهده جواب', default=False)
     answered_at = models.DateTimeField('زمان پاسخ', auto_now=True)
@@ -310,7 +355,9 @@ class ExamSession(models.Model):
         verbose_name='کاربر',
     )
     chapters = models.ManyToManyField(Chapter, related_name='exam_sessions', verbose_name='فصل‌ها')
+    topics = models.ManyToManyField(Topic, related_name='exam_sessions', verbose_name='مباحث', blank=True)
     questions = models.ManyToManyField(Question, related_name='exam_sessions', verbose_name='سوالات')
+    question_type = models.CharField('نوع سؤال', max_length=3, choices=Question.Type.choices, default=Question.Type.MCQ)
     started_at = models.DateTimeField('زمان شروع', auto_now_add=True)
     ends_at = models.DateTimeField('مهلت زمانی', null=True, blank=True)
     finished_at = models.DateTimeField('زمان پایان', null=True, blank=True)
@@ -351,6 +398,7 @@ class ExamAnswer(models.Model):
         related_name='+',
         verbose_name='گزینه انتخابی',
     )
+    text_answer = models.TextField('پاسخ تشریحی کاربر', blank=True)
     is_correct = models.BooleanField('پاسخ درست', null=True, blank=True)
     answered_at = models.DateTimeField('زمان پاسخ', auto_now=True)
 
