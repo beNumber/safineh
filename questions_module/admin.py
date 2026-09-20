@@ -3,7 +3,7 @@ from django import forms
 from users_module.models import Access
 from .models import (
     Chapter, Question, Choice,
-    PracticeSession, ExamSession, PracticeAnswer, ExamAnswer, Category
+    PracticeSession, ExamSession, PracticeAnswer, ExamAnswer, Category, Topic
 )
 
 
@@ -20,10 +20,10 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
     def has_add_permission(self, request):
-        return has_access(request.user, Access.Code.CREATE_QUESTION)
+        return has_access(request.user, Access.Code.BANK)
 
     def has_change_permission(self, request, obj=None):
-        return has_access(request.user, Access.Code.CREATE_QUESTION)
+        return has_access(request.user, Access.Code.BANK)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -41,22 +41,22 @@ class ChapterAdmin(admin.ModelAdmin):
     questions_count.short_description = "تعداد سوالات"
 
     def has_add_permission(self, request):
-        return has_access(request.user, Access.Code.CREATE_CHAPTER)
+        return request.user.is_superuser or request.user.role == 'ADMIN'
 
     def has_module_permission(self, request):
-        return has_access(request.user, Access.Code.CREATE_CHAPTER)
+        return request.user.is_superuser or request.user.role == 'ADMIN'
 
     def has_view_permission(self, request, obj=None):
         return has_access(
             request.user,
-            Access.Code.CREATE_CHAPTER,
+            Access.Code.BANK,
             obj.subject if obj else None,
         )
 
     def has_change_permission(self, request, obj=None):
         return has_access(
             request.user,
-            Access.Code.CREATE_CHAPTER,
+            Access.Code.BANK,
             obj.subject if obj else None,
         )
 
@@ -65,7 +65,7 @@ class ChapterAdmin(admin.ModelAdmin):
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'subject' and not request.user.is_superuser:
-            accesses = request.user.accesses.filter(name=Access.Code.CREATE_CHAPTER)
+            accesses = request.user.accesses.filter(name=Access.Code.BANK)
             if not accesses.filter(subject__isnull=True).exists():
                 kwargs['queryset'] = db_field.remote_field.model.objects.filter(
                     pk__in=accesses.values_list('subject_id', flat=True)
@@ -76,10 +76,29 @@ class ChapterAdmin(admin.ModelAdmin):
         queryset = super().get_queryset(request)
         if request.user.is_superuser:
             return queryset
-        accesses = request.user.accesses.filter(name=Access.Code.CREATE_CHAPTER)
+        accesses = request.user.accesses.filter(name=Access.Code.BANK)
         if accesses.filter(subject__isnull=True).exists():
             return queryset
         return queryset.filter(subject_id__in=accesses.values_list('subject_id', flat=True))
+
+
+@admin.register(Topic)
+class TopicAdmin(admin.ModelAdmin):
+    list_display = ('name', 'chapter', 'is_active')
+    list_filter = ('is_active', 'chapter__subject')
+    search_fields = ('name', 'chapter__name', 'chapter__subject__title')
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser or request.user.role == 'ADMIN'
+
+    def has_add_permission(self, request):
+        return self.has_module_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return self.has_module_permission(request)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -134,8 +153,7 @@ class QuestionAdmin(admin.ModelAdmin):
     list_display = (
         "short_text", 
         "creator",
-        "get_course", 
-        "chapter", 
+        "get_course", "chapter", "topic", "question_type",
         "difficulty", 
         "approval_status",
         "is_active", 
@@ -155,7 +173,7 @@ class QuestionAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("اطلاعات دسته‌بندی", {
-            "fields": (("chapter", "category"), "difficulty", "approval_status", "is_active")
+            "fields": (("chapter", "topic", "category"), ("question_type", "difficulty"), "approval_status", "is_active")
         }),
         ("محتوای سوال", {
             "fields": ("text", "image", "explanation")
@@ -180,22 +198,22 @@ class QuestionAdmin(admin.ModelAdmin):
     get_course.admin_order_field = "chapter__subject__title"
 
     def has_add_permission(self, request):
-        return has_access(request.user, Access.Code.CREATE_QUESTION)
+        return has_access(request.user, Access.Code.BANK)
 
     def has_module_permission(self, request):
-        return has_access(request.user, Access.Code.CREATE_QUESTION)
+        return has_access(request.user, Access.Code.BANK)
 
     def has_view_permission(self, request, obj=None):
         return has_access(
             request.user,
-            Access.Code.CREATE_QUESTION,
+            Access.Code.BANK,
             obj.chapter.subject if obj else None,
         )
 
     def has_change_permission(self, request, obj=None):
         return has_access(
             request.user,
-            Access.Code.CREATE_QUESTION,
+            Access.Code.BANK,
             obj.chapter.subject if obj else None,
         )
 
@@ -205,7 +223,7 @@ class QuestionAdmin(admin.ModelAdmin):
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == 'chapter':
             chapters = Chapter.objects.filter(subject__is_active=True)
-            accesses = request.user.accesses.filter(name=Access.Code.CREATE_QUESTION)
+            accesses = request.user.accesses.filter(name=Access.Code.BANK)
             if not request.user.is_superuser and not accesses.filter(subject__isnull=True).exists():
                 chapters = chapters.filter(subject_id__in=accesses.values_list('subject_id', flat=True))
             kwargs['queryset'] = chapters.select_related('subject')
@@ -215,7 +233,7 @@ class QuestionAdmin(admin.ModelAdmin):
         queryset = super().get_queryset(request)
         if request.user.is_superuser:
             return queryset
-        accesses = request.user.accesses.filter(name=Access.Code.CREATE_QUESTION)
+        accesses = request.user.accesses.filter(name=Access.Code.BANK)
         if accesses.filter(subject__isnull=True).exists():
             return queryset
         return queryset.filter(

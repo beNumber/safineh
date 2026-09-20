@@ -3,9 +3,12 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from auth_module.decorators import role_required
 from auth_module.models import Student, UserRole
+from questions_module.models import ExamSession
+from quiz_module.models import QuizAttempt
 from ticketing_module.models import (
     Ticket,
     TicketAuditLog,
@@ -118,6 +121,91 @@ def my_students(request):
         request,
         "counseling_module/my_students.html",
         {"assignments": assignments, "query": query},
+    )
+
+
+def _student_exam_performance(student):
+    """یک خط زمانی مشترک از آزمون‌های بانک سؤال و آزمون‌های رسمی سامانه."""
+    rows = []
+    bank_exams = (
+        ExamSession.objects.filter(user=student.user, status=ExamSession.Status.DONE)
+        .prefetch_related("chapters__subject")
+        .order_by("finished_at", "started_at", "pk")
+    )
+    for exam in bank_exams:
+        subjects = list(dict.fromkeys(chapter.subject.title for chapter in exam.chapters.all()))
+        rows.append(
+            {
+                "kind": "bank",
+                "title": "، ".join(subjects) or f"آزمون بانک سؤال #{exam.pk}",
+                "percent": round(float(exam.percent or 0), 1),
+                "correct": exam.correct_count,
+                "wrong": exam.wrong_count,
+                "unanswered": exam.unanswered_count,
+                "total": exam.total_questions,
+                "date": exam.finished_at or exam.started_at,
+            }
+        )
+
+    official_attempts = (
+        QuizAttempt.objects.filter(
+            student=student.user,
+            status__in=[QuizAttempt.Status.SUBMITTED, QuizAttempt.Status.GRADED],
+        )
+        .select_related("quiz")
+        .order_by("finished_at", "started_at", "pk")
+    )
+    for attempt in official_attempts:
+        total_questions = attempt.quiz.question_count or attempt.quiz.questions.count()
+        rows.append(
+            {
+                "kind": "official",
+                "title": attempt.quiz.title,
+                "percent": round(float(attempt.percent), 1),
+                "correct": attempt.correct_count,
+                "wrong": attempt.wrong_count,
+                "unanswered": max(total_questions - attempt.answered_count, 0),
+                "total": total_questions,
+                "date": attempt.finished_at or attempt.started_at,
+            }
+        )
+
+    rows.sort(key=lambda item: item["date"] or timezone.now())
+    for index, row in enumerate(rows, start=1):
+        local_date = timezone.localtime(row["date"]) if row["date"] and timezone.is_aware(row["date"]) else row["date"]
+        row["chart_label"] = f"آزمون {index}"
+        row["date_label"] = local_date.strftime("%Y/%m/%d") if local_date else "—"
+
+    completed = len(rows)
+    average = round(sum(row["percent"] for row in rows) / completed, 1) if completed else 0
+    best = max((row["percent"] for row in rows), default=0)
+    total_questions = sum(row["total"] for row in rows)
+    total_correct = sum(row["correct"] for row in rows)
+    accuracy = round(total_correct * 100 / total_questions, 1) if total_questions else 0
+    return rows, {
+        "completed": completed,
+        "average": average,
+        "best": best,
+        "accuracy": accuracy,
+        "latest": rows[-1]["percent"] if rows else 0,
+    }
+
+
+@role_required(UserRole.CONSULTANT)
+def student_performance(request, student_id):
+    # فیلتر consultant مهم است: هیچ مشاوری به دانش‌آموز مشاور دیگر دسترسی ندارد.
+    assignment = get_object_or_404(
+        StudentConsultantAssignment.objects.select_related(
+            "student__user", "student__field__grade", "consultant"
+        ),
+        student_id=student_id,
+        consultant=request.user,
+    )
+    exams, summary = _student_exam_performance(assignment.student)
+    return render(
+        request,
+        "counseling_module/student_performance.html",
+        {"assignment": assignment, "student": assignment.student, "exams": exams, "summary": summary},
     )
 
 

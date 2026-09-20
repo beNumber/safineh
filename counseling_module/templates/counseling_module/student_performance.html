@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}عملکرد {{ student.user.get_full_name|default:student.user.username }} | راه‌دان{% endblock %}
+{% block page_title %}تحلیل عملکرد دانش‌آموز{% endblock %}
+{% block breadcrumb %}پنل مشاور / عملکرد آزمون‌ها{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'counseling_module/counseling.css' %}">{% endblock %}
+{% block content %}
+<div class="counseling-shell performance-page space-y-6">
+  <section class="performance-hero counseling-glass relative overflow-hidden rounded-[2rem] p-6 sm:p-8">
+    <div class="performance-orb performance-orb-one"></div><div class="performance-orb performance-orb-two"></div>
+    <div class="relative z-10 flex flex-wrap items-center justify-between gap-5">
+      <div class="flex items-center gap-4">
+        <div class="counseling-avatar grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-indigo-600 to-cyan-400 text-2xl font-black text-white">{{ student.user.first_name|default:student.user.username|slice:":1" }}</div>
+        <div><span class="performance-kicker"><i class="fa-solid fa-wave-square"></i> پرونده تحلیلی اختصاصی</span><h1 class="mt-2 text-2xl font-black text-slate-900">{{ student.user.get_full_name|default:student.user.username }}</h1><p class="mt-1 text-xs text-slate-500">{{ student.field.grade.title }} · {{ student.field.title }}</p></div>
+      </div>
+      <a href="{% url 'counseling:my_students' %}" class="performance-back"><i class="fa-solid fa-arrow-right"></i> بازگشت به دانش‌آموزان من</a>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <article class="performance-stat stat-blue"><span><i class="fa-solid fa-flag-checkered"></i></span><div><strong>{{ summary.completed }}</strong><small>آزمون تکمیل‌شده</small></div></article>
+    <article class="performance-stat stat-violet"><span><i class="fa-solid fa-chart-simple"></i></span><div><strong>{{ summary.average }}٪</strong><small>میانگین عملکرد</small></div></article>
+    <article class="performance-stat stat-emerald"><span><i class="fa-solid fa-trophy"></i></span><div><strong>{{ summary.best }}٪</strong><small>بهترین نتیجه</small></div></article>
+    <article class="performance-stat stat-amber"><span><i class="fa-solid fa-bullseye"></i></span><div><strong>{{ summary.accuracy }}٪</strong><small>دقت کل پاسخ‌ها</small></div></article>
+  </section>
+
+  <section class="counseling-glass rounded-[2rem] p-5 sm:p-7">
+    <div class="flex flex-wrap items-start justify-between gap-4"><div><span class="performance-kicker"><i class="fa-solid fa-chart-line"></i> روند پیشرفت</span><h2 class="mt-2 text-xl font-black text-slate-900">نمودار عملکرد آزمون‌ها</h2><p class="mt-2 text-xs leading-6 text-slate-500">نتایج بانک سؤال و آزمون‌های رسمی، به ترتیب زمان انجام نمایش داده می‌شوند.</p></div>{% if exams %}<div class="latest-score"><small>آخرین نتیجه</small><strong>{{ summary.latest }}٪</strong></div>{% endif %}</div>
+    {% if exams %}<div class="performance-chart"><canvas id="student-performance-chart"></canvas></div>{{ exams|json_script:"student-performance-data" }}
+    {% else %}<div class="performance-empty"><span><i class="fa-solid fa-chart-line"></i></span><h3>هنوز آزمون تکمیل‌شده‌ای وجود ندارد</h3><p>بعد از اولین آزمون دانش‌آموز، روند پیشرفت و جزئیات پاسخ‌ها اینجا ظاهر می‌شود.</p></div>{% endif %}
+  </section>
+
+  {% if exams %}<section class="counseling-glass overflow-hidden rounded-[2rem] p-5 sm:p-7"><div class="mb-5"><span class="performance-kicker"><i class="fa-solid fa-clock-rotate-left"></i> تاریخچه دقیق</span><h2 class="mt-2 text-xl font-black text-slate-900">جزئیات آزمون‌ها</h2></div><div class="performance-table-wrap"><table class="performance-table"><thead><tr><th>آزمون</th><th>نوع</th><th>تاریخ</th><th>درصد</th><th>صحیح</th><th>غلط</th><th>نزده</th></tr></thead><tbody>{% for exam in exams reversed %}<tr><td><strong>{{ exam.title }}</strong></td><td><span class="exam-kind {{ exam.kind }}">{% if exam.kind == 'official' %}رسمی{% else %}بانک سؤال{% endif %}</span></td><td>{{ exam.date_label }}</td><td><b class="score-pill">{{ exam.percent }}٪</b></td><td class="text-emerald-600">{{ exam.correct }}</td><td class="text-rose-500">{{ exam.wrong }}</td><td class="text-slate-400">{{ exam.unanswered }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}{% if exams %}<script src="{% static 'chart/chart.js' %}"></script><script>
+document.addEventListener('DOMContentLoaded',()=>{const canvas=document.getElementById('student-performance-chart'),source=document.getElementById('student-performance-data');if(!canvas||!source||typeof Chart==='undefined')return;const rows=JSON.parse(source.textContent),ctx=canvas.getContext('2d'),fill=ctx.createLinearGradient(0,0,0,360);fill.addColorStop(0,'rgba(37,99,235,.28)');fill.addColorStop(1,'rgba(14,165,233,0)');const fa=n=>Number(n).toLocaleString('fa-IR',{maximumFractionDigits:1});new Chart(canvas,{type:'line',data:{labels:rows.map(x=>x.chart_label),datasets:[{data:rows.map(x=>x.percent),borderColor:'#2563eb',backgroundColor:fill,borderWidth:4,tension:.38,fill:true,pointRadius:6,pointHoverRadius:9,pointBackgroundColor:'#fff',pointBorderColor:'#2563eb',pointBorderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},animation:{duration:1100,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:{rtl:true,textDirection:'rtl',displayColors:false,backgroundColor:'#0f172a',padding:14,cornerRadius:14,callbacks:{title:i=>rows[i[0].dataIndex].title,label:i=>'درصد: '+fa(i.raw)+'٪',afterBody:i=>{const x=rows[i[0].dataIndex];return ['تاریخ: '+x.date_label,'صحیح: '+fa(x.correct),'غلط: '+fa(x.wrong),'نزده: '+fa(x.unanswered)]}}}},scales:{x:{grid:{display:false},border:{display:false},ticks:{font:{family:'Aria, Tahoma',weight:'700'}}},y:{beginAtZero:true,max:100,border:{display:false},grid:{color:'rgba(148,163,184,.16)'},ticks:{stepSize:20,callback:v=>fa(v)+'٪'}}}}})});
+</script>{% endif %}{% endblock %}

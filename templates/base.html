@@ -261,6 +261,11 @@
                     <span class="sidebar-icon text-indigo-400"><i class="fa-solid fa-calendar-days"></i></span>
                     <span>برنامه شخصی من</span>
                 </a>
+                <a href="{% url 'questions_module:choose_mode' %}"
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/questions/' in request.path %}active{% else %}text-slate-600{% endif %}">
+                    <span class="sidebar-icon text-cyan-500"><i class="fa-solid fa-brain"></i></span>
+                    <span>بانک سؤال</span>
+                </a>
                 {% endif %}
 
                 <a href="{% url 'ticketing:list' %}"
