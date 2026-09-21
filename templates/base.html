@@ -9,7 +9,7 @@
 
     <title>
         {% block title %}
-            سامانه مشاوره تحصیلی
+            فانوس | سامانه هوشمند تحصیلی
         {% endblock %}
     </title>
 
@@ -67,6 +67,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    <link rel="stylesheet" href="{% static 'css/fanous-shell.css' %}">
 
     <style>
         :root {
@@ -204,32 +205,32 @@
             class="app-sidebar fixed inset-y-0 right-0 z-50 flex flex-col overflow-hidden border-l border-slate-200 bg-white">
 
         <!-- Brand -->
-        <div class="brand-pattern relative px-5 py-5 text-white">
+        <div class="fanous-brand">
             <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 shadow-lg backdrop-blur">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                <div class="fanous-logo">
+                    <i class="fa-solid fa-lightbulb"></i>
                 </div>
 
                 <div class="min-w-0">
-                    <h1 class="truncate text-lg font-black">
-                        راه‌دان
+                    <h1 class="truncate text-xl font-black text-slate-900">
+                        فانوس
                     </h1>
-                    <p class="mt-1 text-xs text-blue-100">
-                        سامانه مشاوره تحصیلی
+                    <p class="mt-1 text-[10px] font-bold text-slate-400">
+                        روشنای مسیر یادگیری
                     </p>
                 </div>
 
                 <button
                         id="sidebar-close"
                         type="button"
-                        class="mr-auto flex h-9 w-9 items-center justify-center rounded-xl text-blue-100 transition hover:bg-white/15 hover:text-white lg:hidden">
+                        class="mr-auto flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <div class="mt-5 flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-xs text-blue-50">
-                <span class="h-2 w-2 animate-pulse rounded-full bg-emerald-400"></span>
-                سامانه فعال است
+            <div class="fanous-status">
+                <i></i>
+                فانوس روشن و آماده است
             </div>
         </div>
 
@@ -243,7 +244,7 @@
             <div class="space-y-1">
 
                 <a href="{% url 'dashboard' %}"
-                   class="sidebar-link active flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
+                   class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-grid-2"></i>
                     </span>
@@ -262,6 +263,7 @@
                     <span>برنامه شخصی من</span>
                 </a>
                 <a href="{% url 'questions_module:choose_mode' %}"
+                   data-nav-prefix="/questions/"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/questions/' in request.path %}active{% else %}text-slate-600{% endif %}">
                     <span class="sidebar-icon text-cyan-500"><i class="fa-solid fa-brain"></i></span>
                     <span>بانک سؤال</span>
@@ -489,7 +491,7 @@
     <div class="main-wrapper min-h-screen">
 
         <!-- Topbar -->
-        <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+        <header class="fanous-topbar sticky top-0 z-30">
             <div class="flex h-[76px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
 
                 <!-- Right Side -->
@@ -503,8 +505,8 @@
                     </button>
 
                     <div class="min-w-0">
-                        <p class="hidden text-xs font-medium text-slate-400 sm:block">
-                            خوش آمدید به پنل کاربری
+                        <p class="hidden text-xs font-bold text-sky-600 sm:block">
+                            {{ fanous_day_greeting }}، {{ user.first_name|default:user.username }}
                         </p>
 
                         <h2 class="truncate text-base font-black text-slate-800 sm:text-xl">
@@ -519,7 +521,7 @@
                 <div class="flex items-center gap-2 sm:gap-4">
 
                     <!-- Search -->
-                    <div class="hidden items-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 md:flex">
+                    <div class="fanous-search hidden items-center rounded-xl px-3 py-2 md:flex">
                         <i class="fa-solid fa-magnifying-glass text-sm text-slate-400"></i>
                         <input
                                 type="text"
@@ -534,21 +536,39 @@
                     </div>
 
                     <!-- Notifications -->
-                    <button
-                            type="button"
-                            class="relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
-                        <i class="fa-regular fa-bell text-lg"></i>
-                        <span class="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500"></span>
-                    </button>
+                    <div class="relative">
+                        <button id="notification-toggle" type="button"
+                                data-read-url="{% url 'notifications_read' %}"
+                                data-csrf="{{ csrf_token }}"
+                                class="fanous-notification-button"
+                                aria-label="اعلان‌های تازه">
+                            <i class="fa-regular fa-bell text-lg"></i>
+                            {% if fanous_unread_count %}<span id="notification-count" class="fanous-notification-count">{{ fanous_unread_count }}</span>{% endif %}
+                        </button>
+                        <div id="notification-panel" class="fanous-notifications hidden">
+                            <div class="fanous-notification-head"><div><strong class="block text-sm text-slate-800">تازه‌های فانوس</strong><small class="mt-1 block text-[10px] text-slate-400">خبرها و مطالب منتشرشده جدید</small></div><span class="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-black text-sky-600">{{ fanous_unread_count }} تازه</span></div>
+                            <div class="max-h-80 overflow-y-auto">
+                                {% for item in fanous_notifications %}
+                                <a href="{{ item.url }}" class="fanous-notification-item">
+                                    <span class="notification-symbol {{ item.kind }}"><i class="fa-solid {% if item.kind == 'blog' %}fa-pen-nib{% else %}fa-newspaper{% endif %}"></i></span>
+                                    <span class="min-w-0"><strong class="block truncate text-xs text-slate-700">{{ item.title }}</strong><small class="mt-1 block text-[10px] text-slate-400">{% if item.kind == 'blog' %}مطلب جدید مجله{% else %}خبر تازه{% endif %} · {{ item.published_at|timesince }} پیش</small></span>
+                                </a>
+                                {% empty %}
+                                <div class="px-5 py-9 text-center"><span class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-500"><i class="fa-solid fa-check-double"></i></span><strong class="mt-3 block text-xs text-slate-600">همه‌چیز را دیده‌ای</strong><small class="mt-1 block text-[10px] text-slate-400">فعلاً خبر یا مطلب تازه‌ای نیست.</small></div>
+                                {% endfor %}
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 border-t border-slate-100 p-2"><a href="{% url 'news_module:article_list' %}" class="rounded-xl bg-blue-50 px-3 py-2 text-center text-[10px] font-black text-blue-600">همه اخبار</a><a href="{% url 'blog:post_list' %}" class="rounded-xl bg-violet-50 px-3 py-2 text-center text-[10px] font-black text-violet-600">مجله فانوس</a></div>
+                        </div>
+                    </div>
 
                     <!-- Profile -->
                     <div class="relative">
                         <button
                                 id="profile-toggle"
                                 type="button"
-                                class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1.5 transition hover:border-blue-200 hover:bg-blue-50">
+                                class="fanous-profile-button flex items-center gap-2 p-1.5 transition">
 
-                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+                            <div class="fanous-avatar flex h-9 w-9 items-center justify-center rounded-lg text-white">
                                 <i class="fa-solid fa-user text-sm"></i>
                             </div>
 
@@ -562,7 +582,7 @@
                                 </p>
 
                                 <p class="mt-0.5 text-[10px] text-slate-400">
-                                    حساب کاربری
+                                    {{ fanous_role_title }}
                                 </p>
                             </div>
 
@@ -621,12 +641,12 @@
         </header>
 
         <!-- Breadcrumb / Page Header -->
-        <div class="border-b border-slate-100 bg-white">
+        <div class="fanous-page-head">
             <div class="px-4 py-4 sm:px-6 lg:px-8">
                 <div class="flex flex-wrap items-center justify-between gap-3">
 
                     <div class="flex items-center gap-2 text-xs text-slate-400">
-                        <a href="" class="transition hover:text-blue-600">
+                        <a href="{% url 'dashboard' %}" class="transition hover:text-blue-600">
                             خانه
                         </a>
 
@@ -704,7 +724,7 @@
         <footer class="border-t border-slate-200 bg-white px-4 py-5 sm:px-6 lg:px-8">
             <div class="flex flex-col items-center justify-between gap-2 text-xs text-slate-400 sm:flex-row">
                 <p>
-                    © {% now "Y" %} سامانه مشاوره تحصیلی
+                    © {% now "Y" %} فانوس؛ روشنای مسیر یادگیری
                 </p>
 
                 <p>
@@ -804,21 +824,7 @@
 
 <script src="{% static 'js/persian-utils.js' %}"></script>
 <script src="{% static 'js/app.js' %}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const currentPath = window.location.pathname; // مثلاً /courses/
-        const links = document.querySelectorAll('.sidebar-link');
-
-        links.forEach(link => {
-            const href = new URL(link.href, window.location.origin).pathname;
-            // تطبیق دقیق: فقط اگه مسیر فعلی با مسیر لینک شروع بشه
-            if (href !== '/' && currentPath.startsWith(href)) {
-                links.forEach(l => l.classList.remove('sidebar-link-active'));
-                link.classList.add('sidebar-link-active');
-            }
-        });
-    });
-</script>
+<script src="{% static 'js/fanous-shell.js' %}"></script>
 
 {% block extra_js %}{% endblock %}
 
