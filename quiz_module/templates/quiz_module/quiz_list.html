@@ -7,13 +7,21 @@
 {% block page_actions %}
 <div class="flex flex-wrap gap-2">
     {% if user.role == 'PROVINCE_TRUSTEE' or user.role == 'ADMIN' or user.is_superuser %}
-    <a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:approval_queue' %}"><span class="quiz-btn-icon soft"><i class="fa-solid fa-shield-halved"></i></span>صف تأیید</a>
+    <a class="quiz-btn quiz-btn-soft inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition" href="{% url 'quiz_module:approval_queue' %}">
+        <span class="quiz-btn-icon soft"><i class="fa-solid fa-shield-halved"></i></span>
+        صف تأیید
+    </a>
     {% endif %}
+
     {% if can_create %}
-    <a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:quiz_create' %}"><span class="quiz-btn-icon"><i class="fa-solid fa-file-circle-plus"></i></span>آزمون جدید</a>
+    <a class="quiz-btn inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition" href="{% url 'quiz_module:quiz_create' %}">
+        <span class="quiz-btn-icon"><i class="fa-solid fa-file-circle-plus"></i></span>
+        آزمون جدید
+    </a>
     {% endif %}
 </div>
 {% endblock %}
+
 
 {% block content %}
 <div class="quiz-shell space-y-6">
