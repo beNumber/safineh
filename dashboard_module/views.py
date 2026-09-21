@@ -54,4 +54,6 @@ def dash_view(request):
         context["all_unassigned_count"] = manageable_students_for(request.user).filter(
             consultant_assignment__isnull=True
         ).count()
+        from courses_module.models import Course
+        context["admin_courses_count"] = Course.objects.count()
     return render(request, "dashboard_module/dash.html", context)
