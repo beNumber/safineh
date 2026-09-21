@@ -13,6 +13,7 @@ urlpatterns = [
     path("review/<int:pk>/", views.CourseReviewView.as_view(), name="course_review"),
     path("admin/<int:pk>/close/", views.AdminCourseCloseView.as_view(), name="course_close"),
     path("admin/<int:pk>/delete/", views.AdminCourseDeleteView.as_view(), name="course_delete"),
+    path("admin/<int:course_pk>/resources/create/", views.CourseResourceCreateView.as_view(), name="resource_create"),
     # ``path`` accepts Unicode slugs (including Persian) while the built-in
     # slug converter only accepts ASCII characters.
     path("<path:slug>/enroll/", views.EnrollCourseView.as_view(), name="course_enroll"),

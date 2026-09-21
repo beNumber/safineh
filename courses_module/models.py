@@ -4,6 +4,7 @@ from django.db import models
 from django.db.models import Avg
 from django.utils import timezone
 from django.db.models import Q
+from urllib.parse import parse_qs, urlparse
 from users_module.models import Subject,Grade,School
 from auth_module.models import FieldOfStudy,Province
 class ApprovalStatus(models.TextChoices):
@@ -182,6 +183,55 @@ class CourseEpisode(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class CourseResource(models.Model):
+    class ResourceType(models.TextChoices):
+        VIDEO = "video", "ویدیو"
+        IMAGE = "image", "تصویر"
+        PDF = "pdf", "PDF"
+
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="resources", verbose_name="دوره")
+    title = models.CharField("عنوان محتوا", max_length=255)
+    resource_type = models.CharField("نوع محتوا", max_length=10, choices=ResourceType.choices)
+    file = models.FileField("فایل محتوا", upload_to="courses/resources/", blank=True)
+    url = models.URLField("لینک محتوا", max_length=1000, blank=True)
+    order = models.PositiveIntegerField("ترتیب نمایش", default=1)
+    is_active = models.BooleanField("فعال", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "created_at"]
+        verbose_name = "محتوای دوره"
+        verbose_name_plural = "محتواهای دوره"
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def source_url(self):
+        if self.file:
+            return self.file.url
+        return self.url
+
+    @property
+    def video_embed_url(self):
+        """Return an embeddable URL for common video hosts, if applicable."""
+        if self.resource_type != self.ResourceType.VIDEO or not self.url:
+            return ""
+        parsed = urlparse(self.url)
+        host = parsed.netloc.lower().removeprefix("www.")
+        if host in {"youtube.com", "m.youtube.com"}:
+            video_id = parse_qs(parsed.query).get("v", [""])[0]
+            return f"https://www.youtube.com/embed/{video_id}" if video_id else ""
+        if host == "youtu.be":
+            video_id = parsed.path.strip("/").split("/")[0]
+            return f"https://www.youtube.com/embed/{video_id}" if video_id else ""
+        if host.endswith("aparat.com"):
+            parts = [part for part in parsed.path.split("/") if part]
+            if "v" in parts and parts.index("v") + 1 < len(parts):
+                return f"https://www.aparat.com/video/video/embed/videohash/{parts[parts.index('v') + 1]}/vt/frame"
+        return ""
 
 
 class CourseEnrollment(models.Model):
