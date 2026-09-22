@@ -230,7 +230,7 @@
 
             <div class="fanous-status">
                 <i></i>
-                فانوس روشن و آماده است
+                فانوس روشن است
             </div>
         </div>
 
@@ -252,6 +252,7 @@
                 </a>
 
                 {% if user.is_authenticated and user.role == 'STUDENT' %}
+                <a href="{% url 'classroom_module:list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600"><span class="sidebar-icon text-rose-500"><i class="fa-solid fa-chalkboard-user"></i></span><span class="flex-1">کلاس‌ها</span>{% if fanous_has_class %}<span class="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" title="امروز کلاس دارید"></span>{% endif %}</a>
                 <a href="{% url 'counseling:my_consultant' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-emerald-500"><i class="fa-solid fa-user-shield"></i></span>
@@ -321,6 +322,7 @@
                 </p>
 
                 <div class="space-y-1">
+                    <a href="{% url 'classroom_module:list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600"><span class="sidebar-icon text-rose-500"><i class="fa-solid fa-chalkboard-user"></i></span><span class="flex-1">کلاس‌ها</span>{% if fanous_has_class %}<span class="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" title="امروز کلاس برگزار می‌شود"></span>{% endif %}</a>
                     <a href="{% url 'counseling:my_students' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-emerald-500"><i class="fa-solid fa-user-group"></i></span>
@@ -347,7 +349,7 @@
                         <span>تیکت‌های ارجاع‌شده</span>
                     </a>
 
-                    <a href=""
+                    <a href="{% url 'auth_module:user-management' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-chalkboard-user"></i>
@@ -399,6 +401,7 @@
                     <span class="sidebar-icon text-indigo-400"><i class="fa-solid fa-calendar-plus"></i></span>
                     <span>مدیریت برنامه‌ها</span>
                 </a>
+                <a href="{% url 'classroom_module:list' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600"><span class="sidebar-icon text-rose-500"><i class="fa-solid fa-chalkboard-user"></i></span><span>مدیریت کلاس‌ها</span></a>
                 <a href="{% url 'counseling:manage' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-emerald-500"><i class="fa-solid fa-people-arrows-left-right"></i></span>
                     <span>تخصیص مشاور</span>
@@ -448,7 +451,7 @@
             {% endif %}
 
             <!-- Management Menu -->
-            {% if user.is_authenticated and user.is_staff %}
+            {% if user.is_authenticated and user.role == 'ADMIN' or user.is_superuser %}
                 <div class="my-6 border-t border-slate-100"></div>
 
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
@@ -472,12 +475,7 @@
                         <span>ورود دانش‌آموزان</span>
                     </a>
 
-                    <a href=""
-                       class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
-    <span class="sidebar-icon text-slate-400">
-        <i class="fa-solid fa-sliders"></i>
-    </span>
-                        <span>تنظیمات سامانه</span>
+                    
                     </a>
 
                 </div>
@@ -550,8 +548,8 @@
                             <div class="max-h-80 overflow-y-auto">
                                 {% for item in fanous_notifications %}
                                 <a href="{{ item.url }}" class="fanous-notification-item">
-                                    <span class="notification-symbol {{ item.kind }}"><i class="fa-solid {% if item.kind == 'blog' %}fa-pen-nib{% else %}fa-newspaper{% endif %}"></i></span>
-                                    <span class="min-w-0"><strong class="block truncate text-xs text-slate-700">{{ item.title }}</strong><small class="mt-1 block text-[10px] text-slate-400">{% if item.kind == 'blog' %}مطلب جدید مجله{% else %}خبر تازه{% endif %} · {{ item.published_at|timesince }} پیش</small></span>
+                                    <span class="notification-symbol {{ item.kind }}"><i class="fa-solid {% if item.kind == 'blog' %}fa-pen-nib{% elif item.kind == 'classroom' %}fa-chalkboard-user{% else %}fa-newspaper{% endif %}"></i></span>
+                                    <span class="min-w-0"><strong class="block truncate text-xs text-slate-700">{{ item.title }}</strong><small class="mt-1 block text-[10px] text-slate-400">{% if item.kind == 'blog' %}مطلب جدید مجله{% elif item.kind == 'classroom' %}کلاس نزدیک است · {{ item.published_at|date:"Y/m/d H:i" }}{% else %}خبر تازه{% endif %}</small></span>
                                 </a>
                                 {% empty %}
                                 <div class="px-5 py-9 text-center"><span class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-500"><i class="fa-solid fa-check-double"></i></span><strong class="mt-3 block text-xs text-slate-600">همه‌چیز را دیده‌ای</strong><small class="mt-1 block text-[10px] text-slate-400">فعلاً خبر یا مطلب تازه‌ای نیست.</small></div>

@@ -7,6 +7,7 @@ from django.utils.dateparse import parse_datetime
 from auth_module.models import UserRole
 from blog_module.models import Post
 from news_module.models import Article
+from classroom_module.models import OnlineClass
 
 
 ROLE_COPY = {
@@ -71,6 +72,16 @@ def fanous_shell(request):
     ]
     items.sort(key=lambda item: item["published_at"], reverse=True)
 
+    class_items = []
+    has_class_indicator = False
+    if request.user.role in (UserRole.STUDENT, UserRole.CONSULTANT) or request.user.is_superuser or request.user.role == UserRole.ADMIN:
+        local_now = timezone.localtime(now)
+        tomorrow = now + timedelta(hours=24)
+        upcoming_classes = OnlineClass.objects.filter(is_active=True, starts_at__lte=tomorrow, ends_at__gte=now).order_by("starts_at")[:4]
+        has_class_indicator = OnlineClass.objects.filter(is_active=True, starts_at__date=local_now.date()).exists()
+        class_items = [{"kind": "classroom", "title": f"کلاس: {item.title}", "published_at": item.starts_at, "url": reverse("classroom_module:list")} for item in upcoming_classes]
+        items = class_items + items
+
     role_title, role_message = ROLE_COPY.get(
         request.user.role,
         ("همراه فانوس", "هر قدم کوچک امروز، بخشی از یک مسیر روشن‌تر است."),
@@ -84,4 +95,5 @@ def fanous_shell(request):
         "fanous_role_message": role_message,
         "fanous_notifications": items[:6],
         "fanous_unread_count": len(items),
+        "fanous_has_class": has_class_indicator,
     }

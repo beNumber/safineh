@@ -205,3 +205,15 @@ class SetNewPasswordForm(forms.Form):
                 raise
 
         return cleaned_data
+
+
+class UserSpreadsheetForm(forms.Form):
+    file = forms.FileField(label="فایل کاربران", widget=forms.FileInput(attrs={"accept": ".xlsx,.csv", "class": "hidden", "data-user-file": ""}))
+
+    def clean_file(self):
+        upload = self.cleaned_data["file"]
+        if not upload.name.lower().endswith((".xlsx", ".csv")):
+            raise forms.ValidationError("فقط فایل xlsx یا csv انتخاب کنید.")
+        if upload.size > 8 * 1024 * 1024:
+            raise forms.ValidationError("حجم فایل نباید بیشتر از ۸ مگابایت باشد.")
+        return upload

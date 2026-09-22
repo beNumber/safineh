@@ -38,16 +38,17 @@ def _source_for(user):
     return PlanSource.SELF
 
 
-def _entry_payload(cleaned, student, actor, batch_id=None):
+def _entry_payload(cleaned, student, actor, batch_id=None, schedule=None):
+    schedule = schedule or cleaned
     return PlanEntry(
         student=student,
         subject=cleaned.get("subject"),
         activity_type=cleaned["activity_type"],
         title=cleaned.get("title", ""),
-        scheduled_date=cleaned["scheduled_date"],
-        weekday=(cleaned["scheduled_date"].weekday() + 2) % 7,
-        start_hour=cleaned["start_hour"],
-        end_hour=cleaned["end_hour"],
+        scheduled_date=schedule["scheduled_date"],
+        weekday=(schedule["scheduled_date"].weekday() + 2) % 7,
+        start_hour=schedule["start_hour"],
+        end_hour=schedule["end_hour"],
         color=cleaned["color"],
         notes=cleaned.get("notes", ""),
         source=_source_for(actor),
@@ -234,20 +235,22 @@ def plan_board(request):
         elif not targets:
             form.add_error(None, "دانش‌آموزی برای ثبت برنامه پیدا نشد.")
         else:
-            batch_id = uuid.uuid4() if len(targets) > 1 else None
+            schedules = form.cleaned_data["schedule_rows_parsed"]
+            batch_id = uuid.uuid4() if len(targets) * len(schedules) > 1 else None
             try:
                 with transaction.atomic():
                     for student in targets:
-                        entry = _entry_payload(form.cleaned_data, student, request.user, batch_id)
-                        entry.full_clean()
-                        entry.save()
+                        for schedule in schedules:
+                            entry = _entry_payload(form.cleaned_data, student, request.user, batch_id, schedule)
+                            entry.full_clean()
+                            entry.save()
             except ValidationError as error:
                 form.add_error(None, "; ".join(error.messages))
             else:
-                messages.success(request, f"برنامه با موفقیت برای {len(targets)} دانش‌آموز ثبت شد.")
+                messages.success(request, f"{len(schedules)} زمان برنامه برای {len(targets)} دانش‌آموز ثبت شد.")
                 destination = reverse("plans_module:board")
                 focus_student = targets[0] if targets else selected_student
-                destination += f"?week={current_week_start(form.cleaned_data['scheduled_date']).isoformat()}"
+                destination += f"?week={current_week_start(schedules[0]['scheduled_date']).isoformat()}"
                 if not is_student and focus_student:
                     destination += f"&student={focus_student.pk}"
                 return redirect(destination)
