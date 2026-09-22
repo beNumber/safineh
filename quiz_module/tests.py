@@ -75,11 +75,81 @@ class QuizFeatureTests(TestCase):
         response = self.client.get("/quizzes/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "مدیریت آزمون‌ها")
+        self.assertContains(response, "سؤال جدید")
         response = self.client.get("/quizzes/create/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "ساعت شروع")
         self.assertContains(response, "همه دانش‌آموزان")
         self.assertContains(response, "data-calendar-for")
+
+    def test_question_creation_and_bank_import_use_topic(self):
+        subject = Subject.objects.create(title="ریاضی جریان", field=self.field)
+        chapter = Chapter.objects.create(subject=subject, name="فصل جریان")
+        topic = Topic.objects.create(chapter=chapter, name="مبحث جریان")
+        bank_question = Question.objects.create(
+            creator=self.admin,
+            topic=topic,
+            chapter=chapter,
+            text="سؤال بانک",
+            approval_status=Question.ApprovalStatus.APPROVED,
+        )
+        now = timezone.now()
+        quiz = Quiz.objects.create(
+            title="آزمون جریان سؤال",
+            creator=self.admin,
+            field=self.field,
+            grade=self.grade,
+            school=self.school,
+            province=self.province,
+            status=Quiz.Status.APPROVED,
+            opens_at=now,
+            closes_at=now + timedelta(hours=2),
+        )
+        self.client.force_login(self.admin)
+        response = self.client.get(f"/quizzes/{quiz.pk}/questions/create/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "مبحث مرتبط")
+        response = self.client.post(f"/quizzes/{quiz.pk}/bank/", {"questions": [bank_question.pk]})
+        self.assertRedirects(response, f"/quizzes/{quiz.pk}/builder/")
+        copied = QuizQuestion.objects.get(quiz=quiz, source_question=bank_question)
+        self.assertEqual(copied.bank_topic, topic)
+
+    def test_admin_sees_all_results_and_student_result_is_time_gated(self):
+        now = timezone.now()
+        quiz = Quiz.objects.create(
+            title="آزمون زمان‌بندی نتیجه",
+            creator=self.admin,
+            status=Quiz.Status.APPROVED,
+            opens_at=now - timedelta(hours=1),
+            closes_at=now + timedelta(hours=1),
+            answer_release_at=now + timedelta(hours=2),
+            all_students=True,
+        )
+        question = QuizQuestion.objects.create(quiz=quiz, text="سؤال نتیجه", points=1)
+        correct = QuizChoice.objects.create(question=question, text="صحیح", is_correct=True)
+        QuizChoice.objects.create(question=question, text="غلط ۱")
+        QuizChoice.objects.create(question=question, text="غلط ۲")
+        QuizChoice.objects.create(question=question, text="غلط ۳")
+        attempt = create_attempt(quiz, self.student)
+        QuizAnswer.objects.create(attempt=attempt, question=question, choice=correct)
+        finalize_attempt(attempt)
+
+        self.client.force_login(self.student)
+        response = self.client.get(f"/quizzes/attempt/{attempt.pk}/result/")
+        self.assertRedirects(response, "/quizzes/")
+
+        self.client.force_login(self.admin)
+        response = self.client.get(f"/quizzes/{quiz.pk}/results/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "نتایج این آزمون")
+        self.assertContains(response, self.student.get_full_name() or self.student.username)
+
+        quiz.closes_at = now - timedelta(minutes=5)
+        quiz.answer_release_at = now - timedelta(minutes=1)
+        quiz.save(update_fields=["closes_at", "answer_release_at"])
+        self.client.force_login(self.student)
+        response = self.client.get(f"/quizzes/attempt/{attempt.pk}/result/")
+        self.assertEqual(response.status_code, 200)
 
     def test_all_students_quiz_is_visible_and_editable(self):
         now = timezone.now()
