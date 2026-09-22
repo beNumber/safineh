@@ -1,13 +1,15 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from auth_module.models import UserRole
 
-from .models import ApprovalStatus, Course, CourseEnrollment, CourseRating
+from .forms import CourseResourceForm
+from .models import ApprovalStatus, Course, CourseEnrollment, CourseRating, CourseResource
 
 User = get_user_model()
 
@@ -38,6 +40,47 @@ class CourseWorkflowTests(TestCase):
         self.assertEqual(self.client.get(reverse("courses_module:course_create")).status_code, 403)
         self.client.force_login(self.consultant)
         self.assertEqual(self.client.get(reverse("courses_module:course_create")).status_code, 200)
+
+    def test_admin_can_open_create_page(self):
+        admin = User.objects.create_user(username="course-admin", password="Pass123!", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        response = self.client.get(reverse("courses_module:course_create"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ایجاد و انتشار دوره")
+
+    def test_resource_accepts_either_file_or_url(self):
+        url_form = CourseResourceForm(data={
+            "title": "ویدیوی لینک‌شده", "resource_type": "video",
+            "url": "https://youtu.be/abcdefghijk", "order": 1, "is_active": True,
+        })
+        self.assertTrue(url_form.is_valid(), url_form.errors)
+
+        image = SimpleUploadedFile("lesson.png", b"image-bytes", content_type="image/png")
+        file_form = CourseResourceForm(
+            data={"title": "تصویر درس", "resource_type": "image", "order": 1, "is_active": True},
+            files={"file": image},
+        )
+        self.assertTrue(file_form.is_valid(), file_form.errors)
+
+        empty_form = CourseResourceForm(data={
+            "title": "بدون منبع", "resource_type": "pdf", "order": 1, "is_active": True,
+        })
+        self.assertFalse(empty_form.is_valid())
+
+    def test_linked_and_uploaded_resources_render_inside_course(self):
+        self.course.approval_status = ApprovalStatus.APPROVED
+        self.course.save(update_fields=["approval_status"])
+        CourseResource.objects.create(
+            course=self.course, title="ویدیوی آموزشی", resource_type="video",
+            url="https://youtu.be/abcdefghijk",
+        )
+        CourseResource.objects.create(
+            course=self.course, title="جزوه", resource_type="pdf", url="https://example.com/lesson.pdf",
+        )
+        self.client.force_login(self.student)
+        response = self.client.get(reverse("courses_module:course_detail", args=[self.course.slug]))
+        self.assertContains(response, "https://www.youtube.com/embed/abcdefghijk")
+        self.assertContains(response, "https://example.com/lesson.pdf")
 
     def test_consultant_trustee_and_admin_can_edit_course(self):
         for user in (self.consultant, self.trustee):
