@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Course, CourseEnrollment, CourseEpisode, CourseRating, CourseSection
+from .models import Course, CourseEnrollment, CourseEpisode, CourseRating, CourseSection, CourseResource
 
 
 class CourseEpisodeInline(admin.TabularInline):
@@ -25,3 +25,4 @@ class CourseAdmin(admin.ModelAdmin):
 
 admin.site.register(CourseEnrollment)
 admin.site.register(CourseRating)
+admin.site.register(CourseResource)
