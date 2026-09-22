@@ -98,6 +98,31 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', syncFromMainStudents);
     });
     document.getElementById('plan-entry-form')?.addEventListener('submit', syncFromModalStudents);
+    const scheduleList = document.querySelector('[data-schedule-list]');
+    const scheduleData = document.querySelector('[name="schedule_rows"]');
+    const mainDate = document.querySelector('[name="scheduled_date"]');
+    const mainStart = document.querySelector('[name="start_hour"]');
+    const mainEnd = document.querySelector('[name="end_hour"]');
+    function syncSchedules() {
+        if (!scheduleData || !scheduleList) return;
+        scheduleData.value = JSON.stringify(Array.from(scheduleList.querySelectorAll('[data-schedule-row]')).map(row => ({date: row.querySelector('[data-row-date]').value, start: row.querySelector('[data-row-start]').value, end: row.querySelector('[data-row-end]').value})));
+    }
+    function addScheduleRow(values = {}) {
+        if (!scheduleList) return;
+        const row = document.createElement('div');
+        row.dataset.scheduleRow = '';
+        row.className = 'grid grid-cols-[1fr_100px_100px_38px] gap-2';
+        const hours = (from, to, selected) => Array.from({length: to - from + 1}, (_, i) => from + i).map(hour => `<option value="${hour}" ${String(hour) === String(selected) ? 'selected' : ''}>${String(hour).padStart(2, '0')}:00</option>`).join('');
+        row.innerHTML = `<input data-row-date data-jdp autocomplete="off" placeholder="۱۴۰۵/۰۷/۰۱" class="rounded-xl border border-indigo-100 bg-white px-3 py-2 text-sm" value="${values.date || mainDate?.value || ''}"><select data-row-start class="rounded-xl border border-indigo-100 bg-white px-2 text-sm">${hours(8, 23, values.start || mainStart?.value)}</select><select data-row-end class="rounded-xl border border-indigo-100 bg-white px-2 text-sm">${hours(9, 24, values.end || mainEnd?.value)}</select><button type="button" data-remove-schedule class="rounded-xl bg-rose-50 text-rose-500"><i class="fa-solid fa-xmark"></i></button>`;
+        scheduleList.appendChild(row);
+        row.querySelector('[data-remove-schedule]').addEventListener('click', () => { row.remove(); syncSchedules(); });
+        row.addEventListener('change', syncSchedules);
+        window.jalaliDatepicker?.startWatch({persianDigits: true, autoHide: true, hideAfterChange: true, zIndex: 1600});
+        syncSchedules();
+    }
+    document.querySelector('[data-add-schedule]')?.addEventListener('click', () => addScheduleRow());
+    document.getElementById('plan-entry-form')?.addEventListener('submit', syncSchedules);
+    if (scheduleData?.value) { try { JSON.parse(scheduleData.value).forEach(addScheduleRow); } catch (error) {} }
     if (modal?.dataset.hasFormErrors === 'true') syncFromModalStudents();
     else syncFromMainStudents();
 

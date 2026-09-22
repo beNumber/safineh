@@ -1,6 +1,8 @@
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from auth_module.models import UserRole
 from courses_module.models import ApprovalStatus, CourseEnrollment
@@ -54,6 +56,12 @@ def dash_view(request):
         context["all_unassigned_count"] = manageable_students_for(request.user).filter(
             consultant_assignment__isnull=True
         ).count()
-        from courses_module.models import Course
-        context["admin_courses_count"] = Course.objects.count()
     return render(request, "dashboard_module/dash.html", context)
+
+
+@login_required
+@require_POST
+def mark_content_notifications_read(request):
+    request.session["fanous_content_seen_at"] = timezone.now().isoformat()
+    request.session.modified = True
+    return JsonResponse({"ok": True})

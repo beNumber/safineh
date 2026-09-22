@@ -1,9 +1,13 @@
 import hashlib
 import secrets
+from urllib.parse import parse_qs
 from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django.http import HttpResponse
+from django.core.paginator import Paginator
 from django.contrib.auth.views import LoginView
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
@@ -14,10 +18,112 @@ from .forms import (
     LoginForm,
     SetNewPasswordForm,
     VerifyOTPForm,
+    UserSpreadsheetForm,
 )
+from .decorators import staff_admin_required
+from .models import Student, UserRole
+from .user_management import build_user_template_xlsx, import_users, shift_student_grade
+from users_module.models import FieldOfStudy, Grade, Province, School
 
 
 User = get_user_model()
+
+
+def _filtered_users(request):
+    users = User.objects.all().order_by("-date_joined")
+    query = request.GET.get("q", "").strip()
+    if query:
+        users = users.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query) | Q(username__icontains=query))
+    if request.GET.get("role"):
+        users = users.filter(role=request.GET["role"])
+    if request.GET.get("status") == "active":
+        users = users.filter(is_active=True)
+    elif request.GET.get("status") == "inactive":
+        users = users.filter(is_active=False)
+    if request.GET.get("province"):
+        users = users.filter(student_profiles__field__grade__school__province_id=request.GET["province"])
+    if request.GET.get("city"):
+        users = users.filter(student_profiles__field__grade__school_id=request.GET["city"])
+    if request.GET.get("grade"):
+        users = users.filter(student_profiles__field__grade_id=request.GET["grade"])
+    if request.GET.get("field"):
+        users = users.filter(student_profiles__field_id=request.GET["field"])
+    return users.distinct()
+
+
+@staff_admin_required
+def user_management(request):
+    import_results = request.session.pop("user_import_results", None)
+    users = _filtered_users(request).select_related().prefetch_related("student_profiles__field__grade__school__province")
+    paginator = Paginator(users, 24)
+    page = paginator.get_page(request.GET.get("page"))
+    return render(request, "auth_module/user_management.html", {
+        "page_obj": page,
+        "users_count": User.objects.count(),
+        "active_count": User.objects.filter(is_active=True).count(),
+        "student_count": User.objects.filter(role=UserRole.STUDENT).count(),
+        "staff_count": User.objects.exclude(role=UserRole.STUDENT).count(),
+        "roles": UserRole.choices,
+        "provinces": Province.objects.all(), "cities": School.objects.select_related("province"),
+        "grades": Grade.objects.select_related("school"), "fields": FieldOfStudy.objects.select_related("grade"),
+        "upload_form": UserSpreadsheetForm(), "import_results": import_results,
+    })
+
+
+@staff_admin_required
+def user_import(request):
+    if request.method != "POST":
+        return redirect("auth_module:user-management")
+    form = UserSpreadsheetForm(request.POST, request.FILES)
+    if form.is_valid():
+        results = import_users(form.cleaned_data["file"])
+        request.session["user_import_results"] = results[:200]
+        success = sum(item["ok"] for item in results)
+        messages.success(request, f"پردازش فایل تمام شد: {success} کاربر ساخته شد و {len(results) - success} ردیف خطا داشت.")
+    else:
+        messages.error(request, "فایل انتخاب‌شده معتبر نیست.")
+    return redirect("auth_module:user-management")
+
+
+@staff_admin_required
+def user_template(request):
+    workbook = build_user_template_xlsx()
+    response = HttpResponse(
+        workbook.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="fanous-members-template.xlsx"'
+    return response
+
+
+@staff_admin_required
+def user_bulk_action(request):
+    if request.method != "POST":
+        return redirect("auth_module:user-management")
+    action = request.POST.get("action")
+    if request.POST.get("scope") == "filtered":
+        query = request.POST.get("filter_query", "")
+        mutable = request.GET.copy()
+        mutable.update({key: values[-1] for key, values in parse_qs(query).items()})
+        original = request.GET; request.GET = mutable
+        users = _filtered_users(request)
+        request.GET = original
+    else:
+        ids = [value for value in request.POST.getlist("user_ids") if value.isdigit()]
+        users = User.objects.filter(pk__in=ids)
+    users = users.exclude(pk=request.user.pk).exclude(is_superuser=True)
+    affected = 0
+    if action in ("activate", "deactivate"):
+        affected = users.update(is_active=action == "activate")
+    elif action in ("grade_up", "grade_down"):
+        students = Student.objects.filter(user__in=users).select_related("field__grade__school")
+        direction = 1 if action == "grade_up" else -1
+        affected = sum(1 for student in students if shift_student_grade(student, direction))
+    else:
+        messages.error(request, "عملیات انتخاب‌شده معتبر نیست.")
+        return redirect("auth_module:user-management")
+    messages.success(request, f"عملیات برای {affected} کاربر انجام شد.")
+    return redirect("auth_module:user-management")
 
 
 # ---------------------------------------------------------

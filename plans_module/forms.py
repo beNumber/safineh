@@ -1,3 +1,5 @@
+import json
+
 from django import forms
 import jdatetime
 
@@ -22,6 +24,7 @@ def jalali_date_string(value):
 
 
 class PlanEntryForm(forms.Form):
+    schedule_rows = forms.CharField(required=False, widget=forms.HiddenInput())
     activity_type = forms.ChoiceField(
         label="نوع برنامه", choices=ActivityType.choices, widget=forms.Select(attrs={"class": FIELD_CLASS})
     )
@@ -94,6 +97,31 @@ class PlanEntryForm(forms.Form):
             cleaned["scheduled_date"] = jalali_date.togregorian()
         except (TypeError, ValueError):
             self.add_error("scheduled_date", "یک تاریخ جلالی معتبر انتخاب کنید.")
+        rows = []
+        raw_rows = cleaned.get("schedule_rows")
+        if raw_rows:
+            try:
+                payload = json.loads(raw_rows)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                payload = []
+                self.add_error(None, "اطلاعات زمان‌بندی معتبر نیست.")
+            for index, row in enumerate(payload, start=1):
+                try:
+                    raw_row_date = str(row.get("date", "")).translate(PERSIAN_TO_ENGLISH).strip()
+                    row_date = jdatetime.datetime.strptime(raw_row_date, "%Y/%m/%d").date().togregorian()
+                    start = int(row.get("start"))
+                    end = int(row.get("end"))
+                    if not 8 <= start <= 23 or not 9 <= end <= 24 or end <= start:
+                        raise ValueError
+                    if (row_date.weekday() + 2) % 7 == 6:
+                        self.add_error(None, f"ردیف {index}: برای جمعه امکان ثبت برنامه وجود ندارد.")
+                        continue
+                    rows.append({"scheduled_date": row_date, "start_hour": start, "end_hour": end})
+                except (TypeError, ValueError):
+                    self.add_error(None, f"ردیف زمان‌بندی {index} معتبر نیست.")
+        if not rows and cleaned.get("scheduled_date") and cleaned.get("start_hour") is not None:
+            rows = [{"scheduled_date": cleaned["scheduled_date"], "start_hour": cleaned["start_hour"], "end_hour": cleaned["end_hour"]}]
+        cleaned["schedule_rows_parsed"] = rows
         return cleaned
 
 

@@ -22,7 +22,7 @@ urlpatterns = [
     path('tickets/', include('ticketing_module.urls', namespace='ticketing')),
     path('counseling/', include('counseling_module.urls', namespace='counseling')),
     path('reports/', include('reports_module.urls', namespace='reports_module')),
-    path('users/', include('users_module.urls', namespace='users_module')),
+    path('classes/', include('classroom_module.urls', namespace='classroom_module')),
 ]
 
 if settings.DEBUG:

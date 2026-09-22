@@ -34,3 +34,17 @@ def role_required(*roles, allow_superuser=True):
         return wrapped
 
     return decorator
+
+
+def staff_admin_required(view_func):
+    """اجازه دسترسی به مدیر نقشی، کاربر staff و سوپریوزر."""
+    @wraps(view_func)
+    def wrapped(request, *args, **kwargs):
+        user = request.user
+        if not user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
+        if user.is_superuser or user.is_staff or getattr(user, "role", None) == "ADMIN":
+            return view_func(request, *args, **kwargs)
+        raise PermissionDenied("شما اجازه دسترسی به مدیریت اعضا را ندارید.")
+
+    return wrapped

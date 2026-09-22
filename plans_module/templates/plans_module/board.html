@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}برنامه شخصی | راه‌دان{% endblock %}
+{% block title %}برنامه شخصی | فانوس{% endblock %}
 {% block page_title %}{% if is_student_view %}برنامه شخصی من{% else %}مدیریت برنامه‌ها{% endif %}{% endblock %}
 {% block breadcrumb %}برنامه هفتگی{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'jalalidatepicker/jalalidatepicker.css' %}"><link rel="stylesheet" href="{% static 'plans_module/plans.css' %}">{% endblock %}
@@ -142,6 +142,7 @@
         <button class="modal-close" type="button" data-close-plan-modal><i class="fa-solid fa-xmark"></i></button>
         <div class="modal-title"><span><i class="fa-solid fa-wand-magic-sparkles"></i></span><div><h2>{% if is_student_view %}آیتم جدید برنامه من{% else %}تخصیص برنامه به دانش‌آموزان{% endif %}</h2><p>زمان و نوع فعالیت را دقیق مشخص کن.</p></div></div>
         <form method="post" class="plan-form" id="plan-entry-form">{% csrf_token %}
+            {{ form.schedule_rows }}
             {% if not is_student_view %}<input type="hidden" name="selection_snapshot" data-selection-snapshot value="{% if selected_student %}{{ selected_student.pk }}{% endif %}">{% endif %}
             {% if form.non_field_errors %}<div class="form-alert">{{ form.non_field_errors }}</div>{% endif %}
             {% if not is_student_view %}
@@ -161,6 +162,10 @@
                 <div class="field-wrap"><label>{{ form.start_hour.label }}</label>{{ form.start_hour }}{{ form.start_hour.errors }}</div>
                 <div class="field-wrap"><label>{{ form.end_hour.label }}</label>{{ form.end_hour }}{{ form.end_hour.errors }}</div>
                 <div class="field-wrap full"><label>{{ form.notes.label }}</label>{{ form.notes }}{{ form.notes.errors }}</div>
+            </div>
+            <div class="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+                <div class="flex items-center justify-between gap-3"><div><b class="text-sm text-slate-700">روزها و ساعت‌های بیشتر</b><p class="mt-1 text-xs text-slate-500">برای همین کار چند زمان مختلف اضافه کنید؛ همه با یک کلیک ثبت می‌شوند.</p></div><button type="button" data-add-schedule class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white"><i class="fa-solid fa-plus ml-1"></i>افزودن زمان</button></div>
+                <div data-schedule-list class="mt-3 space-y-2"></div>
             </div>
             <div class="modal-footer"><button type="button" class="button-secondary" data-close-plan-modal>انصراف</button><button type="submit" class="button-submit"><i class="fa-solid fa-check"></i>ثبت در برنامه</button></div>
         </form>
