@@ -564,14 +564,17 @@
                     </div>
 
                     <!-- Profile -->
-                    <div class="relative">
+                    <div class="relative fanous-profile-wrap {% if user.is_superuser or user.role == 'ADMIN' %}role-admin{% elif user.role == 'CONSULTANT' %}role-consultant{% elif user.role == 'PROVINCE_TRUSTEE' %}role-trustee{% elif user.role == 'CONTENT_MODERATOR' %}role-moderator{% else %}role-student{% endif %}">
                         <button
                                 id="profile-toggle"
                                 type="button"
-                                class="fanous-profile-button flex items-center gap-2 p-1.5 transition">
+                                class="fanous-profile-button flex items-center gap-2 p-1.5 transition"
+                                aria-expanded="false"
+                                aria-controls="profile-menu">
 
-                            <div class="fanous-avatar flex h-9 w-9 items-center justify-center rounded-lg text-white">
-                                <i class="fa-solid fa-user text-sm"></i>
+                            <div class="fanous-avatar">
+                                <i class="fa-solid {% if user.is_superuser or user.role == 'ADMIN' %}fa-crown{% elif user.role == 'CONSULTANT' %}fa-user-tie{% elif user.role == 'PROVINCE_TRUSTEE' %}fa-shield-halved{% elif user.role == 'CONTENT_MODERATOR' %}fa-pen-ruler{% else %}fa-graduation-cap{% endif %}"></i>
+                                <span class="fanous-online-dot"></span>
                             </div>
 
                             <div class="hidden text-right sm:block">
@@ -588,49 +591,40 @@
                                 </p>
                             </div>
 
-                            <i class="fa-solid fa-chevron-down ml-1 hidden text-[10px] text-slate-400 sm:block"></i>
+                            <span class="fanous-profile-role-icon hidden sm:grid"><i class="fa-solid {% if user.is_superuser or user.role == 'ADMIN' %}fa-crown{% elif user.role == 'CONSULTANT' %}fa-compass{% elif user.role == 'PROVINCE_TRUSTEE' %}fa-shield-check{% elif user.role == 'CONTENT_MODERATOR' %}fa-eye{% else %}fa-star{% endif %}"></i></span>
+                            <i class="fanous-profile-chevron fa-solid fa-chevron-down ml-1 hidden text-[10px] sm:block"></i>
                         </button>
 
                         <!-- Profile Dropdown -->
                         <div
                                 id="profile-menu"
-                                class="profile-menu hidden absolute left-0 top-14 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-soft">
+                                class="profile-menu hidden absolute left-0 top-16 w-72 overflow-hidden">
 
-                            <div class="border-b border-slate-100 px-3 py-3">
-                                <p class="truncate text-sm font-bold text-slate-800">
+                            <div class="fanous-profile-cover">
+                                <div class="fanous-profile-menu-avatar"><i class="fa-solid {% if user.is_superuser or user.role == 'ADMIN' %}fa-crown{% elif user.role == 'CONSULTANT' %}fa-user-tie{% elif user.role == 'PROVINCE_TRUSTEE' %}fa-shield-halved{% elif user.role == 'CONTENT_MODERATOR' %}fa-pen-ruler{% else %}fa-graduation-cap{% endif %}"></i></div>
+                                <span class="fanous-profile-role-badge">{{ fanous_role_title }}</span>
+                            </div>
+                            <div class="px-4 pb-3 pt-4">
+                                <p class="truncate text-sm font-black text-slate-800">
                                     {% if user.is_authenticated %}
                                         {{ user.get_full_name|default:user.username }}
                                     {% else %}
                                         کاربر سامانه
                                     {% endif %}
                                 </p>
-                                <p class="mt-1 truncate text-xs text-slate-400">
-                                    {% if user.is_authenticated %}
-                                        {{ user.email|default:"ایمیل ثبت نشده" }}
-                                    {% endif %}
-                                </p>
+                                <p class="mt-1 truncate text-[11px] text-slate-400">@{{ user.username }}</p>
+                                <div class="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-[10px]"><span class="font-bold text-slate-500">وضعیت حساب</span><span class="inline-flex items-center gap-1.5 font-black text-emerald-600"><i class="fa-solid fa-circle text-[6px]"></i> فعال</span></div>
                             </div>
 
-                            <a href=""
-                               class="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition hover:bg-blue-50 hover:text-blue-600">
-                                <i class="fa-regular fa-user w-4"></i>
-                                پروفایل من
-                            </a>
 
-                            <a href=""
-                               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-600 transition hover:bg-blue-50 hover:text-blue-600">
-                                <i class="fa-solid fa-gear w-4"></i>
-                                تنظیمات حساب
-                            </a>
-
-                            <div class="my-1 border-t border-slate-100"></div>
+                            <div class="mx-3 border-t border-slate-100"></div>
 
                             {% if user.is_authenticated %}
                                 <form method="post" action="{% url 'auth_module:logout' %}">
                                     {% csrf_token %}
                                     <button type="submit"
-                                            class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm text-red-500 transition hover:bg-red-50">
-                                        <i class="fa-solid fa-right-from-bracket w-4"></i>
+                                            class="fanous-profile-logout flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm text-red-500 transition">
+                                        <span class="grid h-8 w-8 place-items-center rounded-xl bg-red-50"><i class="fa-solid fa-right-from-bracket"></i></span>
                                         خروج
                                     </button>
                                 </form>
@@ -782,6 +776,7 @@
         profileToggle?.addEventListener('click', function (event) {
             event.stopPropagation();
             profileMenu.classList.toggle('hidden');
+            profileToggle.setAttribute('aria-expanded', String(!profileMenu.classList.contains('hidden')));
         });
 
         document.addEventListener('click', function (event) {
@@ -791,6 +786,7 @@
                 !profileToggle.contains(event.target)
             ) {
                 profileMenu.classList.add('hidden');
+                profileToggle.setAttribute('aria-expanded', 'false');
             }
         });
 
