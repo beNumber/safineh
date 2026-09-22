@@ -1,33 +1,306 @@
-{% extends "base.html" %}{% load static %}
-{% block title %}تنظیمات جلسه{% endblock %}{% block page_title %}فصل‌ها، مباحث و تنظیمات{% endblock %}{% block breadcrumb %}مرحله سوم{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/questions.css' %}"><link rel="stylesheet" href="{% static 'css/questions-modern.css' %}">{% include "questions_module/_assets.html" %}{% endblock %}
-{% block content %}
-<div class="qb-shell">
-  {% include "questions_module/_wizard_steps.html" with step=3 %}
-  <form method="post" class="qb-card p-6 sm:p-8" id="session-settings-form">{% csrf_token %}
-    <div class="flex flex-wrap items-start justify-between gap-3"><div><span class="qb-chip {% if question_type == 'DES' %}bg-violet-100 text-violet-700{% else %}bg-blue-100 text-blue-700{% endif %}">{{ question_type|yesno:"سؤال,سؤال" }} {% if question_type == 'DES' %}تشریحی{% else %}تستی{% endif %}</span><h1 class="mt-3 text-xl font-black text-slate-800">مباحث موردنظر را انتخاب کنید</h1><p class="mt-2 text-sm text-slate-500">هر فصل به‌صورت یک کارت نمایش داده شده و مباحث همان فصل درون آن قابل انتخاب است.</p></div></div>
-    <div class="mt-6 grid gap-5 lg:grid-cols-2">{% for item in chapter_items %}<article class="qb-topic-panel"><header><span class="qb-topic-icon"><i class="fa-solid fa-book-open"></i></span><div><small>{{ item.chapter.subject.title }}</small><h2>{{ item.chapter.name }}</h2></div><span class="qb-topic-count">{{ item.topics|length }} مبحث</span></header><div class="qb-topic-list">{% for topic in item.topics %}<label><input type="checkbox" name="topics" value="{{ topic.pk }}" {% if topic.pk in selected_topic_ids %}checked{% endif %}><span><i class="fa-solid fa-check"></i>{{ topic.name }}</span></label>{% endfor %}</div></article>{% empty %}<div class="col-span-full rounded-2xl bg-amber-50 p-5 text-sm text-amber-700">برای درس‌های انتخاب‌شده، مبحث دارای سؤال فعال یافت نشد.</div>{% endfor %}</div>
+{% extends "base.html" %}
+{% load static %}
 
-    <div class="my-8 border-t border-slate-100"></div>
-    <div class="mb-5"><h2 class="text-lg font-black text-slate-800">ترکیب سطح سؤال‌ها</h2><p class="mt-1 text-sm text-slate-500">یک یا چند سطح را فعال کنید و تعداد سؤال هر سطح را جداگانه بنویسید.</p></div>
-    <div class="qb-level-grid">
-      {% for item in difficulty_options %}
-      <article class="qb-level-card qb-level-{{ item.value|lower }}">
-        <label class="qb-level-main" for="difficulty-{{ item.value }}">
-          <input class="qb-level-checkbox sr-only" id="difficulty-{{ item.value }}" type="checkbox" name="difficulties" value="{{ item.value }}" {% if item.selected %}checked{% endif %}>
-          <span class="qb-level-icon"><i class="fa-solid {% if item.value == 'E' %}fa-seedling{% elif item.value == 'M' %}fa-layer-group{% else %}fa-fire-flame-curved{% endif %}"></i></span>
-          <span class="min-w-0 flex-1"><strong class="block text-base text-slate-800">{{ item.label }}</strong><small class="mt-1 block text-slate-500">{% if item.value == 'E' %}شروع روان و پایه‌ای{% elif item.value == 'M' %}تمرین متعادل و استاندارد{% else %}چالش جدی‌تر برای تسلط{% endif %}</small></span>
-          <span class="qb-ios-switch" aria-hidden="true"><span></span></span>
-        </label>
-        <div class="qb-level-count"><label for="count-{{ item.value }}">تعداد سؤال</label><div><button type="button" class="qb-count-btn" data-step="-1" aria-label="کم کردن">−</button><input id="count-{{ item.value }}" name="count_{{ item.value }}" type="number" min="1" max="100" value="{{ item.count }}" inputmode="numeric"><button type="button" class="qb-count-btn" data-step="1" aria-label="زیاد کردن">+</button></div></div>
-      </article>
-      {% endfor %}
+{% block title %}تنظیمات جلسه{% endblock %}
+{% block page_title %}فصل‌ها، مباحث و تنظیمات{% endblock %}
+{% block breadcrumb %}مرحله سوم{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/questions.css' %}">
+<link rel="stylesheet" href="{% static 'css/questions-modern.css' %}">
+{% include "questions_module/_assets.html" %}
+
+<style>
+  /* استایل مدرن چک‌باکس مباحث */
+  .custom-checkbox { transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+  .custom-checkbox:hover { background-color: #f8fafc; border-color: #cbd5e1; }
+  .topic-input:checked + .custom-checkbox {
+    background-color: #f0fdf4;
+    border-color: #22c55e;
+    color: #15803d;
+    box-shadow: 0 2px 6px rgba(34, 197, 94, 0.12);
+  }
+  .topic-input:checked + .custom-checkbox .check-indicator {
+    background-color: #22c55e;
+    border-color: #22c55e;
+    color: #ffffff;
+    transform: scale(1.05);
+  }
+
+  /* ترنزیشن روان آکاردئون با CSS Grid */
+  .chapter-accordion-grid {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    opacity: 1;
+  }
+  .chapter-accordion-grid.is-collapsed { grid-template-rows: 0fr; opacity: 0; pointer-events: none; }
+  .chapter-accordion-inner { overflow: hidden; }
+  .chapter-master-checkbox { accent-color: #2563eb; cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qb-shell max-w-5xl mx-auto py-8 px-4 sm:px-6">
+  {% include "questions_module/_wizard_steps.html" with step=3 %}
+
+  <form method="post" class="mt-6 space-y-8" id="session-settings-form">
+    {% csrf_token %}
+
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-slate-100 pb-6">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {% if question_type == 'DES' %}bg-purple-100 text-purple-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+              <i class="fa-solid {% if question_type == 'DES' %}fa-feather{% else %}fa-list-check{% endif %} text-[11px]"></i>
+              سؤالات {% if question_type == 'DES' %}تشریحی{% else %}تستی{% endif %}
+            </span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-black text-slate-800">انتخاب سرفصل‌ها و مباحث</h1>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">فصل‌های مدنظرتان را تعیین و مباحث مورد آزمون را تیک بزنید.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <div class="relative w-full sm:w-60">
+            <i class="fa-solid fa-magnifying-glass absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="topic-search" placeholder="جستجوی سریع مبحث..." class="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2 pr-9 pl-3 text-xs outline-none focus:border-blue-500 focus:bg-white transition-all">
+          </div>
+          <button type="button" id="select-all-global" class="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all">انتخاب همه</button>
+          <button type="button" id="deselect-all-global" class="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-all">پاک کردن</button>
+        </div>
+      </div>
+
+      <div class="mt-6 space-y-4" id="chapters-container">
+        {% for item in chapter_items %}
+        <section class="chapter-card rounded-2xl border border-slate-200 bg-slate-50/40 p-4 sm:p-5 transition-all hover:border-slate-300">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
+            <div class="flex items-center gap-3.5">
+              <div class="flex items-center" title="انتخاب کل این فصل">
+                <input type="checkbox" class="chapter-master-checkbox h-4.5 w-4.5 rounded border-slate-300 text-blue-600 transition-all">
+              </div>
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200 text-blue-600 shadow-2xs">
+                <i class="fa-solid fa-book text-sm"></i>
+              </div>
+              <div>
+                <span class="block text-[11px] font-bold text-blue-600/80">{{ item.chapter.subject.title }}</span>
+                <h2 class="text-sm sm:text-base font-black text-slate-800">{{ item.chapter.name }}</h2>
+              </div>
+            </div>
+            <div class="flex items-center gap-3.5 self-end sm:self-center">
+              <div class="text-left">
+                <span class="text-xs font-bold text-slate-600">
+                    <span class="chapter-selected-num">۰</span> از <span class="chapter-total-count">{{ item.topics|length }}</span>
+                </span>
+                <div class="w-20 sm:w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                  <div class="chapter-progress-bar h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+              </div>
+              <button type="button" class="chapter-toggle-btn flex h-8 w-8 items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 transition-all" aria-label="جمع کردن / باز کردن">
+                <i class="fa-solid fa-chevron-up text-xs transition-transform duration-300"></i>
+              </button>
+            </div>
+          </div>
+          <div class="chapter-accordion-grid">
+            <div class="chapter-accordion-inner">
+              <div class="chapter-topics-wrapper mt-3 pt-3 border-t border-slate-200/70">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {% for topic in item.topics %}
+                  <label class="topic-item cursor-pointer block select-none">
+                    <input type="checkbox" name="topics" value="{{ topic.pk }}" class="topic-input sr-only" {% if topic.pk in selected_topic_ids %}checked{% endif %}>
+                    <div class="custom-checkbox flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3.5 py-2.5">
+                      <span class="topic-title text-xs font-medium text-slate-700 line-clamp-1">{{ topic.name }}</span>
+                      <div class="check-indicator flex h-4 w-4 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-white text-[9px] text-transparent transition-all">
+                        <i class="fa-solid fa-check"></i>
+                      </div>
+                    </div>
+                  </label>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        {% empty %}
+        <div class="rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 p-8 text-center text-amber-800">
+          <i class="fa-solid fa-circle-exclamation text-3xl mb-2 text-amber-500"></i>
+          <p class="font-bold text-sm">هیچ مبحث فعالی برای درس‌های انتخابی یافت نشد.</p>
+        </div>
+        {% endfor %}
+      </div>
     </div>
-    <div class="mt-5 flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-sm"><span class="font-bold text-slate-600">مجموع سؤال‌های انتخابی</span><strong id="selected-total" class="text-lg text-blue-600">۰</strong></div>
-    <div class="mt-7 flex gap-3"><button class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white">شروع {% if mode == 'practice' %}تمرین{% else %}آزمون{% endif %}</button><a href="{% url 'questions_module:select_courses' %}" class="rounded-xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600">بازگشت</a></div>
+
+    <!-- تنظیمات سطح سؤالات -->
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+      <div class="mb-6">
+        <h2 class="text-lg font-black text-slate-800">ترکیب سطح سؤال‌ها</h2>
+      </div>
+      <div class="qb-level-grid">
+        {% for item in difficulty_options %}
+        <article class="qb-level-card qb-level-{{ item.value|lower }}">
+          <label class="qb-level-main" for="difficulty-{{ item.value }}">
+            <input class="qb-level-checkbox sr-only" id="difficulty-{{ item.value }}" type="checkbox" name="difficulties" value="{{ item.value }}" {% if item.selected %}checked{% endif %}>
+            <span class="qb-level-icon">
+              <i class="fa-solid {% if item.value == 'E' %}fa-seedling{% elif item.value == 'M' %}fa-layer-group{% else %}fa-fire-flame-curved{% endif %}"></i>
+            </span>
+            <span class="min-w-0 flex-1">
+              <strong class="block text-base text-slate-800">{{ item.label }}</strong>
+            </span>
+            <span class="qb-ios-switch" aria-hidden="true"><span></span></span>
+          </label>
+          <div class="qb-level-count">
+            <label for="count-{{ item.value }}">تعداد سؤال</label>
+            <div>
+              <button type="button" class="qb-count-btn" data-step="-1" aria-label="کم کردن">−</button>
+              <input id="count-{{ item.value }}" name="count_{{ item.value }}" type="number" min="1" max="100" value="{{ item.count }}" inputmode="numeric">
+              <button type="button" class="qb-count-btn" data-step="1" aria-label="زیاد کردن">+</button>
+            </div>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      <div class="mt-6 flex items-center justify-between rounded-2xl bg-blue-50/60 border border-blue-100 px-5 py-4">
+        <span class="font-bold text-slate-700 text-sm">مجموع سؤالات درخواستی:</span>
+        <div class="flex items-center gap-1.5">
+          <strong id="selected-total" class="text-2xl font-black text-blue-600">۰</strong>
+          <span class="text-xs font-semibold text-slate-500">سؤال</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between pt-2">
+      <a href="{% url 'questions_module:select_courses' %}" class="rounded-2xl border border-slate-200 bg-white px-7 py-3.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">مرحله قبل</a>
+      <button type="submit" class="rounded-2xl bg-blue-600 hover:bg-blue-700 px-9 py-3.5 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all">شروع {% if mode == 'practice' %}تمرین{% else %}آزمون{% endif %}</button>
+    </div>
   </form>
 </div>
 {% endblock %}
-{% block extra_js %}<script>
-document.addEventListener('DOMContentLoaded',()=>{const cards=[...document.querySelectorAll('.qb-level-card')],total=document.getElementById('selected-total');const fa=n=>Number(n||0).toLocaleString('fa-IR');function sync(){let sum=0;cards.forEach(card=>{const check=card.querySelector('.qb-level-checkbox'),count=card.querySelector('input[type=number]');card.classList.toggle('is-selected',check.checked);count.disabled=!check.checked;if(check.checked)sum+=Math.max(0,Number(count.value)||0)});total.textContent=fa(sum)}cards.forEach(card=>{card.querySelector('.qb-level-checkbox').addEventListener('change',sync);card.querySelector('input[type=number]').addEventListener('input',sync);card.querySelectorAll('.qb-count-btn').forEach(btn=>btn.addEventListener('click',()=>{const input=card.querySelector('input[type=number]');input.value=Math.min(100,Math.max(1,(Number(input.value)||1)+Number(btn.dataset.step)));sync()}))});sync()});
-</script>{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const fa = n => Number(n || 0).toLocaleString('fa-IR');
+
+  // فارسی‌سازی اعداد کل (تعداد کل مباحث)
+  document.querySelectorAll('.chapter-total-count').forEach(el => {
+    el.textContent = fa(el.textContent);
+  });
+
+  /* 1. مدیریت هوشمند مباحث و فصل‌ها */
+  const chapterCards = document.querySelectorAll('.chapter-card');
+  const allTopicCheckboxes = document.querySelectorAll('.topic-input');
+
+  function updateChapterStatus(chapter) {
+    const inputs = chapter.querySelectorAll('.topic-input');
+    const masterCheckbox = chapter.querySelector('.chapter-master-checkbox');
+    const total = inputs.length;
+    const checkedCount = [...inputs].filter(i => i.checked).length;
+
+    chapter.querySelector('.chapter-selected-num').textContent = fa(checkedCount);
+    const pct = total ? (checkedCount / total) * 100 : 0;
+    chapter.querySelector('.chapter-progress-bar').style.width = `${pct}%`;
+
+    if (checkedCount === 0) { masterCheckbox.checked = false; masterCheckbox.indeterminate = false; }
+    else if (checkedCount === total) { masterCheckbox.checked = true; masterCheckbox.indeterminate = false; }
+    else { masterCheckbox.checked = false; masterCheckbox.indeterminate = true; }
+  }
+
+  chapterCards.forEach(chapter => {
+    const toggleBtn = chapter.querySelector('.chapter-toggle-btn');
+    const accordionGrid = chapter.querySelector('.chapter-accordion-grid');
+    const toggleIcon = toggleBtn.querySelector('i');
+    const masterCheckbox = chapter.querySelector('.chapter-master-checkbox');
+    const topicInputs = chapter.querySelectorAll('.topic-input');
+
+    toggleBtn.addEventListener('click', () => {
+      const isCollapsed = accordionGrid.classList.toggle('is-collapsed');
+      toggleIcon.style.transform = isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+    });
+
+    masterCheckbox.addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      topicInputs.forEach(input => {
+        const parentLabel = input.closest('.topic-item');
+        if (parentLabel && parentLabel.style.display !== 'none') input.checked = isChecked;
+      });
+      updateChapterStatus(chapter);
+    });
+
+    topicInputs.forEach(input => input.addEventListener('change', () => updateChapterStatus(chapter)));
+    updateChapterStatus(chapter);
+  });
+
+  document.getElementById('select-all-global').addEventListener('click', () => {
+    allTopicCheckboxes.forEach(c => {
+      const parentLabel = c.closest('.topic-item');
+      if (!parentLabel || parentLabel.style.display !== 'none') c.checked = true;
+    });
+    chapterCards.forEach(updateChapterStatus);
+  });
+
+  document.getElementById('deselect-all-global').addEventListener('click', () => {
+    allTopicCheckboxes.forEach(c => c.checked = false);
+    chapterCards.forEach(updateChapterStatus);
+  });
+
+  const searchInput = document.getElementById('topic-search');
+  searchInput.addEventListener('input', e => {
+    const q = e.target.value.trim().toLowerCase();
+    chapterCards.forEach(chapter => {
+      let matchCount = 0;
+      const topicItems = chapter.querySelectorAll('.topic-item');
+      const accordionGrid = chapter.querySelector('.chapter-accordion-grid');
+      const toggleIcon = chapter.querySelector('.chapter-toggle-btn i');
+
+      topicItems.forEach(item => {
+        const title = item.querySelector('.topic-title').textContent.toLowerCase();
+        const matches = title.includes(q);
+        item.style.display = matches ? 'block' : 'none';
+        if (matches) matchCount++;
+      });
+
+      if (q.length > 0) {
+        if (matchCount > 0) {
+          chapter.style.display = 'block';
+          accordionGrid.classList.remove('is-collapsed');
+          toggleIcon.style.transform = 'rotate(0deg)';
+        } else {
+          chapter.style.display = 'none';
+        }
+      } else {
+        chapter.style.display = 'block';
+      }
+    });
+  });
+
+  /* 2. مدیریت سطوح سؤال */
+  const cards = [...document.querySelectorAll('.qb-level-card')];
+  const total = document.getElementById('selected-total');
+
+  function syncDifficulty() {
+    let sum = 0;
+    cards.forEach(card => {
+      const check = card.querySelector('.qb-level-checkbox');
+      const count = card.querySelector('input[type=number]');
+      card.classList.toggle('is-selected', check.checked);
+      count.disabled = !check.checked;
+      if (check.checked) sum += Math.max(0, Number(count.value) || 0);
+    });
+    total.textContent = fa(sum);
+  }
+
+  cards.forEach(card => {
+    card.querySelector('.qb-level-checkbox').addEventListener('change', syncDifficulty);
+    card.querySelector('input[type=number]').addEventListener('input', syncDifficulty);
+    card.querySelectorAll('.qb-count-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const input = card.querySelector('input[type=number]');
+        input.value = Math.min(100, Math.max(1, (Number(input.value) || 1) + Number(btn.dataset.step)));
+        syncDifficulty();
+      });
+    });
+  });
+
+  syncDifficulty();
+});
+</script>
+{% endblock %}
