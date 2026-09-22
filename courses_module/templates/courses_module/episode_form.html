@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}ویرایش محتوای جلسه{% else %}بارگذاری محتوای جدید{% endif %}{% endblock %}
+{% block page_title %}{% if object %}ویرایش جلسه آموزشی{% else %}بارگذاری محتوای آموزشی{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'courses_module:course_list' %}" class="hover:text-blue-600 transition">دوره‌ها</a> /
+    <a href="{% url 'courses_module:course_detail' section.course.slug %}" class="hover:text-blue-600 transition">{{ section.course.title }}</a> /
+    <span class="text-slate-800 font-bold">{% if object %}ویرایش جلسه{% else %}جلسه جدید{% endif %}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-glass {
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(24px) saturate(160%);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+    .source-tab.active {
+        background-color: white;
+        color: #2563eb;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl">
+    <div class="form-glass rounded-3xl p-6 sm:p-8">
+        <!-- Header -->
+        <div class="flex items-center gap-4 border-b border-slate-100 pb-5">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
+            </span>
+            <div>
+                <h1 class="text-base sm:text-lg font-black text-slate-800">
+                    {% if object %}ویرایش محتوای: {{ object.title }}{% else %}بارگذاری جلسه یا محتوای جدید{% endif %}
+                </h1>
+                <p class="text-[11px] text-slate-400 mt-0.5">افزودن به سرفصل: <b class="text-slate-700">{{ section.title }}</b></p>
+            </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <!-- Title -->
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="mb-1.5 block text-xs font-bold text-slate-700">
+                    عنوان جلسه / درس <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-video text-xs"></i>
+                    </span>
+                    <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}"
+                           value="{{ form.title.value|default:'' }}"
+                           placeholder="مثال: جلسه ۱ - حل تمرین صفحه ۲۵"
+                           required
+                           class="w-full rounded-xl border border-slate-200/90 bg-white/90 py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
+                </div>
+                {% if form.title.errors %}
+                    <p class="mt-1 text-[11px] text-rose-500">{{ form.title.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Type & Duration Grid -->
+            <div class="grid gap-4 sm:grid-cols-2">
+                <!-- File Type -->
+                <div>
+                    <label for="{{ form.file_type.id_for_label }}" class="mb-1.5 block text-xs font-bold text-slate-700">
+                        نوع محتوا <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="{{ form.file_type.name }}" id="{{ form.file_type.id_for_label }}"
+                            class="w-full rounded-xl border border-slate-200/90 bg-white/90 py-2.5 px-3 text-xs font-medium text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
+                        {% for val, label in form.file_type.field.choices %}
+                            <option value="{{ val }}" {% if form.file_type.value == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.file_type.errors %}
+                        <p class="mt-1 text-[11px] text-rose-500">{{ form.file_type.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Duration / Pages -->
+                <div>
+                    <label for="{{ form.duration_or_pages.id_for_label }}" class="mb-1.5 block text-xs font-bold text-slate-700">
+                        مدت زمان یا تعداد صفحات
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                            <i class="fa-regular fa-clock text-xs"></i>
+                        </span>
+                        <input type="text" name="{{ form.duration_or_pages.name }}" id="{{ form.duration_or_pages.id_for_label }}"
+                               value="{{ form.duration_or_pages.value|default:'' }}"
+                               placeholder="مثال: ۱۵ دقیقه یا ۲۰ صفحه"
+                               class="w-full rounded-xl border border-slate-200/90 bg-white/90 py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Media Source Switcher -->
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/70 p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-slate-700">روش ارائه محتوا:</span>
+                    <div class="flex rounded-xl bg-slate-200/80 p-1 text-xs font-bold">
+                        <button type="button" id="tabUpload" class="source-tab active rounded-lg px-3 py-1 text-slate-600 transition">
+                            <i class="fa-solid fa-cloud-arrow-up ml-1 text-[10px]"></i> آپلود فایل
+                        </button>
+                        <button type="button" id="tabLink" class="source-tab rounded-lg px-3 py-1 text-slate-600 transition">
+                            <i class="fa-solid fa-link ml-1 text-[10px]"></i> لینک خارجی
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section: File Upload -->
+                <div id="uploadFieldContainer" class="space-y-2">
+                    <div class="relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white p-6 text-center hover:border-blue-400 transition group cursor-pointer" onclick="document.getElementById('{{ form.file.id_for_label }}').click()">
+                        <input type="file" name="{{ form.file.name }}" id="{{ form.file.id_for_label }}" class="hidden" onchange="showSelectedFile(this)">
+                        <span class="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600 group-hover:scale-110 transition duration-200">
+                            <i class="fa-solid fa-file-arrow-up text-lg"></i>
+                        </span>
+                        <p class="mt-2 text-xs font-bold text-slate-700" id="fileUploadPrompt">جهت انتخاب فایل کلیک کنید یا آن را به اینجا بکشید</p>
+                        <p class="mt-1 text-[11px] text-slate-400">پشتیبانی از فرمت‌های MP4, PDF, MP3, PNG و ...</p>
+                    </div>
+                    {% if object.file %}
+                        <div class="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2 text-[11px] text-slate-600">
+                            <span class="truncate"><i class="fa-solid fa-paperclip ml-1 text-slate-400"></i>فایل فعلی: {{ object.file.name }}</span>
+                        </div>
+                    {% endif %}
+                    {% if form.file.errors %}
+                        <p class="text-[11px] text-rose-500">{{ form.file.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Section: URL Link -->
+                <div id="linkFieldContainer" class="hidden space-y-2">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-globe text-xs"></i>
+                        </span>
+                        <input type="url" name="{{ form.url.name }}" id="{{ form.url.id_for_label }}"
+                               value="{{ form.url.value|default:'' }}"
+                               placeholder="https://www.aparat.com/v/... یا لینک مستقیم ویدیو"
+                               class="w-full rounded-xl border border-slate-200/90 bg-white py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
+                    </div>
+                    <p class="text-[11px] text-slate-400">می‌توانید لینک ویدیوهای آپارات، یوتیوب یا هاست دانلود خود را وارد کنید.</p>
+                    {% if form.url.errors %}
+                        <p class="text-[11px] text-rose-500">{{ form.url.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <a href="{% url 'courses_module:course_detail' section.course.slug %}" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                    انصراف
+                </a>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-700 transition">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    {% if object %}ذخیره محتوا{% else %}بارگذاری جلسه{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const tabUpload = document.getElementById('tabUpload');
+    const tabLink = document.getElementById('tabLink');
+    const uploadContainer = document.getElementById('uploadFieldContainer');
+    const linkContainer = document.getElementById('linkFieldContainer');
+    const urlInput = document.getElementById('{{ form.url.id_for_label }}');
+
+    function activateTab(type) {
+        if (type === 'link') {
+            tabLink.classList.add('active');
+            tabUpload.classList.remove('active');
+            linkContainer.classList.remove('hidden');
+            uploadContainer.classList.add('hidden');
+        } else {
+            tabUpload.classList.add('active');
+            tabLink.classList.remove('active');
+            uploadContainer.classList.remove('hidden');
+            linkContainer.classList.add('hidden');
+        }
+    }
+
+    tabUpload.addEventListener('click', () => activateTab('upload'));
+    tabLink.addEventListener('click', () => activateTab('link'));
+
+    // اگر هنگام ویرایش یا بازگشت با خطا مقدار URL پر بود، خودکار تب لینک باز شود
+    if (urlInput && urlInput.value.trim() !== '') {
+        activateTab('link');
+    }
+
+    function showSelectedFile(input) {
+        if (input.files && input.files[0]) {
+            const fileName = input.files[0].name;
+            const fileSize = (input.files[0].size / (1024 * 1024)).toFixed(2) + ' MB';
+            document.getElementById('fileUploadPrompt').innerHTML = `<span class="text-blue-600">${fileName}</span> <span class="text-slate-400 font-normal">(${fileSize})</span>`;
+        }
+    }
+</script>
+{% endblock %}
