@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -11,10 +12,37 @@ from plans_module.services import current_week_start, student_profile_for
 from counseling_module.models import StudentConsultantAssignment
 from counseling_module.services import manageable_students_for
 
+# ایمپورت مدل اخبار
+from news_module.models import Article
+
+# ایمپورت مدل وبلاگ
+try:
+    from blog.models import Post
+except ModuleNotFoundError:
+    from blog_module.models import Post
+
 
 @login_required
 def dash_view(request):
     context = {}
+    now = timezone.now()
+
+    # دریافت آخرین اخبار منتشر شده (۴ خبر اخیر)
+    context["latest_news"] = (
+        Article.objects.filter(
+            status=Article.Status.PUBLISHED,
+        )
+        .filter(Q(published_at__lte=now) | Q(published_at__isnull=True))
+        .select_related("category")
+        .order_by("-published_at", "-created_at")[:4]
+    )
+
+    # دریافت آخرین مقالات منتشر شده وبلاگ (۴ پست اخیر)
+    context["latest_posts"] = (
+        Post.published.select_related("category", "author")
+        .order_by("-published_at", "-created_at")[:4]
+    )
+
     if request.user.role == UserRole.STUDENT:
         context["my_course_enrollments"] = CourseEnrollment.objects.filter(
             student=request.user,
@@ -56,6 +84,7 @@ def dash_view(request):
         context["all_unassigned_count"] = manageable_students_for(request.user).filter(
             consultant_assignment__isnull=True
         ).count()
+
     return render(request, "dashboard_module/dash.html", context)
 
 
