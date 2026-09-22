@@ -4,6 +4,7 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -15,6 +16,7 @@
 
     <meta name="theme-color" content="#172554">
     <meta name="description" content="سامانه مشاوره و پشتیبانی تحصیلی">
+    <link rel="icon" type="image/png" href="{% static 'images/fanous-logo.png' %}">
 
     <!-- Tailwind CSS -->
     <script src="{% static 'tailwind/tailwind.js' %}"></script>
@@ -205,34 +207,39 @@
             class="app-sidebar fixed inset-y-0 right-0 z-50 flex flex-col overflow-hidden border-l border-slate-200 bg-white">
 
         <!-- Brand -->
-        <div class="fanous-brand">
-            <div class="flex items-center gap-3">
-                <div class="fanous-logo">
-                    <i class="fa-solid fa-lightbulb"></i>
-                </div>
-
-                <div class="min-w-0">
-                    <h1 class="truncate text-xl font-black text-slate-900">
-                        فانوس
-                    </h1>
-                    <p class="mt-1 text-[10px] font-bold text-slate-400">
-                        روشنای مسیر یادگیری
-                    </p>
-                </div>
-
-                <button
-                        id="sidebar-close"
-                        type="button"
-                        class="mr-auto flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <div class="fanous-status">
-                <i></i>
-                فانوس روشن است
-            </div>
+      <div class="fanous-brand">
+    <div class="flex items-center gap-3">
+        <div class="fanous-logo" style="background: transparent; border: 0; box-shadow: none;">
+            <img src="{% static 'images/fanous-logo.png' %}?v=20260922"
+                 alt="لوگوی فانوس"
+                 width="52"
+                 height="52"
+                 class="fanous-logo-img"
+                 style="background: transparent; border: 0; box-shadow: none;">
         </div>
+
+        <div class="min-w-0">
+            <h1 class="truncate text-xl font-black text-slate-900">
+                فانوس
+            </h1>
+            <p class="mt-1 text-[10px] font-bold text-slate-400">
+                روشنای مسیر یادگیری
+            </p>
+        </div>
+
+        <button id="sidebar-close" type="button"
+                class="mr-auto flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+
+    <div class="fanous-status">
+        <i></i>
+        فانوس روشن است
+    </div>
+</div>
+
+
 
         <!-- Navigation -->
         <nav class="flex-1 overflow-y-auto px-4 py-5">
@@ -349,7 +356,7 @@
                         <span>تیکت‌های ارجاع‌شده</span>
                     </a>
 
-                    <a href="{% url 'auth_module:user-management' %}"
+                    <a href=""
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-chalkboard-user"></i>
@@ -451,7 +458,7 @@
             {% endif %}
 
             <!-- Management Menu -->
-            {% if user.is_authenticated and user.role == 'ADMIN' or user.is_superuser %}
+            {% if user.is_authenticated and user.role == 'ADMIN' or user.is_superuser or user.is_staff %}
                 <div class="my-6 border-t border-slate-100"></div>
 
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">
@@ -459,7 +466,7 @@
                 </p>
 
                 <div class="space-y-1">
-                    <a href=""
+                    <a href="{% url 'auth_module:user-management' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-user-gear"></i>
@@ -467,15 +474,12 @@
                         <span>مدیریت کاربران</span>
                     </a>
 
-                    <a href=""
+                    <a href="{% url 'auth_module:user-management' %}#member-import"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-file-import"></i>
                         </span>
-                        <span>ورود دانش‌آموزان</span>
-                    </a>
-
-                    
+                        <span>ورود اعضا</span>
                     </a>
 
                 </div>

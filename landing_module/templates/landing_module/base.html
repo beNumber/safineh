@@ -6,13 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>
-      {% block title %} سامانه آموزشی مدرسه سفینه دانش {% endblock %}
+      {% block title %} سامانه آموزشی مدرسه فانوس {% endblock %}
     </title>
 
     <meta
       name="description"
-      content="{% block meta_description %}سامانه آموزشی مدرسه سفینه دانش برای دانش‌آموزان پایه پنجم تا دوازدهم{% endblock %}"
+      content="{% block meta_description %}سامانه آموزشی مدرسه سفینه فانوس برای دانش‌آموزان پایه پنجم تا دوازدهم{% endblock %}"
     />
+    <link rel="icon" type="image/png" href="{% static 'images/fanous-logo.png' %}" />
 
     <!-- FontAwesome -->
     <link
@@ -147,17 +148,15 @@
           <a
             href="/"
             class="focus-ring flex shrink-0 items-center gap-3 rounded-lg"
-            aria-label="صفحه اصلی سامانه آموزشی مدرسه سفینه دانش"
+            aria-label="صفحه اصلی سامانه آموزشی مدرسه فانوس "
           >
-            <span
-              class="flex h-11 w-11 items-center justify-center rounded-xl bg-school-navy text-xl text-white shadow-card"
-            >
-              <i class="fa-solid fa-school" aria-hidden="true"></i>
+            <span class="flex h-12 w-12 items-center justify-center bg-transparent">
+              <img src="{% static 'images/fanous-logo.png' %}" alt="لوگوی فانوس" width="48" height="48" class="block h-12 w-12 object-contain" />
             </span>
 
             <span class="hidden sm:block">
               <span class="block text-sm font-bold leading-6 text-school-navy">
-                مدرسه سفینه دانش
+                مدرسه فانوس
               </span>
               <span class="block text-xs leading-5 text-slate-500">
                 سامانه آموزشی دانش‌آموزان
@@ -316,14 +315,12 @@
           <!-- معرفی -->
           <div>
             <div class="mb-4 flex items-center gap-3">
-              <span
-                class="flex h-10 w-10 items-center justify-center rounded-lg bg-school-navy text-lg text-white"
-              >
-                <i class="fa-solid fa-school" aria-hidden="true"></i>
+              <span class="flex h-11 w-11 items-center justify-center bg-transparent">
+                <img src="{% static 'images/fanous-logo.png' %}" alt="لوگوی فانوس" width="44" height="44" class="block h-11 w-11 object-contain" />
               </span>
 
               <div>
-                <h2 class="font-bold text-school-navy">مدرسه سفینه دانش</h2>
+                <h2 class="font-bold text-school-navy">مدرسه فانوس</h2>
                 <p class="text-xs text-slate-500">سامانه آموزشی مدرسه</p>
               </div>
             </div>
@@ -379,7 +376,7 @@
                   class="fa-solid fa-location-dot w-4 text-school-blue"
                   aria-hidden="true"
                 ></i>
-                مدرسه سفینه دانش
+               مدرسه فانوس
               </p>
 
               <p class="flex items-center gap-2">
@@ -404,7 +401,7 @@
         <div
           class="mt-8 flex flex-col gap-3 border-t border-slate-100 pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between"
         >
-          <p>تمامی حقوق این سامانه برای مدرسه سفینه دانش محفوظ است.</p>
+          <p>تمامی حقوق این سامانه برای مدرسه فانوس محفوظ است.</p>
 
           <p>{% now "Y" %} - سامانه آموزشی مدرسه</p>
         </div>

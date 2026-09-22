@@ -1,6 +1,5 @@
 import hashlib
 import secrets
-import csv
 from urllib.parse import parse_qs
 from datetime import timedelta
 
@@ -21,9 +20,9 @@ from .forms import (
     VerifyOTPForm,
     UserSpreadsheetForm,
 )
-from .decorators import role_required
+from .decorators import staff_admin_required
 from .models import Student, UserRole
-from .user_management import import_users, shift_student_grade
+from .user_management import build_user_template_xlsx, import_users, shift_student_grade
 from users_module.models import FieldOfStudy, Grade, Province, School
 
 
@@ -52,7 +51,7 @@ def _filtered_users(request):
     return users.distinct()
 
 
-@role_required(UserRole.ADMIN)
+@staff_admin_required
 def user_management(request):
     import_results = request.session.pop("user_import_results", None)
     users = _filtered_users(request).select_related().prefetch_related("student_profiles__field__grade__school__province")
@@ -71,7 +70,7 @@ def user_management(request):
     })
 
 
-@role_required(UserRole.ADMIN)
+@staff_admin_required
 def user_import(request):
     if request.method != "POST":
         return redirect("auth_module:user-management")
@@ -86,18 +85,18 @@ def user_import(request):
     return redirect("auth_module:user-management")
 
 
-@role_required(UserRole.ADMIN)
+@staff_admin_required
 def user_template(request):
-    response = HttpResponse(content_type="text/csv; charset=utf-8")
-    response["Content-Disposition"] = 'attachment; filename="users-template.csv"'
-    response.write("\ufeff")
-    writer = csv.writer(response)
-    writer.writerow(["اسم", "فامیل", "شهر", "استان", "رشته", "کد ملی", "رمز عبور", "نقش", "نام کاربری", "پایه (اختیاری)"])
-    writer.writerow(["علی", "محمدی", "بندرعباس", "هرمزگان", "ریاضی", "0012345678", "StrongPass123", "دانش‌آموز", "0012345678", "دهم"])
+    workbook = build_user_template_xlsx()
+    response = HttpResponse(
+        workbook.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="fanous-members-template.xlsx"'
     return response
 
 
-@role_required(UserRole.ADMIN)
+@staff_admin_required
 def user_bulk_action(request):
     if request.method != "POST":
         return redirect("auth_module:user-management")

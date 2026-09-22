@@ -4,8 +4,39 @@ body{background:radial-gradient(circle at 16% 8%,rgba(14,165,233,.07),transparen
 .main-wrapper{margin-right:var(--sidebar-width)!important}
 .fanous-brand{position:relative;overflow:hidden;margin:14px;border:1px solid rgba(219,234,254,.9);border-radius:1.65rem;background:linear-gradient(145deg,#fff,#f8fbff);padding:1rem;box-shadow:0 18px 45px rgba(37,99,235,.09),inset 0 1px 0 #fff}
 .fanous-brand::before{content:"";position:absolute;width:9rem;height:9rem;left:-5rem;top:-5rem;border-radius:50%;background:radial-gradient(circle,rgba(34,211,238,.2),transparent 68%);animation:fanous-float 7s ease-in-out infinite}
-.fanous-logo{position:relative;display:grid;width:3.25rem;height:3.25rem;flex:0 0 auto;place-items:center;border-radius:1.15rem;background:linear-gradient(145deg,#2563eb,#06b6d4);color:#fff;font-size:1.25rem;box-shadow:0 13px 28px rgba(37,99,235,.25)}
-.fanous-logo::after{content:"";position:absolute;inset:-.35rem;border:1px solid rgba(37,99,235,.16);border-radius:1.35rem;animation:fanous-beacon 2.8s ease-in-out infinite}
+.fanous-logo {
+    position: relative;
+    display: grid;
+    width: 3.25rem;
+    height: 3.25rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0;
+    background: transparent !important;
+    background-image: none !important;
+    color: inherit;
+    font-size: 1.25rem;
+    box-shadow: none !important;
+    overflow: visible;
+}
+
+.fanous-logo::after {
+    content: none !important;
+    display: none !important;
+    animation: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.fanous-logo img,
+.fanous-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    background: transparent;
+}
+
 .fanous-status{display:flex;align-items:center;gap:.55rem;margin-top:.9rem;border:1px solid #ecfdf5;border-radius:1rem;background:#f0fdf4;padding:.6rem .75rem;color:#15803d;font-size:.67rem;font-weight:800}
 .fanous-status i{width:.48rem;height:.48rem;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.11);animation:fanous-pulse 2s ease-in-out infinite}
 .app-sidebar nav{padding:0 1rem 1.25rem!important}.app-sidebar nav>p{margin-top:.5rem;color:#94a3b8;letter-spacing:.08em}
@@ -22,7 +53,7 @@ body{background:radial-gradient(circle at 16% 8%,rgba(14,165,233,.07),transparen
 .fanous-notification-count{position:absolute;right:-.3rem;top:-.35rem;display:grid;min-width:1.25rem;height:1.25rem;place-items:center;border:2px solid #fff;border-radius:999px;background:linear-gradient(135deg,#f43f5e,#fb7185);padding:0 .22rem;color:#fff;font-size:.55rem;font-weight:900;box-shadow:0 5px 12px rgba(244,63,94,.28)}
 .fanous-notifications{position:absolute;left:0;top:3.5rem;width:min(23rem,calc(100vw - 2rem));overflow:hidden;border:1px solid rgba(226,232,240,.9);border-radius:1.5rem;background:rgba(255,255,255,.98);box-shadow:0 28px 70px rgba(15,23,42,.17);transform-origin:top left;transition:.2s;backdrop-filter:blur(24px)}.fanous-notifications.hidden{display:block!important;visibility:hidden;opacity:0;transform:translateY(-8px) scale(.97);pointer-events:none}.fanous-notifications:not(.hidden){visibility:visible;opacity:1;transform:none}
 .fanous-notification-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f5f9;padding:1rem}.fanous-notification-item{display:flex;gap:.75rem;padding:.85rem 1rem;transition:.2s}.fanous-notification-item:hover{background:#f8fafc}.fanous-notification-item+.fanous-notification-item{border-top:1px solid #f8fafc}.notification-symbol{display:grid;width:2.5rem;height:2.5rem;flex:0 0 auto;place-items:center;border-radius:.9rem}.notification-symbol.blog{background:#ede9fe;color:#7c3aed}.notification-symbol.news{background:#dbeafe;color:#2563eb}
-.fanous-profile-button{border:1px solid #e2e8f0!important;border-radius:1rem!important;background:#fff!important;box-shadow:0 8px 24px rgba(15,23,42,.045)}.fanous-profile-button:hover{border-color:#bae6fd!important;background:#f8fdff!important}.fanous-avatar{background:linear-gradient(145deg,#2563eb,#06b6d4)!important;box-shadow:0 7px 18px rgba(37,99,235,.2)}
+.fanous-profile-button{border:1px solid #e2e8f0!important;border-radius:1rem!important;background:#fff!important;box-shadow:0 8px 24px rgba(15,23,42,.045)}.fanous-profile-button:hover{border-color:#bae6fd!important;background:#f8fdff!important}
 .fanous-page-head{border-bottom:1px solid rgba(241,245,249,.9)!important;background:rgba(255,255,255,.58)!important;backdrop-filter:blur(16px)}
 .profile-menu{border-color:#e2e8f0!important;border-radius:1.35rem!important;box-shadow:0 25px 65px rgba(15,23,42,.15)!important}
 @keyframes fanous-float{50%{transform:translate3d(18px,12px,0) scale(1.08)}}@keyframes fanous-beacon{50%{transform:scale(1.16);opacity:.05}}@keyframes fanous-pulse{50%{box-shadow:0 0 0 8px rgba(34,197,94,0)}}

@@ -2,6 +2,46 @@
 /* Custom Styles for Django Templates - No @apply directives */
 
 /* Base Button Styles */
+/* ====================== حذف کامل قاب آبی لوگو ====================== */
+.fanous-logo {
+    width: 52px !important;
+    height: 52px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.fanous-logo * {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.fanous-logo-img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+}
+
+/* اگر لوگو در Navbar یا جایی خاص است، این‌ها را هم اضافه کنید */
+.navbar .fanous-logo {
+    background: transparent !important;
+}
+
 .btn-primary {
   background: linear-gradient(to right, #2563eb, #7c3aed);
   color: white;
@@ -881,3 +921,4 @@
 .schedule-times.show {
   display: block;
 }
+
