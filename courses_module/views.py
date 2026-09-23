@@ -1,21 +1,36 @@
+from urllib.parse import unquote
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Avg, Count, Exists, FloatField, OuterRef, Q, Value
 from django.db.models.functions import Coalesce
-from django.http import HttpResponseBadRequest
+from django.http import FileResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views import View
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from auth_module.models import Student, UserRole
 
-from .forms import CourseCreateForm, CourseResourceForm
-from .models import ApprovalStatus, Course, CourseEnrollment, CourseRating, CourseResource
+from .forms import (
+    CourseCreateForm,
+    CourseEpisodeForm,
+    CourseResourceForm,
+    CourseSectionForm,
+)
+from .models import (
+    ApprovalStatus,
+    Course,
+    CourseEnrollment,
+    CourseEpisode,
+    CourseRating,
+    CourseResource,
+    CourseSection,
+)
 
 
 def course_cards(queryset, user):
@@ -34,9 +49,23 @@ class RoleRequiredMixin(LoginRequiredMixin):
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
-        if request.user.role not in self.allowed_roles and not (self.allow_superuser and request.user.is_superuser):
+        user_role = getattr(request.user, "role", None)
+        if user_role not in self.allowed_roles and not (self.allow_superuser and request.user.is_superuser):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
+
+
+def user_can_manage_course(user, course):
+    """بررسی اینکه آیا کاربر دسترسی ویرایش و مدیریت این دوره را دارد یا خیر."""
+    if not user.is_authenticated:
+        return False
+    # ادمین و سوپریوزر دسترسی کامل دارند
+    if user.is_superuser or getattr(user, "role", None) == UserRole.ADMIN:
+        return True
+    # اگر کاربر خود نویسنده دوره باشد
+    if course.author_id == user.id:
+        return True
+    return False
 
 
 class CourseListView(LoginRequiredMixin, ListView):
@@ -51,11 +80,12 @@ class CourseListView(LoginRequiredMixin, ListView):
         published = Q(approval_status=ApprovalStatus.APPROVED, is_active=True, start_date__lte=now) & (
             Q(end_date__isnull=True) | Q(end_date__gte=now)
         )
-        if user.role == UserRole.CONSULTANT:
-            queryset = Course.objects.filter(published | Q(author=user))
-        elif user.role == UserRole.ADMIN or user.is_superuser:
+        user_role = getattr(user, "role", None)
+        if user_role == UserRole.ADMIN or user.is_superuser:
             queryset = Course.objects.all()
-        elif user.role == UserRole.PROVINCE_TRUSTEE:
+        elif user_role == UserRole.CONSULTANT:
+            queryset = Course.objects.filter(published | Q(author=user))
+        elif user_role == UserRole.PROVINCE_TRUSTEE:
             queryset = Course.objects.filter(published)
         else:
             queryset = Course.objects.filter(published)
@@ -75,7 +105,8 @@ class MyCoursesView(RoleRequiredMixin, ListView):
     context_object_name = "courses"
 
     def get_queryset(self):
-        if self.request.user.role == UserRole.ADMIN or self.request.user.is_superuser:
+        user_role = getattr(self.request.user, "role", None)
+        if user_role == UserRole.ADMIN or self.request.user.is_superuser:
             return Course.objects.all().select_related("author").prefetch_related(
                 "subjects", "allowed_grades", "allowed_fields", "allowed_provinces", "sections", "resources"
             ).annotate(
@@ -83,8 +114,9 @@ class MyCoursesView(RoleRequiredMixin, ListView):
                 admin_resource_count=Count("resources", distinct=True),
                 admin_section_count=Count("sections", distinct=True),
             )
-        if self.request.user.role == UserRole.PROVINCE_TRUSTEE:
-            return Course.objects.filter(approval_status=ApprovalStatus.PENDING).select_related("author").prefetch_related(
+        if user_role == UserRole.PROVINCE_TRUSTEE:
+            return Course.objects.filter(approval_status=ApprovalStatus.PENDING).select_related(
+                "author").prefetch_related(
                 "subjects", "allowed_grades", "allowed_fields"
             )
         queryset = Course.published.filter(enrollments__student=self.request.user).distinct()
@@ -92,12 +124,15 @@ class MyCoursesView(RoleRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["is_trustee_queue"] = self.request.user.role == UserRole.PROVINCE_TRUSTEE
-        context["is_admin_catalog"] = self.request.user.role == UserRole.ADMIN or self.request.user.is_superuser
+        user_role = getattr(self.request.user, "role", None)
+        context["is_trustee_queue"] = user_role == UserRole.PROVINCE_TRUSTEE
+        context["is_admin_catalog"] = user_role == UserRole.ADMIN or self.request.user.is_superuser
         if context["is_admin_catalog"]:
             context["admin_total_courses"] = self.get_queryset().count()
-            context["admin_published_courses"] = self.get_queryset().filter(approval_status=ApprovalStatus.APPROVED, is_active=True).count()
-            context["admin_pending_courses"] = self.get_queryset().filter(approval_status=ApprovalStatus.PENDING).count()
+            context["admin_published_courses"] = self.get_queryset().filter(approval_status=ApprovalStatus.APPROVED,
+                                                                            is_active=True).count()
+            context["admin_pending_courses"] = self.get_queryset().filter(
+                approval_status=ApprovalStatus.PENDING).count()
         return context
 
 
@@ -108,50 +143,42 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
     slug_field = "slug"
     slug_url_kwarg = "slug"
 
+    def get_object(self, queryset=None):
+        slug = unquote(self.kwargs.get(self.slug_url_kwarg))
+        if queryset is None:
+            queryset = self.get_queryset()
+        return get_object_or_404(queryset, slug=slug)
+
     def get_queryset(self):
         user = self.request.user
-        if user.is_superuser or user.role in (UserRole.PROVINCE_TRUSTEE, UserRole.ADMIN):
+        user_role = getattr(user, "role", None)
+        if user.is_superuser or user_role in (UserRole.PROVINCE_TRUSTEE, UserRole.ADMIN):
             return Course.objects.all()
-        if user.role == UserRole.CONSULTANT:
+        if user_role == UserRole.CONSULTANT:
             return Course.objects.filter(Q(author=user) | Q(pk__in=Course.published.all()))
         return Course.published.all()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
-        context["sections"] = self.object.sections.prefetch_related("episodes").all()
-        context["rating_average"] = self.object.average_rating
-        context["rating_count"] = self.object.ratings.count()
-        context["is_enrolled"] = self.object.enrollments.filter(student=user).exists()
-        rating = self.object.ratings.filter(student=user).first()
+        course = self.object
+
+        can_manage = user_can_manage_course(user, course)
+        sections_qs = course.sections.all()
+        if not can_manage:
+            sections_qs = sections_qs.filter(is_active=True)
+
+        context["sections"] = sections_qs.prefetch_related("episodes").order_by("order", "id")
+        context["rating_average"] = course.average_rating
+        context["rating_count"] = course.ratings.count()
+        context["is_enrolled"] = course.enrollments.filter(student=user).exists()
+        rating = course.ratings.filter(student=user).first()
         context["user_rating"] = rating.value if rating else 0
-        context["resources"] = self.object.resources.filter(is_active=True)
+        context["resources"] = course.resources.filter(is_active=True).order_by("order", "id")
+
+        context["can_manage"] = can_manage
+        context["can_delete"] = can_manage
         return context
-
-
-class CourseResourceCreateView(RoleRequiredMixin, CreateView):
-    allowed_roles = (UserRole.ADMIN,)
-    allow_superuser = True
-    model = CourseResource
-    form_class = CourseResourceForm
-    template_name = "courses_module/resource_form.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        self.course = get_object_or_404(Course, pk=kwargs["course_pk"])
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        form.instance.course = self.course
-        messages.success(self.request, "محتوای دوره با موفقیت اضافه شد.")
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["course"] = self.course
-        return context
-
-    def get_success_url(self):
-        return reverse_lazy("courses_module:course_detail", kwargs={"slug": self.course.slug})
 
 
 class CourseCreateView(RoleRequiredMixin, CreateView):
@@ -160,7 +187,6 @@ class CourseCreateView(RoleRequiredMixin, CreateView):
     model = Course
     form_class = CourseCreateForm
     template_name = "courses_module/course_form.html"
-    success_url = reverse_lazy("courses_module:course_list")
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -169,8 +195,17 @@ class CourseCreateView(RoleRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.approval_status = ApprovalStatus.APPROVED if self.request.user.role == UserRole.ADMIN or self.request.user.is_superuser else ApprovalStatus.PENDING
-        form.instance.is_active = True
+        is_admin_or_super = self.request.user.is_superuser or getattr(self.request.user, "role", None) == UserRole.ADMIN
+
+        # اگر ادمین یا سوپریوزر بود مستقیماً تایید و فعال شود
+        if is_admin_or_super:
+            form.instance.approval_status = ApprovalStatus.APPROVED
+            form.instance.is_active = True
+            if not form.instance.start_date:
+                form.instance.start_date = timezone.now()
+        else:
+            form.instance.approval_status = ApprovalStatus.PENDING
+
         base_slug = slugify(form.cleaned_data["title"], allow_unicode=True) or "course"
         slug = base_slug
         counter = 2
@@ -178,19 +213,25 @@ class CourseCreateView(RoleRequiredMixin, CreateView):
             slug = f"{base_slug}-{counter}"
             counter += 1
         form.instance.slug = slug
+
         response = super().form_valid(form)
-        subjects = form.cleaned_data["subjects"]
-        self.object.topic = "، ".join(subjects.values_list("title", flat=True))[:255]
-        self.object.save(update_fields=["topic"])
-        if self.request.user.role == UserRole.ADMIN or self.request.user.is_superuser:
-            messages.success(self.request, "دوره با موفقیت ایجاد و مستقیماً منتشر شد.")
+        subjects = form.cleaned_data.get("subjects")
+        if subjects:
+            self.object.topic = "، ".join(subjects.values_list("title", flat=True))[:255]
+            self.object.save(update_fields=["topic"])
+
+        if is_admin_or_super:
+            messages.success(self.request, "دوره با موفقیت ایجاد و مستقیماً تایید و منتشر شد.")
         else:
             messages.success(self.request, "درخواست ساخت دوره ثبت شد و برای تأیید به معتمد استان ارسال گردید.")
         return response
 
+    def get_success_url(self):
+        # پس از ساخت، مستقیماً وارد صفحه خود دوره شویم تا بتوان سرفصل‌ها را اضافه کرد
+        return reverse_lazy("courses_module:course_detail", kwargs={"slug": self.object.slug})
+
 
 class CourseUpdateView(RoleRequiredMixin, UpdateView):
-    """Edit a course according to the role-specific ownership rules."""
     allowed_roles = (UserRole.CONSULTANT, UserRole.PROVINCE_TRUSTEE, UserRole.ADMIN)
     allow_superuser = True
     model = Course
@@ -199,11 +240,12 @@ class CourseUpdateView(RoleRequiredMixin, UpdateView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_superuser or user.role == UserRole.ADMIN:
+        user_role = getattr(user, "role", None)
+        if user.is_superuser or user_role == UserRole.ADMIN:
             return Course.objects.all()
-        if user.role == UserRole.CONSULTANT:
+        if user_role == UserRole.CONSULTANT:
             return Course.objects.filter(author=user)
-        if user.role == UserRole.PROVINCE_TRUSTEE:
+        if user_role == UserRole.PROVINCE_TRUSTEE:
             return Course.objects.all()
         return Course.objects.none()
 
@@ -216,13 +258,14 @@ class CourseUpdateView(RoleRequiredMixin, UpdateView):
         return reverse_lazy("courses_module:course_detail", kwargs={"slug": self.object.slug})
 
     def form_valid(self, form):
-        # Any edit after review must return to the trustee queue.
-        if self.request.user.role == UserRole.CONSULTANT and self.object.approval_status != ApprovalStatus.PENDING:
+        user_role = getattr(self.request.user, "role", None)
+        if user_role == UserRole.CONSULTANT and self.object.approval_status != ApprovalStatus.PENDING:
             form.instance.approval_status = ApprovalStatus.PENDING
             form.instance.reviewed_by = None
             form.instance.reviewed_at = None
-        elif self.request.user.role == UserRole.ADMIN or self.request.user.is_superuser:
+        elif user_role == UserRole.ADMIN or self.request.user.is_superuser:
             form.instance.approval_status = ApprovalStatus.APPROVED
+
         response = super().form_valid(form)
         subjects = form.cleaned_data.get("subjects")
         if subjects is not None:
@@ -232,31 +275,55 @@ class CourseUpdateView(RoleRequiredMixin, UpdateView):
         return response
 
 
+class CourseDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        course = get_object_or_404(Course, pk=pk)
+        if not user_can_manage_course(request.user, course):
+            raise PermissionDenied
+        title = course.title
+        course.delete()
+        messages.success(request, f"دوره «{title}» با موفقیت حذف شد.")
+        return redirect("courses_module:course_list")
+
+
 class EnrollCourseView(RoleRequiredMixin, View):
-    allowed_roles = (UserRole.STUDENT,)
+    allowed_roles = (UserRole.STUDENT, UserRole.ADMIN)
+    allow_superuser = True
 
     def post(self, request, slug):
+        decoded_slug = unquote(slug)
+        is_admin_or_super = request.user.is_superuser or getattr(request.user, "role", None) == UserRole.ADMIN
+
         with transaction.atomic():
-            course = get_object_or_404(Course.published.select_for_update(), slug=slug)
+            if is_admin_or_super:
+                course = get_object_or_404(Course.objects.select_for_update(), slug=decoded_slug)
+            else:
+                course = get_object_or_404(Course.published.select_for_update(), slug=decoded_slug)
+
             if CourseEnrollment.objects.filter(course=course, student=request.user).exists():
                 messages.info(request, "این دوره از قبل در دوره‌های من قرار دارد.")
-                return redirect("courses_module:course_detail", slug=slug)
-            if course.capacity is not None and course.enrollments.count() >= course.capacity:
+                return redirect("courses_module:course_detail", slug=course.slug)
+
+            if not is_admin_or_super and course.capacity is not None and course.enrollments.count() >= course.capacity:
                 messages.error(request, "ظرفیت این دوره تکمیل شده است.")
-                return redirect("courses_module:course_detail", slug=slug)
+                return redirect("courses_module:course_detail", slug=course.slug)
+
             CourseEnrollment.objects.create(course=course, student=request.user)
+
         messages.success(request, "دوره با موفقیت به «دوره‌های من» اضافه شد.")
-        return redirect("courses_module:my_courses")
+        return redirect("courses_module:course_detail", slug=course.slug)
 
 
 class RateCourseView(RoleRequiredMixin, View):
-    allowed_roles = (UserRole.STUDENT,)
+    allowed_roles = (UserRole.STUDENT, UserRole.ADMIN)
+    allow_superuser = True
 
     def post(self, request, slug):
-        course = get_object_or_404(Course.published.all(), slug=slug)
+        decoded_slug = unquote(slug)
+        course = get_object_or_404(Course.objects.all(), slug=decoded_slug)
         if not CourseEnrollment.objects.filter(course=course, student=request.user).exists():
             messages.error(request, "برای امتیاز دادن ابتدا در دوره شرکت کنید.")
-            return redirect("courses_module:course_detail", slug=slug)
+            return redirect("courses_module:course_detail", slug=course.slug)
         try:
             value = int(request.POST.get("rating", ""))
         except (TypeError, ValueError):
@@ -265,7 +332,7 @@ class RateCourseView(RoleRequiredMixin, View):
             return HttpResponseBadRequest("امتیاز باید بین ۱ تا ۵ باشد.")
         CourseRating.objects.update_or_create(course=course, student=request.user, defaults={"value": value})
         messages.success(request, "امتیاز شما ثبت شد.")
-        return redirect("courses_module:course_detail", slug=slug)
+        return redirect("courses_module:course_detail", slug=course.slug)
 
 
 class CourseReviewListView(RoleRequiredMixin, ListView):
@@ -311,9 +378,11 @@ class AdminCourseCloseView(RoleRequiredMixin, View):
 
     def post(self, request, pk):
         course = get_object_or_404(Course, pk=pk)
-        course.is_active = False
+        # تاگل کردن وضعیت فعال/غیرفعال بودن
+        course.is_active = not course.is_active
         course.save(update_fields=["is_active", "updated_at"])
-        messages.success(request, "دوره بسته شد و دیگر برای دانش‌آموزان نمایش داده نمی‌شود.")
+        status_msg = "فعال و بازگشایی شد." if course.is_active else "بسته شد و از دید دانش‌آموزان خارج گردید."
+        messages.success(request, f"دوره با موفقیت {status_msg}")
         return redirect("courses_module:course_detail", slug=course.slug)
 
 
@@ -327,3 +396,185 @@ class AdminCourseDeleteView(RoleRequiredMixin, View):
         course.delete()
         messages.success(request, f"دوره «{title}» حذف شد.")
         return redirect("courses_module:course_list")
+
+
+# ==============================================================================
+# مدیریت سرفصل‌ها و جلسات (CourseSection & Episode & Resource)
+# ==============================================================================
+
+class CourseResourceCreateView(RoleRequiredMixin, CreateView):
+    allowed_roles = (UserRole.ADMIN, UserRole.CONSULTANT)
+    allow_superuser = True
+    model = CourseResource
+    form_class = CourseResourceForm
+    template_name = "courses_module/resource_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.course = get_object_or_404(Course, pk=kwargs["course_pk"])
+        if not user_can_manage_course(request.user, self.course):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.course = self.course
+        messages.success(self.request, "محتوای دوره با موفقیت اضافه شد.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["course"] = self.course
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("courses_module:course_detail", kwargs={"slug": self.course.slug})
+
+
+class SectionCreateView(LoginRequiredMixin, CreateView):
+    model = CourseSection
+    form_class = CourseSectionForm
+    template_name = "courses_module/section_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.course = get_object_or_404(Course, pk=kwargs["course_pk"])
+        if not user_can_manage_course(request.user, self.course):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.course = self.course
+        messages.success(self.request, "سرفصل جدید با موفقیت ایجاد شد.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["course"] = self.course
+        return context
+
+    def get_success_url(self):
+        return reverse("courses_module:course_detail", kwargs={"slug": self.course.slug})
+
+
+class SectionUpdateView(LoginRequiredMixin, UpdateView):
+    model = CourseSection
+    form_class = CourseSectionForm
+    template_name = "courses_module/section_form.html"
+    pk_url_kwarg = "pk"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.section = self.get_object()
+        if not user_can_manage_course(request.user, self.section.course):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["course"] = self.section.course
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, "سرفصل با موفقیت ویرایش شد.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("courses_module:course_detail", kwargs={"slug": self.object.course.slug})
+
+
+class SectionDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        section = get_object_or_404(CourseSection, pk=pk)
+        course = section.course
+        if not user_can_manage_course(request.user, course):
+            raise PermissionDenied
+        title = section.title
+        section.delete()
+        messages.success(request, f"سرفصل «{title}» حذف شد.")
+        return redirect("courses_module:course_detail", slug=course.slug)
+
+
+class EpisodeCreateView(LoginRequiredMixin, CreateView):
+    model = CourseEpisode
+    form_class = CourseEpisodeForm
+    template_name = "courses_module/episode_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.section = get_object_or_404(CourseSection.objects.select_related("course"), pk=kwargs["section_pk"])
+        if not user_can_manage_course(request.user, self.section.course):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.section = self.section
+        messages.success(self.request, "محتوا / جلسه جدید با موفقیت افزوده شد.")
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["section"] = self.section
+        context["course"] = self.section.course
+        return context
+
+    def get_success_url(self):
+        return reverse("courses_module:course_detail", kwargs={"slug": self.section.course.slug})
+
+
+class EpisodeUpdateView(LoginRequiredMixin, UpdateView):
+    model = CourseEpisode
+    form_class = CourseEpisodeForm
+    template_name = "courses_module/episode_form.html"
+    pk_url_kwarg = "pk"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.episode = self.get_object()
+        if not user_can_manage_course(request.user, self.episode.section.course):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["section"] = self.episode.section
+        context["course"] = self.episode.section.course
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, "محتوای جلسه بروزرسانی شد.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("courses_module:course_detail", kwargs={"slug": self.object.section.course.slug})
+
+
+class EpisodeDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        episode = get_object_or_404(CourseEpisode.objects.select_related("section__course"), pk=pk)
+        course = episode.section.course
+        if not user_can_manage_course(request.user, course):
+            raise PermissionDenied
+        title = episode.title
+        episode.delete()
+        messages.success(request, f"جلسه «{title}» با موفقیت حذف شد.")
+        return redirect("courses_module:course_detail", slug=course.slug)
+
+
+class EpisodeDownloadView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        episode = get_object_or_404(CourseEpisode.objects.select_related("section__course"), pk=pk)
+        course = episode.section.course
+
+        is_enrolled = course.enrollments.filter(student=request.user).exists()
+        can_manage = user_can_manage_course(request.user, course)
+
+        if not (is_enrolled or can_manage):
+            messages.error(request, "برای دانلود فایل ابتدا باید در این دوره ثبت‌نام کنید.")
+            return redirect("courses_module:course_detail", slug=course.slug)
+
+        if getattr(episode, "file", None) and episode.file:
+            try:
+                return FileResponse(episode.file.open("rb"), as_attachment=True,
+                                    filename=episode.file.name.split("/")[-1])
+            except FileNotFoundError:
+                raise Http404("فایل مورد نظر یافت نشد.")
+
+        if getattr(episode, "url", None) and episode.url:
+            return redirect(episode.url)
+
+        raise Http404("هیچ فایلی برای این جلسه موجود نیست.")
