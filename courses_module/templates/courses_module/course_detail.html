@@ -11,7 +11,7 @@
 <div class="space-y-6">
     {% if user == course.author and course.approval_status == 'REJECTED' %}
         <div class="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-xs leading-6 text-rose-800">
-            <i class="fa-solid fa-circle-xmark ml-2"></i><b>این دوره توسط معتمد استان رد شده است.</b>
+            <i class="fa-solid fa-circle-xmark ml-2"></i><b>این دوره توسط مسئول منطقه رد شده است.</b>
             <span class="mr-1">دلیل: {{ course.rejection_reason|default:'دلیلی ثبت نشده است.' }}</span>
         </div>
     {% endif %}

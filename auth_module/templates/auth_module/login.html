@@ -6,7 +6,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>ورود | سفینه</title>
+    <title>ورود | فانوس</title>
+    <link rel="icon" type="image/png" href="{% static 'images/fanous-logo.png' %}">
 
     <script src="{% static 'tailwind/tailwind.js' %}"></script>
 
@@ -56,6 +57,10 @@
             linear-gradient(135deg, #172554 0%, #1d4ed8 100%);
             background-size: 28px 28px, 34px 34px, auto;
         }
+
+        .login-brand-logo {
+            filter: drop-shadow(0 12px 24px rgba(15, 23, 42, .18));
+        }
     </style>
 </head>
 
@@ -74,12 +79,12 @@
 
             <div class="relative z-10">
                 <div class="mb-8 flex items-center gap-3">
-                    <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-                        <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                    <div class="flex h-16 w-16 items-center justify-center rounded-[1.35rem] bg-white p-1.5 shadow-xl shadow-blue-950/20">
+                        <img class="login-brand-logo h-full w-full rounded-2xl object-contain" src="{% static 'images/fanous-logo.png' %}" alt="لوگوی فانوس">
                     </div>
 
                     <div>
-                        <h1 class="text-2xl font-black">سفینه</h1>
+                        <h1 class="text-2xl font-black">فانوس</h1>
                         <p class="mt-1 text-sm text-blue-100">
                             سامانه مشاوره تحصیلی
                         </p>
@@ -95,7 +100,7 @@
                 </h2>
 
                 <p class="mt-5 max-w-md text-sm leading-8 text-blue-100">
-                    در سامانه سفینه می‌توانی با مشاوران و پشتیبانان در ارتباط باشی،
+                    در سامانه فانوس می‌توانی با مشاوران و پشتیبانان در ارتباط باشی،
                     تیکت ثبت کنی و به محتوای آموزشی متناسب با شرایط خودت دسترسی داشته باشی.
                 </p>
             </div>
@@ -124,8 +129,7 @@
             <div class="w-full max-w-md">
 
                 <div class="mb-8 text-center lg:text-right">
-                    <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 lg:mx-0">
-                        <i class="fa-solid fa-right-to-bracket text-2xl"></i>
+                    <div class="mx-auto mb-5 flex h-0 w-0 items-center justify-center rounded-[1.35rem] border border-blue-100 bg-white p-1.5 shadow-lg shadow-blue-100/70 lg:mx-0">
                     </div>
 
                     <h2 class="text-2xl font-black text-slate-800">

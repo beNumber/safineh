@@ -35,12 +35,12 @@ class FanousDashboardTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def test_dashboard_shows_role_greeting_and_new_content_notifications(self):
+    def test_dashboard_shows_time_greeting_without_role_card(self):
         response = self.client.get(reverse("dashboard"))
-        self.assertContains(response, "دانش‌آموز پرتلاش فانوس")
-        self.assertContains(response, self.post.title)
-        self.assertContains(response, self.article.title)
-        self.assertContains(response, 'id="notification-count"')
+        self.assertContains(response, "سلام،")
+        self.assertContains(response, "جان؛")
+        self.assertNotContains(response, "جایگاه شما در فانوس")
+        self.assertNotContains(response, 'placeholder="جستجو..."')
 
     def test_marking_notifications_read_clears_new_content_badge(self):
         response = self.client.post(reverse("notifications_read"))

@@ -4,6 +4,7 @@
 {% block title %}داشبورد | فانوس{% endblock %}
 {% block page_title %}داشبورد فانوس{% endblock %}
 {% block breadcrumb %}نمای کلی امروز{% endblock %}
+{% block header_search %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'dashboard_module/fanous-dashboard.css' %}">
@@ -26,34 +27,11 @@
         </span>
 
         <h1>
-          سلام {{ user.first_name|default:user.username }} جان؛
+          سلام، {{ fanous_day_greeting }} {{ user.first_name|default:user.username }} جان؛
           <span>به فانوس خوش آمدی</span>
         </h1>
 
         <p>{{ fanous_role_message }}</p>
-      </div>
-
-      <div class="dash-role-card">
-        <span class="dash-role-icon">
-          <i class="fa-solid
-            {% if user.role == 'STUDENT' %}
-              fa-graduation-cap
-            {% elif user.role == 'CONSULTANT' %}
-              fa-compass
-            {% elif user.role == 'PROVINCE_TRUSTEE' %}
-              fa-map-location-dot
-            {% elif user.role == 'ADMIN' or user.is_superuser %}
-              fa-gears
-            {% else %}
-              fa-shield-halved
-            {% endif %}
-          "></i>
-        </span>
-
-        <div>
-          <small>جایگاه شما در فانوس</small>
-          <strong>{{ fanous_role_title }}</strong>
-        </div>
       </div>
     </div>
   </section>

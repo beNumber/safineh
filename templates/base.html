@@ -522,6 +522,7 @@
                 <!-- Left Side -->
                 <div class="flex items-center gap-2 sm:gap-4">
 
+                    {% block header_search %}
                     <!-- Search -->
                     <div class="fanous-search hidden items-center rounded-xl px-3 py-2 md:flex">
                         <i class="fa-solid fa-magnifying-glass text-sm text-slate-400"></i>
@@ -530,6 +531,7 @@
                                 placeholder="جستجو..."
                                 class="mr-2 w-32 border-0 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48">
                     </div>
+                    {% endblock %}
 
                     <!-- Date -->
                     <div class="hidden items-center gap-2 text-xs font-medium text-slate-400 xl:flex">
@@ -573,7 +575,7 @@
                                 aria-controls="profile-menu">
 
                             <div class="fanous-avatar">
-                                <i class="fa-solid {% if user.is_superuser or user.role == 'ADMIN' %}fa-crown{% elif user.role == 'CONSULTANT' %}fa-user-tie{% elif user.role == 'PROVINCE_TRUSTEE' %}fa-shield-halved{% elif user.role == 'CONTENT_MODERATOR' %}fa-pen-ruler{% else %}fa-graduation-cap{% endif %}"></i>
+                                <img src="{% static 'images/fanous-logo.png' %}" alt="لوگوی پروفایل {{ fanous_role_title }}">
                                 <span class="fanous-online-dot"></span>
                             </div>
 
@@ -601,7 +603,7 @@
                                 class="profile-menu hidden absolute left-0 top-16 w-72 overflow-hidden">
 
                             <div class="fanous-profile-cover">
-                                <div class="fanous-profile-menu-avatar"><i class="fa-solid {% if user.is_superuser or user.role == 'ADMIN' %}fa-crown{% elif user.role == 'CONSULTANT' %}fa-user-tie{% elif user.role == 'PROVINCE_TRUSTEE' %}fa-shield-halved{% elif user.role == 'CONTENT_MODERATOR' %}fa-pen-ruler{% else %}fa-graduation-cap{% endif %}"></i></div>
+                                <div class="fanous-profile-menu-avatar"><img src="{% static 'images/fanous-logo.png' %}" alt="لوگوی پروفایل {{ fanous_role_title }}"></div>
                                 <span class="fanous-profile-role-badge">{{ fanous_role_title }}</span>
                             </div>
                             <div class="px-4 pb-3 pt-4">

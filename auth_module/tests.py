@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import AnonymousUser
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
@@ -49,3 +51,45 @@ class LogoutTests(TestCase):
 
         self.assertRedirects(response, reverse("auth_module:login"))
         self.assertNotIn("_auth_user_id", self.client.session)
+
+
+class UserBulkDeleteTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username="admin-user",
+            password="pass12345",
+            role=UserRole.ADMIN,
+            is_staff=True,
+        )
+        self.target = User.objects.create_user(
+            username="delete-me",
+            password="pass12345",
+        )
+        self.superuser = User.objects.create_superuser(
+            username="protected-root",
+            password="pass12345",
+        )
+        self.client.force_login(self.admin)
+
+    def test_admin_can_delete_selected_user(self):
+        with patch("django.db.models.query.QuerySet.delete") as delete:
+            response = self.client.post(
+                reverse("auth_module:user-bulk"),
+                {"action": "delete", "scope": "selected", "user_ids": [self.target.pk]},
+            )
+
+        self.assertRedirects(response, reverse("auth_module:user-management"))
+        delete.assert_called_once()
+
+    def test_admin_cannot_delete_self_or_superuser(self):
+        self.client.post(
+            reverse("auth_module:user-bulk"),
+            {
+                "action": "delete",
+                "scope": "selected",
+                "user_ids": [self.admin.pk, self.superuser.pk],
+            },
+        )
+
+        self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+        self.assertTrue(User.objects.filter(pk=self.superuser.pk).exists())

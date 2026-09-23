@@ -185,7 +185,7 @@ class CourseCreateView(RoleRequiredMixin, CreateView):
         if self.request.user.role == UserRole.ADMIN or self.request.user.is_superuser:
             messages.success(self.request, "دوره با موفقیت ایجاد و مستقیماً منتشر شد.")
         else:
-            messages.success(self.request, "درخواست ساخت دوره ثبت شد و برای تأیید به معتمد استان ارسال گردید.")
+            messages.success(self.request, "درخواست ساخت دوره ثبت شد و برای تأیید به مسئول منطقه ارسال گردید.")
         return response
 
 

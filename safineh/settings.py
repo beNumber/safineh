@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
  
 
     # CKEditor
@@ -52,6 +51,8 @@ INSTALLED_APPS = [
     "plans_module",
     "counseling_module",
     "reports_module",
+    'classroom_module'
+
 ]
 
 

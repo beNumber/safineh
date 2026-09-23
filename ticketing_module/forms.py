@@ -118,7 +118,7 @@ class ReferralForm(forms.Form):
             eligible, is_active=True
         ).distinct()
         if actor and actor.role == UserRole.CONSULTANT:
-            self.fields["queue"].choices = [(TicketQueue.TRUSTEE, "معتمد استان")]
+            self.fields["queue"].choices = [(TicketQueue.TRUSTEE, "مسئول منطقه")]
 
     def clean(self):
         cleaned = super().clean()
