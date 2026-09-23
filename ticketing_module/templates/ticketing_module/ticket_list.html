@@ -1,58 +1,245 @@
 {% extends "base.html" %}
 {% load shamsi %}
 
-{% block title %}تیکت‌ها{% endblock %}
-{% block page_title %}تیکت‌ها و پرسش‌ها{% endblock %}
+{% block title %}فهرست تیکت‌ها و پرسش‌ها{% endblock %}
+{% block page_title %}میز خدمت و تیکت‌ها{% endblock %}
 {% block breadcrumb %}تیکت‌ها{% endblock %}
 
 {% block page_actions %}
     {% if user.role == "STUDENT" %}
-        <a href="{% url 'ticketing:create' %}" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
-            <i class="fa-solid fa-plus ml-1"></i> ثبت تیکت
+        <a href="{% url 'ticketing:create' %}" class="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-2.5 text-xs font-black text-white shadow-sm hover:bg-blue-700 hover:shadow-md transition">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>ثبت تیکت جدید</span>
         </a>
     {% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="space-y-5">
-    <form method="get" class="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-card sm:grid-cols-3">
-        <select name="status" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
-            <option value="">همه وضعیت‌ها</option>
-            {% for value, label in status_choices %}
-                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        <select name="type" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
-            <option value="">همه موضوع‌ها</option>
-            <option value="LESSON" {% if selected_type == "LESSON" %}selected{% endif %}>درسی</option>
-            <option value="TECHNICAL" {% if selected_type == "TECHNICAL" %}selected{% endif %}>فنی</option>
-            <option value="PSYCHOLOGY" {% if selected_type == "PSYCHOLOGY" %}selected{% endif %}>روانشناسی</option>
-        </select>
-        <button class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700">اعمال فیلتر</button>
-    </form>
+<div class="space-y-6">
 
-    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
+    <!-- نوار فیلتر و جستجو -->
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <form method="get" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 items-center">
+
+            <!-- فیلتر وضعیت -->
+            <div class="relative">
+                <label class="block text-[11px] font-bold text-slate-500 mb-1.5 mr-1">وضعیت تیکت</label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-slate-400">
+                        <i class="fa-solid fa-traffic-light text-xs"></i>
+                    </span>
+                    <select name="status" class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pr-9 pl-4 text-xs font-bold text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-none transition">
+                        <option value="">همه وضعیت‌ها</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- فیلتر موضوع -->
+            <div class="relative">
+                <label class="block text-[11px] font-bold text-slate-500 mb-1.5 mr-1">نوع پرسش</label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-slate-400">
+                        <i class="fa-solid fa-shapes text-xs"></i>
+                    </span>
+                    <select name="type" class="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pr-9 pl-4 text-xs font-bold text-slate-700 focus:border-blue-500 focus:bg-white focus:outline-none transition">
+                        <option value="">همه موضوع‌ها</option>
+                        <option value="LESSON" {% if selected_type == "LESSON" %}selected{% endif %}>درسی و آموزشی</option>
+                        <option value="TECHNICAL" {% if selected_type == "TECHNICAL" %}selected{% endif %}>پشتیبانی فنی</option>
+                        <option value="PSYCHOLOGY" {% if selected_type == "PSYCHOLOGY" %}selected{% endif %}>مشاوره تحصیلی و روانشناسی</option>
+                    </select>
+                    <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                    </span>
+                </div>
+            </div>
+
+            <!-- دکمه‌های عملیاتی فیلتر -->
+            <div class="sm:col-span-2 lg:col-span-2 flex items-end gap-2 pt-1 lg:pt-0">
+                <button type="submit" class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 shadow-sm transition">
+                    <i class="fa-solid fa-filter text-xs"></i>
+                    <span>اعمال فیلتر</span>
+                </button>
+                {% if selected_status or selected_type %}
+                    <a href="{% url 'ticketing:list' %}" class="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-200 transition" title="پاک‌کردن فیلترها">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="hidden md:inline">ریست</span>
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- جدول داده در دسکتاپ -->
+    <div class="hidden md:block overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm">
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[760px] text-right text-sm">
-                <thead class="bg-slate-50 text-xs text-slate-500">
-                    <tr><th class="p-4">شماره و عنوان</th><th class="p-4">دانش‌آموز</th><th class="p-4">موضوع</th><th class="p-4">مقصد فعلی</th><th class="p-4">وضعیت</th><th class="p-4">آخرین تغییر</th></tr>
+            <table class="w-full text-right text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 bg-slate-50/75 text-slate-400 font-bold">
+                        <th class="py-4 px-5">شماره و عنوان پرسش</th>
+                        <th class="py-4 px-5">دانش‌آموز</th>
+                        <th class="py-4 px-5">دسته‌بندی</th>
+                        <th class="py-4 px-5">صف / مسئول فعلی</th>
+                        <th class="py-4 px-5">وضعیت</th>
+                        <th class="py-4 px-5">آخرین بروزرسانی</th>
+                        <th class="py-4 px-5 text-center">عملیات</th>
+                    </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody class="divide-y divide-slate-100 font-medium">
                     {% for ticket in tickets %}
-                    <tr class="transition hover:bg-blue-50/40">
-                        <td class="p-4"><a class="font-bold text-blue-700 hover:underline" href="{% url 'ticketing:detail' ticket.pk %}">#{{ ticket.pk }} — {{ ticket.title }}</a>{% if ticket.is_private_consultation %}<span class="mr-2 rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black text-emerald-600"><i class="fa-solid fa-lock ml-1"></i> خصوصی</span>{% endif %}</td>
-                        <td class="p-4 text-slate-600">{{ ticket.student.user.get_full_name|default:ticket.student.user.username }}</td>
-                        <td class="p-4">{{ ticket.get_ticket_type_display }}{% if ticket.subject %} / {{ ticket.subject }}{% endif %}</td>
-                        <td class="p-4">{{ ticket.get_current_queue_display }}{% if ticket.current_assignee_user %}<span class="block text-xs text-slate-400">{{ ticket.current_assignee_user }}</span>{% endif %}</td>
-                        <td class="p-4"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{{ ticket.get_status_display }}</span></td>
-                        <td class="p-4 text-xs text-slate-400">{{ ticket.updated_at|shamsi:"%Y/%m/%d - %H:%M" }}</td>
+                    <tr class="transition-colors hover:bg-slate-50/70 group">
+
+                        <!-- کد و عنوان -->
+                        <td class="py-4 px-5">
+                            <div class="flex items-center gap-2.5">
+                                <span class="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-600 font-mono">
+                                    #{{ ticket.pk }}
+                                </span>
+                                <div>
+                                    <a class="font-black text-slate-800 hover:text-blue-600 transition block text-[13px]" href="{% url 'ticketing:detail' ticket.pk %}">
+                                        {{ ticket.title }}
+                                    </a>
+                                    {% if ticket.is_private_consultation %}
+                                        <span class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 mt-0.5">
+                                            <i class="fa-solid fa-lock text-[9px]"></i> مشاوره خصوصی
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- نام دانش‌آموز -->
+                        <td class="py-4 px-5">
+                            <div class="flex items-center gap-2">
+                                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 font-bold text-slate-600 text-[10px]">
+                                    {{ ticket.student.user.get_full_name|slice:":1"|default:ticket.student.user.username|slice:":1" }}
+                                </div>
+                                <span class="font-bold text-slate-700">{{ ticket.student.user.get_full_name|default:ticket.student.user.username }}</span>
+                            </div>
+                        </td>
+
+                        <!-- دسته‌بندی و موضوع -->
+                        <td class="py-4 px-5">
+                            <div class="space-y-1">
+                                <span class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold
+                                    {% if ticket.ticket_type == 'LESSON' %}bg-blue-50 text-blue-700 border border-blue-100
+                                    {% elif ticket.ticket_type == 'PSYCHOLOGY' %}bg-purple-50 text-purple-700 border border-purple-100
+                                    {% else %}bg-amber-50 text-amber-700 border border-amber-100{% endif %}">
+                                    {{ ticket.get_ticket_type_display }}
+                                </span>
+                                {% if ticket.subject %}
+                                    <span class="block text-[11px] font-medium text-slate-500">
+                                        {{ ticket.subject }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- صف فعلی و کارشناس -->
+                        <td class="py-4 px-5">
+                            <div class="text-slate-700 font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-inbox text-[10px] text-slate-400"></i>
+                                {{ ticket.get_current_queue_display }}
+                            </div>
+                            {% if ticket.current_assignee_user %}
+                                <span class="block text-[11px] text-slate-400 font-normal mt-0.5">
+                                    {{ ticket.current_assignee_user.get_full_name|default:ticket.current_assignee_user.username }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- وضعیت تیکت با نشانگر دایره‌ای -->
+                        <td class="py-4 px-5">
+                            <span class="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-black
+                                {% if ticket.status == 'OPEN' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-50 text-blue-700 border border-blue-200
+                                {% elif ticket.status == 'RESOLVED' %}bg-purple-50 text-purple-700 border border-purple-200
+                                {% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+                                <span class="h-1.5 w-1.5 rounded-full
+                                    {% if ticket.status == 'OPEN' %}bg-emerald-500
+                                    {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-500
+                                    {% elif ticket.status == 'RESOLVED' %}bg-purple-500
+                                    {% else %}bg-slate-400{% endif %}">
+                                </span>
+                                {{ ticket.get_status_display }}
+                            </span>
+                        </td>
+
+                        <!-- تاریخ و ساعت بروزرسانی -->
+                        <td class="py-4 px-5 font-mono text-[11px] text-slate-400 dir-ltr text-right">
+                            {{ ticket.updated_at|shamsi:"%Y/%m/%d - %H:%M" }}
+                        </td>
+
+                        <!-- دکمه جزئیات -->
+                        <td class="py-4 px-5 text-center">
+                            <a href="{% url 'ticketing:detail' ticket.pk %}" class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-blue-600 hover:text-white transition shadow-2xs" title="مشاهده جزئیات">
+                                <i class="fa-solid fa-arrow-left text-xs"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="p-12 text-center text-slate-400">تیکتی در این بخش وجود ندارد.</td></tr>
+                    <tr>
+                        <td colspan="7" class="py-16 text-center text-slate-400">
+                            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-300 mb-3 border border-slate-100">
+                                <i class="fa-regular fa-folder-open text-2xl"></i>
+                            </div>
+                            <span class="block text-sm font-bold text-slate-500">تیکتی در این بخش یافت نشد</span>
+                            <span class="text-xs text-slate-400 mt-1 block">می‌توانید فیلترها را تغییر داده یا تیکت جدید ثبت کنید.</span>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- نمای کارتی بهینه‌شده برای موبایل (Mobile View) -->
+    <div class="grid gap-3.5 md:hidden">
+        {% for ticket in tickets %}
+            <article class="rounded-3xl border border-slate-200/90 bg-white p-4 shadow-sm space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-black text-slate-700 font-mono">
+                            #{{ ticket.pk }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-bold
+                            {% if ticket.ticket_type == 'LESSON' %}bg-blue-50 text-blue-700
+                            {% elif ticket.ticket_type == 'PSYCHOLOGY' %}bg-purple-50 text-purple-700
+                            {% else %}bg-amber-50 text-amber-700{% endif %}">
+                            {{ ticket.get_ticket_type_display }}
+                        </span>
+                    </div>
+
+                    <span class="inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-[10px] font-black
+                        {% if ticket.status == 'OPEN' %}bg-emerald-50 text-emerald-700
+                        {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-50 text-blue-700
+                        {% elif ticket.status == 'RESOLVED' %}bg-purple-50 text-purple-700
+                        {% else %}bg-slate-100 text-slate-600{% endif %}">
+                        {{ ticket.get_status_display }}
+                    </span>
+                </div>
+
+                <a href="{% url 'ticketing:detail' ticket.pk %}" class="block text-sm font-black text-slate-800 leading-snug hover:text-blue-600">
+                    {{ ticket.title }}
+                </a>
+
+                <div class="flex flex-wrap items-center justify-between border-t border-slate-100 pt-2.5 text-[11px] text-slate-400">
+                    <span class="font-bold text-slate-600">{{ ticket.student.user.get_full_name|default:ticket.student.user.username }}</span>
+                    <span>{{ ticket.updated_at|shamsi:"%m/%d - %H:%M" }}</span>
+                </div>
+            </article>
+        {% empty %}
+            <div class="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-400">
+                <i class="fa-regular fa-folder-open text-3xl mb-2 text-slate-300"></i>
+                <p class="text-xs font-bold">هیچ تیکتی وجود ندارد.</p>
+            </div>
+        {% endfor %}
+    </div>
+
 </div>
 {% endblock %}

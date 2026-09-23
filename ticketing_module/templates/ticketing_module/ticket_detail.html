@@ -1,68 +1,504 @@
 {% extends "base.html" %}
 {% load shamsi %}
-{% block title %}تیکت #{{ ticket.pk }}{% endblock %}
-{% block page_title %}تیکت #{{ ticket.pk }}{% endblock %}
+
+{% block title %}تیکت #{{ ticket.pk }} | {{ ticket.title }}{% endblock %}
+{% block page_title %}جزئیات تیکت #{{ ticket.pk }}{% endblock %}
 {% block breadcrumb %}{{ ticket.title }}{% endblock %}
+
 {% block content %}
-<div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-    <section class="space-y-4">
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+
+    <!-- ستون اصلی: پیام‌ها و فرم ارسال پاسخ -->
+    <section class="space-y-5">
+
+        <!-- هدر مشخصات کلی تیکت -->
+        <div class="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-4">
-                <div>{% if ticket.is_private_consultation %}<span class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-600"><i class="fa-solid fa-lock"></i> گفت‌وگوی خصوصی مشاوره</span>{% endif %}<h3 class="text-lg font-black text-slate-800">{{ ticket.title }}</h3><p class="mt-2 text-sm text-slate-500">{{ ticket.student.user.get_full_name|default:ticket.student.user.username }} — {{ ticket.get_ticket_type_display }}{% if ticket.subject %} / {{ ticket.subject }}{% endif %}</p></div>
-                <div class="text-left"><span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">{{ ticket.get_status_display }}</span><p class="mt-2 text-xs text-slate-400">{{ ticket.get_current_queue_display }}</p></div>
+                <div class="space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-700">
+                            #{{ ticket.pk }}
+                        </span>
+
+                        <!-- بج نوع تیکت -->
+                        <span class="inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold
+                            {% if ticket.ticket_type == 'LESSON' %}bg-blue-50 text-blue-700 border border-blue-100
+                            {% elif ticket.ticket_type == 'PSYCHOLOGY' %}bg-purple-50 text-purple-700 border border-purple-100
+                            {% else %}bg-amber-50 text-amber-700 border border-amber-100{% endif %}">
+                            {% if ticket.ticket_type == 'LESSON' %}<i class="fa-solid fa-book-open text-[11px]"></i>
+                            {% elif ticket.ticket_type == 'PSYCHOLOGY' %}<i class="fa-solid fa-brain text-[11px]"></i>
+                            {% else %}<i class="fa-solid fa-wrench text-[11px]"></i>{% endif %}
+                            {{ ticket.get_ticket_type_display }}
+                        </span>
+
+                        {% if ticket.subject %}
+                            <span class="inline-flex items-center gap-1 rounded-xl bg-slate-50 border border-slate-200 px-2.5 py-1 text-xs font-bold text-slate-600">
+                                <i class="fa-solid fa-layer-group text-[10px] text-slate-400"></i>
+                                {{ ticket.subject }}
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <h2 class="text-lg font-black text-slate-900 md:text-xl">{{ ticket.title }}</h2>
+
+                    <div class="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                        <i class="fa-regular fa-user"></i>
+                        <span>ثبت توسط: <strong class="text-slate-700 font-bold">{{ ticket.student.user.get_full_name|default:ticket.student.user.username }}</strong></span>
+                        <span>•</span>
+                        <span>{{ ticket.created_at|shamsi:"%Y/%m/%d ساعت %H:%M" }}</span>
+                    </div>
+                </div>
+
+                <!-- وضعیت و صف فعلی -->
+                <div class="flex flex-col items-end gap-2">
+                    <span class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-black
+                        {% if ticket.status == 'OPEN' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                        {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-50 text-blue-700 border border-blue-200
+                        {% elif ticket.status == 'RESOLVED' %}bg-purple-50 text-purple-700 border border-purple-200
+                        {% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+                        <span class="h-2 w-2 rounded-full
+                            {% if ticket.status == 'OPEN' %}bg-emerald-500
+                            {% elif ticket.status == 'IN_PROGRESS' %}bg-blue-500
+                            {% elif ticket.status == 'RESOLVED' %}bg-purple-500
+                            {% else %}bg-slate-400{% endif %}">
+                        </span>
+                        {{ ticket.get_status_display }}
+                    </span>
+
+                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+                        <i class="fa-solid fa-inbox text-[10px]"></i>
+                        صف: {{ ticket.get_current_queue_display }}
+                    </span>
+                </div>
             </div>
         </div>
 
-        {% for item in ticket_messages %}
-        <article class="rounded-2xl border bg-white p-5 shadow-card {% if item.sender_id == user.id %}border-blue-200{% else %}border-slate-200{% endif %}">
-            <div class="flex flex-wrap justify-between gap-2">
-                <p class="text-sm font-bold text-slate-700">{{ item.sender.get_full_name|default:item.sender.username }} <span class="mr-2 text-xs font-normal text-slate-400">{{ item.sender.get_role_display }}</span></p>
-                <div class="flex gap-2 text-xs">
-                    {% if item.moderation_status == "PENDING" %}<span class="text-amber-600">در انتظار تأیید ناظر</span>{% elif item.moderation_status == "REJECTED" %}<span class="text-red-600">رد شده</span>{% else %}<span class="text-emerald-600">تأیید ناظر</span>{% endif %}
-                    <span class="text-slate-400">{{ item.created_at|shamsi:"%Y/%m/%d - %H:%M" }}</span>
-                </div>
-            </div>
-            <p class="mt-4 whitespace-pre-line text-sm leading-8 text-slate-700">{{ item.content }}</p>
-            {% if item.attachment %}<a class="mt-3 inline-block text-xs font-bold text-blue-600" href="{{ item.attachment.url }}">دریافت پیوست</a>{% endif %}
-            {% if item.review_note %}<p class="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">یادداشت ناظر: {{ item.review_note }}</p>{% endif %}
-            {% if can_moderate and item.moderation_status == "PENDING" %}
-            <form method="post" action="{% url 'ticketing:moderate_message' item.pk %}" class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                {% csrf_token %}<input name="note" class="min-w-48 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="توضیح اختیاری">
-                <button name="decision" value="approve" class="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white">تأیید</button>
-                <button name="decision" value="reject" class="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white">رد</button>
-            </form>
-            {% endif %}
-        </article>
-        {% empty %}<div class="rounded-2xl bg-white p-8 text-center text-slate-400">هنوز پیامی وجود ندارد.</div>{% endfor %}
+        <!-- جریان پیام‌ها (Timeline Thread) -->
+        <div class="space-y-4">
+            {% for item in ticket_messages %}
+                <article class="relative rounded-3xl border p-5 transition-all md:p-6
+                    {% if item.sender_id == user.id %}
+                        border-blue-200/90 bg-gradient-to-br from-blue-50/40 to-white shadow-sm mr-0 md:mr-4
+                    {% else %}
+                        border-slate-200/90 bg-white shadow-sm ml-0 md:ml-4
+                    {% endif %}">
 
+                    <!-- اطلاعات نویسنده پیام -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl font-black text-xs shadow-sm
+                                {% if item.sender_id == user.id %}bg-blue-600 text-white{% else %}bg-slate-100 text-slate-700{% endif %}">
+                                {{ item.sender.get_full_name|slice:":1"|default:item.sender.username|slice:":1" }}
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-black text-slate-800">
+                                        {{ item.sender.get_full_name|default:item.sender.username }}
+                                    </span>
+                                    <span class="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                                        {{ item.sender.get_role_display|default:"کاربر" }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- برچسب وضعیت نظارت و تاریخ -->
+                        <div class="flex items-center gap-2">
+                            {% if item.attachment or item.moderation_status != "APPROVED" %}
+                                {% if item.moderation_status == "PENDING" %}
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
+                                        <i class="fa-solid fa-clock-rotate-left"></i> در انتظار تأیید ناظر
+                                    </span>
+                                {% elif item.moderation_status == "REJECTED" %}
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-bold text-red-700 border border-red-200">
+                                        <i class="fa-solid fa-ban"></i> رد محتوا
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                                        <i class="fa-solid fa-check"></i> تأیید شده
+                                    </span>
+                                {% endif %}
+                            {% endif %}
+
+                            <span class="text-[11px] font-medium text-slate-400">
+                                {{ item.created_at|shamsi:"%Y/%m/%d - %H:%M" }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- متن پیام -->
+                    <div class="mt-4 text-xs font-normal leading-7 text-slate-700 md:text-sm md:leading-8 whitespace-pre-line">
+                        {{ item.content }}
+                    </div>
+
+                    <!-- پیوست فایل بازطراحی‌شده و شکیل -->
+                    {% if item.attachment %}
+                        <div class="mt-4 pt-3.5 border-t border-slate-100/90">
+                            {% if item.moderation_status == "APPROVED" or can_moderate or item.sender_id == user.id %}
+
+                                {% with file_ext=item.attachment.name|lower %}
+                                    <!-- اگر پیوست تصویر باشد -->
+                                    {% if '.png' in file_ext or '.jpg' in file_ext or '.jpeg' in file_ext or '.webp' in file_ext %}
+                                        <div class="group relative inline-flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 p-2 transition-all hover:border-blue-300 hover:shadow-md">
+                                            <div class="relative max-h-56 max-w-xs overflow-hidden rounded-xl bg-slate-100">
+                                                <img src="{{ item.attachment.url }}" alt="تصویر پیوست" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy">
+
+                                                <!-- لایه اکشن شیشه‌ای در حالت هاور -->
+                                                <div class="absolute inset-0 flex items-center justify-center gap-2 bg-slate-900/40 opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100">
+                                                    <a href="{{ item.attachment.url }}" target="_blank" class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/90 text-slate-800 shadow hover:bg-white hover:text-blue-600 transition" title="مشاهده اندازه کامل">
+                                                        <i class="fa-solid fa-up-right-and-down-left-from-center text-xs"></i>
+                                                    </a>
+                                                    <a href="{{ item.attachment.url }}" download class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/90 text-slate-800 shadow hover:bg-white hover:text-emerald-600 transition" title="دانلود تصویر">
+                                                        <i class="fa-solid fa-arrow-down-to-bracket text-xs"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 flex items-center justify-between px-1 text-[11px] font-bold text-slate-600">
+                                                <span class="truncate max-w-[190px] font-mono dir-ltr" title="{{ item.attachment.name }}">{{ item.attachment.name|cut:"tickets/attachments/"|truncatechars:22 }}</span>
+                                                <span class="text-[10px] text-slate-400 font-sans">تصویر</span>
+                                            </div>
+                                        </div>
+
+                                    <!-- اگر پیوست فایل سند/زیپ/غیره باشد -->
+                                    {% else %}
+                                        <div class="inline-flex items-center gap-3.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs hover:border-blue-300 hover:bg-blue-50/20 transition-all max-w-sm">
+                                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl
+                                                {% if '.pdf' in file_ext %}bg-red-50 text-red-600 border border-red-100
+                                                {% elif '.zip' in file_ext or '.rar' in file_ext %}bg-amber-50 text-amber-600 border border-amber-100
+                                                {% elif '.doc' in file_ext or '.docx' in file_ext %}bg-blue-50 text-blue-600 border border-blue-100
+                                                {% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %}">
+
+                                                {% if '.pdf' in file_ext %}<i class="fa-solid fa-file-pdf text-xl"></i>
+                                                {% elif '.zip' in file_ext or '.rar' in file_ext %}<i class="fa-solid fa-file-zipper text-xl"></i>
+                                                {% elif '.doc' in file_ext or '.docx' in file_ext %}<i class="fa-solid fa-file-word text-xl"></i>
+                                                {% else %}<i class="fa-solid fa-file-lines text-xl"></i>{% endif %}
+                                            </div>
+
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-xs font-bold text-slate-800 font-mono dir-ltr" title="{{ item.attachment.name }}">
+                                                    {{ item.attachment.name|cut:"tickets/attachments/"|truncatechars:25 }}
+                                                </p>
+                                                <span class="text-[10px] font-medium text-slate-400">فایل پیوست شده</span>
+                                            </div>
+
+                                            <a href="{{ item.attachment.url }}" download class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-blue-600 hover:text-white transition shadow-xs" title="دانلود فایل">
+                                                <i class="fa-solid fa-download text-xs"></i>
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                {% endwith %}
+
+                            {% else %}
+                                <!-- هشدار پیوست در انتظار بررسی ناظر -->
+                                <div class="inline-flex items-center gap-2.5 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-2.5 text-xs text-amber-800">
+                                    <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-600 shrink-0">
+                                        <i class="fa-solid fa-shield-halved text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <span class="font-bold">فایل پیوست موقتاً قفل است:</span>
+                                        <span class="text-[11px] text-amber-700">پس از بررسی و تأیید ناظر نمایش داده خواهد شد.</span>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <!-- یادداشت ناظر محتوا -->
+                    {% if item.review_note %}
+                        <div class="mt-3 rounded-2xl bg-amber-50/60 border border-amber-200/60 p-3 text-xs leading-6 text-amber-800">
+                            <span class="font-black flex items-center gap-1.5 mb-1">
+                                <i class="fa-solid fa-shield-halved"></i> یادداشت ناظر محتوا:
+                            </span>
+                            {{ item.review_note }}
+                        </div>
+                    {% endif %}
+
+                    <!-- پنل بررسی و تعیین تکلیف ناظر -->
+                    {% if can_moderate and item.moderation_status == "PENDING" %}
+                        <form method="post" action="{% url 'ticketing:moderate_message' item.pk %}" class="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-3">
+                            {% csrf_token %}
+                            <div class="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                                <i class="fa-solid fa-gavel text-blue-600"></i>
+                                مدیریت ناظر: تصمیم‌گیری درباره محتوا/پیوست
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <input name="note" class="min-w-[200px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:border-blue-500 focus:outline-none" placeholder="یادداشت ناظر (اختیاری)">
+                                <button name="decision" value="approve" class="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-sm transition">
+                                    <i class="fa-solid fa-check"></i> تأیید پیام
+                                </button>
+                                <button name="decision" value="reject" class="flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 shadow-sm transition">
+                                    <i class="fa-solid fa-xmark"></i> رد محتوا
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </article>
+            {% empty %}
+                <div class="rounded-3xl border border-slate-200 bg-white p-12 text-center text-slate-400">
+                    <i class="fa-regular fa-comments text-4xl mb-3 block text-slate-300"></i>
+                    هنوز پاسخی در این تیکت ثبت نشده است.
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- کادر ارسال پیام جدید -->
         {% if ticket.status != "CLOSED" %}
-        <form method="post" enctype="multipart/form-data" action="{% url 'ticketing:add_message' ticket.pk %}" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-            {% csrf_token %}<h3 class="mb-4 font-black text-slate-800">ارسال پیام</h3>
-            <div class="space-y-4">{{ message_form.as_p }}</div>
-            <button class="mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white">ارسال پیام</button>
-        </form>
+            <div class="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-sm">
+                <h3 class="mb-4 text-sm font-black text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-reply text-blue-600"></i>
+                    ارسال پاسخ جدید
+                </h3>
+                <form method="post" enctype="multipart/form-data" action="{% url 'ticketing:add_message' ticket.pk %}" class="space-y-4">
+                    {% csrf_token %}
+
+                    <div>
+                        {{ message_form.content }}
+                        {% if message_form.content.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ message_form.content.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- بخش آپلود فایل بهینه‌شده و مدرن -->
+                    {% if message_form.attachment %}
+                        <div class="relative">
+                            <label for="{{ message_form.attachment.id_for_label }}" class="group relative flex cursor-pointer items-center justify-between rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-4 transition-all hover:border-blue-400 hover:bg-blue-50/20">
+                                <div class="flex items-center gap-3.5">
+                                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 group-hover:border-blue-300 group-hover:text-blue-600 transition shadow-xs">
+                                        <i class="fa-solid fa-cloud-arrow-up text-lg transition-transform group-hover:-translate-y-0.5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition">
+                                            افزودن تصویر یا فایل پیوست
+                                        </div>
+                                        <p class="text-[11px] text-slate-400 font-normal mt-0.5">
+                                            فایل را اینجا بکشید یا برای انتخاب کلیک کنید (حداکثر ۱۰ مگابایت)
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span class="rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-600 group-hover:border-blue-200 group-hover:text-blue-600 transition shadow-2xs">
+                                    انتخاب فایل
+                                </span>
+
+                                <div class="hidden">
+                                    {{ message_form.attachment }}
+                                </div>
+                            </label>
+
+                            <!-- کپسول نمایش مشخصات فایل انتخاب شده -->
+                            <div id="file-chosen-box" class="hidden mt-2.5 items-center justify-between rounded-xl border border-blue-200 bg-blue-50/70 px-3.5 py-2 text-xs text-blue-900">
+                                <div class="flex items-center gap-2 truncate">
+                                    <i class="fa-solid fa-paperclip text-blue-600"></i>
+                                    <span id="file-chosen-name" class="font-bold truncate font-mono"></span>
+                                    <span id="file-chosen-size" class="text-[10px] text-blue-500 font-sans"></span>
+                                </div>
+                                <button type="button" id="file-clear-btn" class="text-blue-400 hover:text-red-500 transition p-1" title="حذف فایل انتخابی">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            {% if message_form.attachment.errors %}
+                                <p class="mt-1 text-xs text-red-600 font-bold">{{ message_form.attachment.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- اسکریپت سبک بدون نیاز به کتابخانه اضافی -->
+                        <script>
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const fileInput = document.querySelector('input[type="file"][name="{{ message_form.attachment.html_name }}"]');
+                            const box = document.getElementById('file-chosen-box');
+                            const nameEl = document.getElementById('file-chosen-name');
+                            const sizeEl = document.getElementById('file-chosen-size');
+                            const clearBtn = document.getElementById('file-clear-btn');
+
+                            if (!fileInput || !box) return;
+
+                            fileInput.addEventListener('change', () => {
+                                if (fileInput.files.length > 0) {
+                                    const file = fileInput.files[0];
+                                    nameEl.textContent = file.name;
+                                    const sizeKB = (file.size / 1024).toFixed(1);
+                                    sizeEl.textContent = `(${sizeKB > 1024 ? (sizeKB/1024).toFixed(1) + ' MB' : sizeKB + ' KB'})`;
+                                    box.classList.remove('hidden');
+                                    box.classList.add('flex');
+                                } else {
+                                    box.classList.add('hidden');
+                                    box.classList.remove('flex');
+                                }
+                            });
+
+                            clearBtn.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                fileInput.value = '';
+                                box.classList.add('hidden');
+                                box.classList.remove('flex');
+                            });
+                        });
+                        </script>
+                    {% endif %}
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" class="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 transition">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            ثبت و ارسال پاسخ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        {% else %}
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center text-xs font-bold text-slate-500">
+                <i class="fa-solid fa-lock ml-1 text-slate-400"></i> این تیکت بسته شده است و امکان ارسال پاسخ جدید وجود ندارد.
+            </div>
         {% endif %}
+
     </section>
 
-    <aside class="space-y-4">
+    <!-- سایدبار: ابزارها، اطلاعات دانش‌آموز و گزارش گردش -->
+    <aside class="space-y-5">
+
+        <!-- ۱. مشخصات تحصیلی دانش‌آموز -->
         {% if can_view_student_academic_details %}
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-                <h3 class="font-black text-slate-800">اطلاعات تیکت</h3>
-                <dl class="mt-4 space-y-3 text-sm">
-                    <div class="flex justify-between"><dt class="text-slate-400">استان</dt><dd>{{ ticket.province.get_name_display }}</dd></div>
-                    <div class="flex justify-between"><dt class="text-slate-400">مدرسه</dt><dd>{{ ticket.student.field.grade.school }}</dd></div>
-                    <div class="flex justify-between"><dt class="text-slate-400">پایه</dt><dd>{{ ticket.student.field.grade }}</dd></div>
-                    <div class="flex justify-between"><dt class="text-slate-400">رشته</dt><dd>{{ ticket.student.field }}</dd></div>
+            <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                <h3 class="font-black text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <i class="fa-solid fa-graduation-cap text-indigo-600"></i>
+                    اطلاعات تحصیلی دانش‌آموز
+                </h3>
+                <dl class="mt-3.5 space-y-2.5 text-xs">
+                    <div class="flex justify-between items-center bg-slate-50/70 p-2.5 rounded-xl">
+                        <dt class="text-slate-400">استان</dt>
+                        <dd class="font-bold text-slate-700">{{ ticket.province.get_name_display|default:ticket.province }}</dd>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-50/70 p-2.5 rounded-xl">
+                        <dt class="text-slate-400">مدرسه</dt>
+                        <dd class="font-bold text-slate-700">{{ ticket.student.field.grade.school|default:"—" }}</dd>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-50/70 p-2.5 rounded-xl">
+                        <dt class="text-slate-400">پایه</dt>
+                        <dd class="font-bold text-slate-700">{{ ticket.student.field.grade|default:"—" }}</dd>
+                    </div>
+                    <div class="flex justify-between items-center bg-slate-50/70 p-2.5 rounded-xl">
+                        <dt class="text-slate-400">رشته تحصیلی</dt>
+                        <dd class="font-bold text-slate-700">{{ ticket.student.field|default:"—" }}</dd>
+                    </div>
                 </dl>
             </div>
         {% endif %}
 
-        {% if can_refer %}<form method="post" action="{% url 'ticketing:refer' ticket.pk %}" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">{% csrf_token %}<h3 class="mb-4 font-black">ارجاع تیکت</h3>{{ referral_form.as_p }}<button class="mt-3 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">ثبت ارجاع</button></form>{% endif %}
-        {% if can_edit %}<form method="post" action="{% url 'ticketing:edit' ticket.pk %}" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">{% csrf_token %}<h3 class="mb-4 font-black">ویرایش موضوع و وضعیت</h3>{{ edit_form.as_p }}<button class="mt-3 w-full rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white">ذخیره تغییرات</button></form>{% endif %}
+        <!-- ۲. ارجاع تیکت -->
+        {% if can_refer %}
+            <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                <h3 class="font-black text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <i class="fa-solid fa-share-nodes text-indigo-600"></i>
+                    ارجاع به صف یا کارشناس دیگر
+                </h3>
+                <form method="post" action="{% url 'ticketing:refer' ticket.pk %}" class="mt-3.5 space-y-3">
+                    {% csrf_token %}
+                    <div class="space-y-2 text-xs">
+                        {{ referral_form.as_p }}
+                    </div>
+                    <button type="submit" class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-indigo-700 shadow-sm transition">
+                        <i class="fa-solid fa-check"></i>
+                        ثبت ارجاع تیکت
+                    </button>
+                </form>
+            </div>
+        {% endif %}
 
-        {% if previous_tickets %}<div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><h3 class="font-black">پرسش‌های قبلی همین دانش‌آموز در این درس</h3><div class="mt-4 space-y-3">{% for old in previous_tickets %}<a href="{% url 'ticketing:detail' old.pk %}" class="block rounded-xl bg-slate-50 p-3 text-sm text-blue-700">#{{ old.pk }} — {{ old.title }}<span class="mt-1 block text-xs text-slate-400">{{ old.get_status_display }}</span></a>{% endfor %}</div></div>{% endif %}
+        <!-- ۳. ویرایش سریع وضعیت و موضوع -->
+        {% if can_edit %}
+            <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                <h3 class="font-black text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <i class="fa-solid fa-pen-to-square text-slate-700"></i>
+                    تغییر وضعیت یا موضوع
+                </h3>
+                <form method="post" action="{% url 'ticketing:edit' ticket.pk %}" class="mt-3.5 space-y-3">
+                    {% csrf_token %}
+                    <div class="space-y-2 text-xs">
+                        {{ edit_form.as_p }}
+                    </div>
+                    <button type="submit" class="w-full rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-900 shadow-sm transition">
+                        ذخیره تغییرات
+                    </button>
+                </form>
+            </div>
+        {% endif %}
 
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><h3 class="font-black">گردش تیکت</h3><div class="mt-4 space-y-4 border-r-2 border-slate-100 pr-4">{% for log in ticket.logs.all %}<div><p class="text-sm font-bold text-slate-700">{{ log.get_action_display }}</p><p class="text-xs leading-6 text-slate-400">{{ log.actor.get_full_name|default:"نام ثبت نشده" }} — {{ log.created_at|shamsi:"%Y/%m/%d - %H:%M" }}{% if log.description %}<br>{{ log.description }}{% endif %}</p></div>{% empty %}<p class="text-xs text-slate-400">رویدادی ثبت نشده است.</p>{% endfor %}</div></div>
+        <!-- ۴. تیکت‌های قبلی دانش‌آموز در همین درس -->
+        {% if previous_tickets %}
+            <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                <h3 class="font-black text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
+                    <i class="fa-solid fa-clock-rotate-left text-blue-600"></i>
+                    پرسش‌های قبلی در این درس
+                </h3>
+                <div class="mt-3 space-y-2">
+                    {% for old in previous_tickets %}
+                        <a href="{% url 'ticketing:detail' old.pk %}" class="block rounded-2xl bg-slate-50 border border-slate-100 p-3 hover:bg-blue-50/50 hover:border-blue-200 transition group">
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-700 group-hover:text-blue-600">
+                                <span>#{{ old.pk }} — {{ old.title|truncatechars:28 }}</span>
+                                <i class="fa-solid fa-chevron-left text-[10px] text-slate-300 group-hover:text-blue-600 transition"></i>
+                            </div>
+                            <span class="mt-1 block text-[10px] text-slate-400 font-medium">{{ old.get_status_display }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- ۵. تایم‌لاین گردش و لاگ‌های تیکت -->
+        <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <h3 class="font-black text-slate-800 text-xs flex items-center gap-2 pb-3 border-b border-slate-100">
+                <i class="fa-solid fa-timeline text-slate-600"></i>
+                تاریخچه و گردش تیکت
+            </h3>
+            <div class="mt-4 space-y-4 border-r-2 border-slate-100 pr-3 mr-1">
+                {% for log in ticket.logs.all %}
+                    <div class="relative group">
+                        <!-- نقطه دایره‌ای تایم‌لاین -->
+                        <span class="absolute -right-[17px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-blue-500 ring-2 ring-blue-100"></span>
+
+                        <p class="text-xs font-black text-slate-800">{{ log.get_action_display }}</p>
+                        <p class="mt-0.5 text-[11px] leading-5 text-slate-400">
+                            {{ log.actor.get_full_name|default:"سیستم" }} • {{ log.created_at|shamsi:"%m/%d - %H:%M" }}
+                            {% if log.description %}
+                                <span class="block text-slate-500 font-normal mt-0.5">{{ log.description }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                {% empty %}
+                    <p class="text-xs text-slate-400">رویدادی ثبت نشده است.</p>
+                {% endfor %}
+            </div>
+        </div>
+
     </aside>
 </div>
+
+<style>
+/* استایل‌دهی خودکار به فیلدهای تولیدی جنگو (as_p) در سایدبار */
+aside form p label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 4px;
+}
+aside form p select,
+aside form p input,
+aside form p textarea {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 0.75rem;
+    font-size: 12px;
+    background-color: #fff;
+    outline: none;
+    transition: all 0.2s;
+}
+aside form p select:focus,
+aside form p input:focus,
+aside form p textarea:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+</style>
 {% endblock %}
