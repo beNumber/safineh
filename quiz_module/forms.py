@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from auth_module.models import UserRole
 # خط ۱۱ را به این شکل تغییر بده:
-from questions_module.models import Question, Chapter
+from questions_module.models import Question, Topic
 
 from .models import Quiz, QuizChoice, QuizQuestion
 
@@ -105,9 +105,17 @@ class QuizQuestionForm(forms.ModelForm):
         fields = ["question_type", "bank_topic", "text", "image", "explanation", "explanation_image", "points", "submit_to_bank"]
         widgets = {"text": CKEditorUploadingWidget(), "explanation": CKEditorUploadingWidget()}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, quiz=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["bank_topic"].queryset = Topic.objects.filter(is_active=True).select_related("chapter__subject")
+        topics = Topic.objects.filter(is_active=True).select_related("chapter__subject")
+        if quiz is not None:
+            if quiz.field_id:
+                topics = topics.filter(chapter__subject__field_id=quiz.field_id)
+            elif quiz.grade_id:
+                topics = topics.filter(chapter__subject__field__grade_id=quiz.grade_id)
+        self.fields["bank_topic"].queryset = topics
+        self.fields["bank_topic"].label = "مبحث مرتبط"
+        self.fields["bank_topic"].help_text = "فقط مباحث پایه و رشته انتخاب‌شده در آزمون نمایش داده می‌شوند."
         for field in self.fields.values():
             if not isinstance(field.widget, (forms.CheckboxInput, CKEditorUploadingWidget)):
                 field.widget.attrs["class"] = CONTROL

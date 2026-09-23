@@ -1,1 +1,26 @@
-{% extends "quiz_module/_base.html" %}{% block title %}فراخوانی از بانک سؤال{% endblock %}{% block page_title %}بانک سؤال{% endblock %}{% block breadcrumb %}{{ quiz.title }}{% endblock %}{% block content %}<form method="post" class="quiz-shell quiz-card p-6">{% csrf_token %}<h1 class="text-lg font-black text-slate-900">انتخاب سریع سؤال‌های تأییدشده</h1><p class="mt-1 text-xs text-slate-500">سؤال‌ها با متن، تصویر، گزینه‌ها و کلید به آزمون کپی می‌شوند.</p><div class="mt-5 max-h-[60vh] space-y-2 overflow-auto rounded-2xl bg-slate-50 p-4">{{ form.questions }}</div>{% for error in form.questions.errors %}<p class="mt-2 text-xs text-rose-600">{{ error }}</p>{% endfor %}<div class="mt-5 flex gap-2"><button class="quiz-btn quiz-btn-primary">افزودن سؤال‌ها</button><a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_builder' quiz.pk %}">بازگشت</a></div></form>{% endblock %}
+{% extends "quiz_module/_base.html" %}
+{% block title %}بانک سؤال{% endblock %}
+{% block page_title %}بانک سؤال{% endblock %}
+{% block breadcrumb %}{{ quiz.title }} / بانک سؤال{% endblock %}
+{% block page_actions %}
+<div class="flex flex-wrap gap-2">
+  <a class="quiz-action-btn quiz-action-soft" href="{% url 'quiz_module:quiz_builder' quiz.pk %}"><i class="fa-solid fa-arrow-right"></i> بازگشت به سؤال‌ها</a>
+  <a class="quiz-action-btn quiz-action-primary" href="{% url 'quiz_module:question_create' quiz.pk %}"><i class="fa-solid fa-circle-plus"></i> ایجاد سؤال جدید</a>
+</div>
+{% endblock %}
+{% block content %}
+<form method="post" class="quiz-shell quiz-card p-6 sm:p-8">
+  {% csrf_token %}
+  <div>
+    <span class="quiz-chip border border-white/70 bg-white/70 text-blue-700 backdrop-blur-xl"><i class="fa-solid fa-box-archive ml-1"></i> انتخاب از بانک</span>
+    <h1 class="mt-3 text-xl font-black text-slate-900">سؤال‌های تأییدشده</h1>
+    <p class="mt-2 text-xs leading-6 text-slate-500">سؤال‌ها با متن، تصویر، گزینه‌ها و کلید پاسخ به این آزمون کپی می‌شوند.</p>
+  </div>
+  <div class="mt-6 max-h-[60vh] space-y-2 overflow-auto rounded-3xl border border-white/80 bg-white/55 p-4 shadow-inner backdrop-blur-xl">{{ form.questions }}</div>
+  {% for error in form.questions.errors %}<p class="mt-2 text-xs text-rose-600">{{ error }}</p>{% endfor %}
+  <div class="mt-6 flex flex-wrap gap-2">
+    <button class="quiz-action-btn quiz-action-primary"><i class="fa-solid fa-plus"></i> افزودن سؤال‌ها</button>
+    <a class="quiz-action-btn quiz-action-soft" href="{% url 'quiz_module:quiz_builder' quiz.pk %}">انصراف</a>
+  </div>
+</form>
+{% endblock %}

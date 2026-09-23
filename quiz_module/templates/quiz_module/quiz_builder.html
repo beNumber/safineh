@@ -1,3 +1,245 @@
-{% extends "quiz_module/_base.html" %}{% block title %}طراحی {{ quiz.title }}{% endblock %}{% block page_title %}طراحی آزمون{% endblock %}{% block breadcrumb %}{{ quiz.title }}{% endblock %}
-{% block page_actions %}<div class="flex flex-wrap gap-2">{% if user.role == 'ADMIN' or user.is_superuser or quiz.creator_id == user.id %}<a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:quiz_edit' quiz.pk %}"><i class="fa-solid fa-pen-to-square"></i> ویرایش آزمون</a>{% endif %}<a class="quiz-btn quiz-btn-soft" href="{% url 'quiz_module:bank_import' quiz.pk %}"><span class="quiz-btn-icon soft"><i class="fa-solid fa-box-archive"></i></span>بانک سؤال</a><a class="quiz-btn quiz-btn-primary" href="{% url 'quiz_module:question_create' quiz.pk %}"><span class="quiz-btn-icon"><i class="fa-solid fa-circle-plus"></i></span>سؤال جدید</a></div>{% endblock %}
-{% block content %}<div class="quiz-shell space-y-5"><section class="quiz-glass-hero rounded-[28px] p-6 text-white"><div class="relative z-10 flex flex-wrap items-center justify-between gap-4"><div><span class="quiz-chip border border-white/20 bg-white/15 text-white"><i class="fa-solid fa-pen-ruler ml-1"></i>طراحی آزمون</span><h1 class="mt-3 text-2xl font-black">{{ quiz.title }}</h1><p class="mt-2 text-xs text-blue-100">{{ quiz.question_count }} سؤال · مجموع بارم {{ quiz.total_points }}</p></div>{% if user.role == 'ADMIN' or user.is_superuser or quiz.creator_id == user.id %}<form method="post" action="{% url 'quiz_module:submit_for_review' quiz.pk %}">{% csrf_token %}<button class="quiz-btn bg-white text-blue-700 shadow-lg"><span class="quiz-btn-icon soft"><i class="fa-solid fa-paper-plane"></i></span>{% if user.role == 'ADMIN' or user.is_superuser %}فعال‌سازی آزمون{% else %}ارسال برای تأیید معتمد{% endif %}</button></form>{% else %}<span class="rounded-2xl border border-white/20 bg-white/15 px-4 py-3 text-xs font-bold backdrop-blur-md"><i class="fa-solid fa-shield-halved ml-2"></i>ویرایش توسط معتمد استان</span>{% endif %}</div></section><section class="space-y-3">{% for question in quiz.questions.all %}<article class="quiz-card p-5"><div class="flex items-start gap-4"><span class="choice-number h-11 w-11 shrink-0">{{ forloop.counter }}</span><div class="min-w-0 flex-1"><div class="flex flex-wrap gap-2"><span class="quiz-chip bg-slate-100 text-slate-600">{{ question.get_question_type_display }}</span><span class="quiz-chip bg-emerald-50 text-emerald-700">{{ question.points }} نمره</span>{% if question.source_question %}<span class="quiz-chip bg-indigo-50 text-indigo-700">بانک سؤال</span>{% endif %}</div><div class="mt-3 text-sm leading-7 text-slate-700">{{ question.text|safe }}</div></div><div class="flex gap-1"><a class="quiz-icon-action edit" href="{% url 'quiz_module:question_edit' quiz.pk question.pk %}" title="ویرایش سؤال"><i class="fa-solid fa-pen"></i></a><form method="post" action="{% url 'quiz_module:question_delete' quiz.pk question.pk %}" onsubmit="return confirm('سؤال حذف شود؟')">{% csrf_token %}<button class="quiz-icon-action delete" title="حذف سؤال"><i class="fa-solid fa-trash"></i></button></form></div></div></article>{% empty %}<div class="quiz-card p-12 text-center text-sm text-slate-400"><span class="quiz-empty-icon"><i class="fa-solid fa-circle-question"></i></span><b class="mt-4 block text-slate-600">هنوز سؤالی اضافه نشده است</b></div>{% endfor %}</section></div>{% endblock %}
+﻿{% extends "quiz_module/_base.html" %}
+{% load shamsi %}
+
+{% block title %}سؤال‌های {{ quiz.title }}{% endblock %}
+{% block page_title %}مدیریت سؤال‌های آزمون{% endblock %}
+{% block breadcrumb %}{{ quiz.title }} / سؤال‌ها{% endblock %}
+
+{% block page_actions %}
+<div class="flex flex-wrap items-center gap-2">
+    <a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all duration-200 active:scale-[0.98]" href="{% url 'quiz_module:quiz_list' %}">
+        <i class="fa-solid fa-arrow-right text-[10px] text-slate-400 group-hover:-translate-x-0.5 transition-transform"></i>
+        <span>بازگشت به آزمون‌ها</span>
+    </a>
+
+    <a class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-white/90 hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all duration-200 active:scale-[0.98]" href="{% url 'quiz_module:bank_import' quiz.pk %}">
+        <span class="w-4 h-4 rounded-md bg-cyan-50 text-cyan-600 flex items-center justify-center transition-colors group-hover:bg-cyan-100">
+            <i class="fa-solid fa-box-archive text-[9px]"></i>
+        </span>
+        <span>بانک سؤال</span>
+    </a>
+
+    <a class="group inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-sm shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 active:scale-[0.98]" href="{% url 'quiz_module:question_create' quiz.pk %}">
+        <span class="w-4 h-4 rounded-md bg-white/20 flex items-center justify-center">
+            <i class="fa-solid fa-plus text-[9px]"></i>
+        </span>
+        <span>ایجاد سؤال جدید</span>
+    </a>
+
+    <form method="post" action="{% url 'quiz_module:submit_for_review' quiz.pk %}" class="inline">
+        {% csrf_token %}
+        <button type="submit" class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50/90 hover:bg-emerald-100/80 border border-emerald-200/70 shadow-xs transition-all duration-200 active:scale-[0.98] cursor-pointer">
+            <i class="fa-solid fa-paper-plane text-[10px] text-emerald-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+            <span>ارسال جهت تأیید</span>
+        </button>
+    </form>
+
+    <a class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100/80 border border-indigo-100/80 transition-all duration-200 active:scale-[0.98]" href="{% url 'quiz_module:quiz_results' quiz.pk %}">
+        <i class="fa-solid fa-chart-pie text-[10px] text-indigo-500"></i>
+        <span>نتایج آزمون</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="quiz-shell space-y-5 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+    <!-- هدر مدرن و شیشه‌ای -->
+    <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-950 p-6 sm:p-7 lg:p-8 text-white shadow-xl shadow-indigo-950/30">
+        <!-- Animated gradient mesh background -->
+        <div class="absolute inset-0 opacity-30">
+            <div class="absolute -left-32 -top-32 w-80 h-80 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full blur-3xl animate-pulse"></div>
+            <div class="absolute -right-32 -bottom-32 w-80 h-80 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 bg-gradient-to-br from-violet-500 to-pink-500 rounded-full blur-3xl animate-pulse" style="animation-delay: 2s;"></div>
+        </div>
+
+        <!-- شبکه نقطه‌چین دکوراتیو -->
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgb(255_255_255_/_0.05)_1px,_transparent_0)] bg-[length:20px_20px] pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div class="space-y-3 flex-1">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white/95 border border-white/20 backdrop-blur-xl text-[11px] font-semibold shadow-md">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                    </span>
+                    <i class="fa-solid fa-list-check text-[11px]"></i>
+                    <span>مدیریت و چینش سؤال‌ها</span>
+                </div>
+
+                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white drop-shadow-xl leading-tight">
+                    {{ quiz.title }}
+                </h1>
+
+                <p class="text-xs sm:text-sm text-blue-100/90 leading-relaxed max-w-xl font-medium">
+                    سؤال‌ها را ایجاد، بارم‌بندی و ویرایش کنید یا از مخزن سؤال‌های آماده بهره بگیرید.
+                </p>
+            </div>
+
+            <!-- آمار سریع آزمون -->
+            <div class="relative group shrink-0">
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-2xl blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
+
+                <div class="relative flex items-stretch gap-0 bg-white/10 border border-white/20 rounded-xl backdrop-blur-xl overflow-hidden shadow-xl">
+                    <div class="px-5 py-3.5 text-center border-l border-white/15 hover:bg-white/5 transition-colors">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
+                                <i class="fa-solid fa-question text-sm text-blue-200"></i>
+                            </div>
+                            <span class="block text-2xl font-black text-white tracking-tight leading-none mt-0.5">{{ quiz.question_count }}</span>
+                            <span class="text-[10px] text-blue-200/80 font-semibold uppercase tracking-wide">کل سؤال‌ها</span>
+                        </div>
+                    </div>
+
+                    <div class="px-5 py-3.5 text-center hover:bg-white/5 transition-colors">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+                                <i class="fa-solid fa-star text-sm text-emerald-300"></i>
+                            </div>
+                            <span class="block text-2xl font-black text-emerald-400 tracking-tight leading-none mt-0.5">{{ quiz.total_points }}</span>
+                            <span class="text-[10px] text-blue-200/80 font-semibold uppercase tracking-wide">مجموع بارم</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- لیست سؤال‌ها -->
+    <section class="space-y-3.5">
+        {% for question in quiz.questions.all %}
+        <article class="group relative flex flex-col sm:flex-row items-start gap-4 p-4 sm:p-5 bg-white rounded-xl border border-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.12)] hover:border-sky-400 hover:shadow-[0_0_22px_rgba(56,189,248,0.3)] transition-all duration-300">
+            <!-- خط دکوراتیو کناری -->
+            <div class="absolute right-0 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-indigo-400 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-r-xl"></div>
+
+            <!-- شماره سؤال و اکشن موبایل -->
+            <div class="flex sm:flex-col items-center justify-between w-full sm:w-auto gap-2.5">
+                <span class="relative flex items-center justify-center h-10 w-10 shrink-0 rounded-xl bg-slate-50 text-slate-700 font-bold text-sm border border-slate-200 shadow-xs group-hover:bg-indigo-50 group-hover:text-indigo-600 group-hover:border-indigo-200 transition-colors">
+                    {{ forloop.counter }}
+                </span>
+
+                <!-- دکمه‌های اکشن برای موبایل -->
+                <div class="flex sm:hidden items-center gap-1">
+                    <a class="p-1.5 rounded-lg text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all active:scale-95" href="{% url 'quiz_module:question_edit' quiz.pk question.pk %}" title="ویرایش سؤال">
+                        <i class="fa-solid fa-pen text-[11px]"></i>
+                    </a>
+                    <form method="post" action="{% url 'quiz_module:question_delete' quiz.pk question.pk %}" onsubmit="return confirm('آیا از حذف این سؤال اطمینان دارید؟')">
+                        {% csrf_token %}
+                        <button class="p-1.5 rounded-lg text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 cursor-pointer" title="حذف سؤال">
+                            <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- محتوای سؤال و تگ‌ها -->
+            <div class="min-w-0 flex-1 space-y-3">
+                <!-- تگ‌ها و بج‌های متادیتا -->
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 text-[10px] font-bold border border-slate-200/80">
+                        <i class="fa-regular fa-file-lines text-[9px] text-slate-500"></i>
+                        {{ question.get_question_type_display }}
+                    </span>
+
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/80">
+                        <i class="fa-solid fa-star text-[9px] text-emerald-500"></i>
+                        {{ question.points }} نمره
+                    </span>
+
+                    {% if question.bank_topic %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-50 text-cyan-700 text-[10px] font-bold border border-cyan-200/80">
+                        <i class="fa-solid fa-tag text-[9px] text-cyan-500"></i>
+                        {{ question.bank_topic }}
+                    </span>
+                    {% endif %}
+
+                    {% if question.source_question %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200/80">
+                        <i class="fa-solid fa-box-archive text-[9px] text-indigo-500"></i>
+                        بانک سؤال
+                    </span>
+                    {% endif %}
+                </div>
+
+                <!-- متن سؤال -->
+                <div class="relative">
+                    <div class="prose prose-sm max-w-none text-slate-800 leading-relaxed font-normal bg-slate-50/70 rounded-xl p-3.5 border border-slate-200/60 group-hover:border-indigo-100 group-hover:bg-indigo-50/20 transition-all text-xs sm:text-sm">
+                        {{ question.text|safe }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- دکمه‌های اکشن دسکتاپ -->
+            <div class="hidden sm:flex flex-col items-center gap-1.5 shrink-0 self-center">
+                <a class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 border border-slate-200 hover:border-indigo-200 transition-all active:scale-95 group/btn" href="{% url 'quiz_module:question_edit' quiz.pk question.pk %}" title="ویرایش سؤال">
+                    <i class="fa-solid fa-pen text-[11px] group-hover/btn:scale-105 transition-transform"></i>
+                </a>
+                <form method="post" action="{% url 'quiz_module:question_delete' quiz.pk question.pk %}" onsubmit="return confirm('آیا از حذف این سؤال اطمینان دارید؟')">
+                    {% csrf_token %}
+                    <button class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-all active:scale-95 cursor-pointer group/btn" title="حذف سؤال">
+                        <i class="fa-solid fa-trash-can text-[11px] group-hover/btn:scale-105 transition-transform"></i>
+                    </button>
+                </form>
+            </div>
+        </article>
+        {% empty %}
+        <!-- وضعیت خالی (Empty State) -->
+        <div class="relative overflow-hidden p-10 text-center bg-gradient-to-br from-white via-slate-50 to-blue-50/30 rounded-2xl border-2 border-dashed border-slate-300/60 shadow-sm">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgb(99_102_241_/_0.03)_0%,_transparent_50%)]"></div>
+
+            <div class="relative z-10">
+                <div class="relative w-14 h-14 mx-auto mb-4">
+                    <div class="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl animate-pulse"></div>
+                    <div class="relative w-full h-full rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 text-slate-400 flex items-center justify-center text-2xl border border-slate-200 shadow-xs">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </div>
+                </div>
+
+                <h3 class="text-base font-bold text-slate-800 mb-1.5">هنوز سؤالی برای این آزمون ثبت نشده است</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed font-medium">
+                    می‌توانید به سادگی سؤال‌های جدید طراحی کنید یا از سؤال‌های از پیش آماده در بانک سؤال استفاده نمایید.
+                </p>
+
+                <div class="mt-6 flex items-center justify-center gap-2.5 flex-wrap">
+                    <a class="group inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 shadow-sm transition-all active:scale-95" href="{% url 'quiz_module:question_create' quiz.pk %}">
+                        <span class="w-4 h-4 rounded-md bg-white/20 flex items-center justify-center group-hover:rotate-90 transition-transform">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                        </span>
+                        <span>طراحی اولین سؤال</span>
+                    </a>
+
+                    <a class="group inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 shadow-xs transition-all active:scale-95" href="{% url 'quiz_module:bank_import' quiz.pk %}">
+                        <span class="w-4 h-4 rounded-md bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-box-archive text-[10px]"></i>
+                        </span>
+                        <span>دریافت از بانک سؤال</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+</div>
+
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.05); }
+}
+
+.animate-pulse {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* افکت شیشه‌ای بهبود یافته */
+.backdrop-blur-2xl {
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+}
+
+/* بهبود رندرینگ فونت فارسی */
+.font-black, .font-bold, .font-semibold {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+</style>
+{% endblock %}
