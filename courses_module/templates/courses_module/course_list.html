@@ -2,15 +2,28 @@
 {% block title %}دوره‌های آموزشی{% endblock %}
 {% block page_title %}دوره‌ها{% endblock %}
 {% block breadcrumb %}همه دوره‌ها{% endblock %}
+
 {% block page_actions %}
-    {% if user.role == 'CONSULTANT' %}
-        <a href="{% url 'courses_module:course_create' %}" class="primary-glass-button"><i class="fa-solid fa-plus"></i> ساخت دوره جدید</a>
-    {% elif user.role == 'PROVINCE_TRUSTEE' %}
-        <a href="{% url 'courses_module:my_courses' %}" class="primary-glass-button"><i class="fa-solid fa-shield-check"></i> دوره‌های تأییدنشده</a>
-    {% elif user.role == 'ADMIN' or user.is_superuser %}
-        <span class="rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs font-bold text-slate-600"><i class="fa-solid fa-lock ml-1"></i>مدیریت دوره‌ها</span>
-    {% endif %}
+    <div class="flex items-center gap-2">
+        {% if user.role == 'CONSULTANT' %}
+            <a href="{% url 'courses_module:course_create' %}" class="primary-glass-button">
+                <i class="fa-solid fa-plus"></i> ساخت دوره جدید
+            </a>
+        {% elif user.role == 'PROVINCE_TRUSTEE' %}
+            <a href="{% url 'courses_module:my_courses' %}" class="primary-glass-button">
+                <i class="fa-solid fa-shield-check"></i> دوره‌های تأییدنشده
+            </a>
+        {% elif user.role == 'ADMIN' or user.is_superuser %}
+            <a href="{% url 'courses_module:course_create' %}" class="primary-glass-button">
+                <i class="fa-solid fa-plus"></i> ساخت دوره جدید
+            </a>
+            <a href="{% url 'courses_module:my_courses' %}" class="rounded-xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-white hover:shadow-sm">
+                <i class="fa-solid fa-sliders ml-1 text-blue-600"></i> مدیریت دوره‌ها
+            </a>
+        {% endif %}
+    </div>
 {% endblock %}
+
 {% block extra_css %}
 <style>
     .courses-shell{position:relative;isolation:isolate}.courses-shell:before,.courses-shell:after{content:"";position:fixed;z-index:-1;border-radius:999px;filter:blur(80px);opacity:.38}.courses-shell:before{width:320px;height:320px;background:#60a5fa;top:90px;left:7%}.courses-shell:after{width:280px;height:280px;background:#a78bfa;bottom:5%;right:20%}
@@ -20,15 +33,21 @@
     .level-pill,.status-pill{position:absolute;top:12px;padding:6px 10px;border:1px solid rgba(255,255,255,.7);border-radius:999px;background:rgba(255,255,255,.78);backdrop-filter:blur(12px);font-size:10px;font-weight:900;color:#334155}.level-pill{right:12px}.status-pill{left:12px}.status-pending{color:#b45309}.status-rejected{color:#be123c}.course-body{padding:5px 18px 16px}.subject-row{display:flex;gap:5px;min-height:22px;overflow:hidden}.subject-row span{white-space:nowrap;border-radius:7px;background:#eff6ff;padding:3px 7px;font-size:10px;font-weight:800;color:#2563eb}.course-body h3{margin-top:9px;font-size:16px;font-weight:950;color:#172033}.course-body p{min-height:40px;margin-top:7px;font-size:11px;line-height:1.8;color:#64748b}.course-meta{display:flex;gap:15px;margin-top:12px;font-size:10px;font-weight:700;color:#64748b}.rating-line{display:flex;align-items:center;gap:6px;margin-top:12px}.stars{direction:ltr;letter-spacing:1px;color:#fbbf24;text-shadow:0 1px 5px rgba(245,158,11,.2)}.rating-line strong{font-size:12px;color:#334155}.rating-line small{font-size:10px;color:#94a3b8}.course-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;border-top:1px solid rgba(226,232,240,.75);padding:13px 18px}.teacher{max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:700;color:#64748b}.joined-button{background:#ecfdf5;color:#059669}.empty-state{grid-column:1/-1;padding:55px;text-align:center;border:1px dashed #cbd5e1;border-radius:26px;background:rgba(255,255,255,.65)}.empty-state i{font-size:35px;color:#94a3b8}.empty-state h3{margin-top:12px;font-weight:900}.empty-state p{margin-top:5px;font-size:11px;color:#94a3b8}@media(max-width:1024px){.course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.course-grid{grid-template-columns:1fr}.glass-hero{padding:22px}}
 </style>
 {% endblock %}
+
 {% block content %}
 <div class="courses-shell">
     <section class="glass-hero" data-aos="fade-down">
         <div class="relative z-10 max-w-2xl">
-            <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-bold backdrop-blur-xl"><i class="fa-solid fa-sparkles text-amber-300"></i> مسیر یادگیری مخصوص تو</span>
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-bold backdrop-blur-xl">
+                <i class="fa-solid fa-sparkles text-amber-300"></i> مسیر یادگیری مخصوص تو
+            </span>
             <h1 class="mt-4 text-2xl font-black sm:text-3xl">دوره‌ای را پیدا کن که یک قدم جلوترت ببرد</h1>
-            <p class="mt-2 text-xs leading-7 text-blue-100">دوره‌های تأییدشده را بر اساس پایه، رشته و درس ببین، امتیاز دانش‌آموزان را مقایسه کن و با یک لمس به دوره‌هایت اضافه کن.</p>
+            <p class="mt-2 text-xs leading-7 text-blue-100">
+                دوره‌های تأییدشده را بر اساس پایه، رشته و درس ببین، امتیاز دانش‌آموزان را مقایسه کن و با یک لمس به دوره‌هایت اضافه کن.
+            </p>
         </div>
     </section>
+
     {% include 'courses_module/_course_cards.html' %}
 </div>
 {% endblock %}
