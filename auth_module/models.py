@@ -8,7 +8,7 @@ from users_module.models import Access, FieldOfStudy, Province
 class UserRole(models.TextChoices):
     STUDENT = "STUDENT", "دانش‌آموز"
     CONSULTANT = "CONSULTANT", "مشاور"
-    PROVINCE_TRUSTEE = "PROVINCE_TRUSTEE", "معتمد استان"
+    PROVINCE_TRUSTEE = "PROVINCE_TRUSTEE", "مسئول منطقه"
     CONTENT_MODERATOR = "CONTENT_MODERATOR", "ناظر محتوا"
     ADMIN = "ADMIN", "مدیر سیستم"
 
@@ -122,8 +122,8 @@ class ProvinceTrustee(models.Model):
                 fields=["user", "province"], name="unique_trustee_per_province"
             )
         ]
-        verbose_name = "معتمد استان"
-        verbose_name_plural = "معتمدان استان‌ها"
+        verbose_name = "مسئول منطقه"
+        verbose_name_plural = "مسئولان مناطق"
 
     def __str__(self):
         return f"{self.user} - {self.province}"
@@ -132,5 +132,5 @@ class ProvinceTrustee(models.Model):
         super().clean()
         if self.user_id and self.user.role != UserRole.PROVINCE_TRUSTEE:
             raise ValidationError(
-                {"user": "کاربر انتخاب‌شده باید نقش معتمد استان داشته باشد."}
+                {"user": "کاربر انتخاب‌شده باید نقش مسئول منطقه داشته باشد."}
             )

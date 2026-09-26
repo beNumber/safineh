@@ -459,7 +459,7 @@ def question_create(request):
                 question.choices.all().delete()
         messages.success(
             request,
-            "سؤال ثبت شد و برای تأیید معتمد استان ارسال گردید."
+            "سؤال ثبت شد و برای تأیید مسئول منطقه ارسال گردید."
             if _question_requires_approval(request.user)
             else "سؤال با موفقیت وارد بانک سؤال شد.",
         )

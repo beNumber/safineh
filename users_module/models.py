@@ -17,6 +17,8 @@ class School(models.Model):
     name = models.CharField(max_length=100)
 
     class Meta:
+        verbose_name = "مدرسه"
+        verbose_name_plural = "مدارس"
         constraints = [
             models.UniqueConstraint(
                 fields=["province", "name"],

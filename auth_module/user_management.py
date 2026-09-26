@@ -16,17 +16,17 @@ DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "012345678901
 ROLE_MAP = {
     "دانش آموز": UserRole.STUDENT, "دانش‌آموز": UserRole.STUDENT, "student": UserRole.STUDENT,
     "مشاور": UserRole.CONSULTANT, "consultant": UserRole.CONSULTANT,
-    "معتمد": UserRole.PROVINCE_TRUSTEE, "معتمد استان": UserRole.PROVINCE_TRUSTEE, "province_trustee": UserRole.PROVINCE_TRUSTEE,
+    "مسئول منطقه": UserRole.PROVINCE_TRUSTEE, "معتمد": UserRole.PROVINCE_TRUSTEE, "معتمد استان": UserRole.PROVINCE_TRUSTEE, "province_trustee": UserRole.PROVINCE_TRUSTEE,
     "ناظر": UserRole.CONTENT_MODERATOR, "ناظر محتوا": UserRole.CONTENT_MODERATOR, "content_moderator": UserRole.CONTENT_MODERATOR,
     "ادمین": UserRole.ADMIN, "مدیر": UserRole.ADMIN, "مدیر سیستم": UserRole.ADMIN, "admin": UserRole.ADMIN,
 }
 HEADERS = {
     "اسم": "first_name", "نام": "first_name", "فامیل": "last_name", "نام خانوادگی": "last_name",
-    "شهر": "city", "استان": "province", "رشته": "field", "پایه": "grade", "پایه (اختیاری)": "grade",
+    "مدرسه": "city", "شهر": "city", "استان": "province", "رشته": "field", "پایه": "grade", "پایه (اختیاری)": "grade",
     "کد ملی": "national_code", "کدملی": "national_code", "رمز عبور": "password",
     "نقش": "role", "نام کاربری": "username",
 }
-TEMPLATE_HEADERS = ["اسم", "فامیل", "استان", "شهر", "پایه", "رشته", "کد ملی", "رمز عبور", "نقش", "نام کاربری"]
+TEMPLATE_HEADERS = ["اسم", "فامیل", "استان", "مدرسه", "پایه", "رشته", "کد ملی", "رمز عبور", "نقش", "نام کاربری"]
 
 
 def clean_text(value):
@@ -140,12 +140,12 @@ def import_users(upload):
                     raise ValueError("استان برای این نقش الزامی است.")
                 province = _province(row["province"])
             if role == UserRole.STUDENT:
-                empty_student_fields = [label for key, label in (("city", "شهر"), ("grade", "پایه"), ("field", "رشته")) if not row.get(key)]
+                empty_student_fields = [label for key, label in (("city", "مدرسه"), ("grade", "پایه"), ("field", "رشته")) if not row.get(key)]
                 if empty_student_fields:
                     raise ValueError("برای دانش‌آموز این موارد الزامی است: " + "، ".join(empty_student_fields))
                 school = next((item for item in School.objects.filter(province=province) if normalized(item.name) == normalized(row["city"])), None)
                 if not school:
-                    raise ValueError("شهر واردشده در استان انتخابی داخل users_module تعریف نشده است.")
+                    raise ValueError("مدرسه واردشده در استان انتخابی داخل users_module تعریف نشده است.")
             with transaction.atomic():
                 user, created = User.objects.get_or_create(username=code, defaults={"first_name": row["first_name"], "last_name": row["last_name"], "role": role})
                 if not created:
@@ -157,7 +157,7 @@ def import_users(upload):
                 if role == UserRole.STUDENT:
                     fields = [item for item in FieldOfStudy.objects.select_related("grade").filter(grade__school=school, is_active=True, grade__is_active=True) if normalized(item.title) == normalized(row["field"]) and normalized(item.grade.title) == normalized(row["grade"])]
                     if len(fields) != 1:
-                        raise ValueError("ترکیب استان، شهر، پایه و رشته در users_module پیدا نشد.")
+                        raise ValueError("ترکیب استان، مدرسه، پایه و رشته در users_module پیدا نشد.")
                     Student.objects.create(user=user, field=fields[0])
                 elif role == UserRole.CONSULTANT:
                     Consultant.objects.get_or_create(consultant=user)
@@ -203,15 +203,15 @@ def build_user_template_xlsx(member_rows=None):
     guide_rows = [
         ["راهنمای تکمیل فایل", "توضیح"],
         ["نام کاربری", "لازم نیست تغییر کند؛ سامانه همیشه کد ملی را به‌عنوان نام کاربری ثبت می‌کند."],
-        ["دانش‌آموز", "اسم، فامیل، استان، شهر، پایه، رشته، کد ملی، رمز عبور و نقش را کامل کنید."],
-        ["معتمد استان", "اسم، فامیل، استان، کد ملی، رمز عبور و نقش الزامی است."],
+        ["دانش‌آموز", "اسم، فامیل، استان، مدرسه، پایه، رشته، کد ملی، رمز عبور و نقش را کامل کنید."],
+        ["مسئول منطقه", "اسم، فامیل، استان، کد ملی، رمز عبور و نقش الزامی است."],
         ["مشاور / ناظر / مدیر", "اسم، فامیل، کد ملی، رمز عبور و نقش الزامی است؛ اطلاعات آموزشی می‌تواند خالی باشد."],
-        ["نقش‌های مجاز", "دانش‌آموز، مشاور، معتمد استان، ناظر محتوا، مدیر سیستم"],
-        ["هشدار", "نام استان، شهر، پایه و رشته را دقیقاً از شیت «مقادیر مجاز» کپی کنید."],
+        ["نقش‌های مجاز", "دانش‌آموز، مشاور، مسئول منطقه، ناظر محتوا، مدیر سیستم"],
+        ["هشدار", "نام استان، مدرسه، پایه و رشته را دقیقاً از شیت «مقادیر مجاز» کپی کنید."],
     ]
-    allowed_rows = [["نوع", "استان", "شهر", "پایه", "رشته"]]
+    allowed_rows = [["نوع", "استان", "مدرسه", "پایه", "رشته"]]
     allowed_rows += [["استان", item.get_name_display(), "", "", ""] for item in provinces]
-    allowed_rows += [["شهر", item.province.get_name_display(), item.name, "", ""] for item in schools]
+    allowed_rows += [["مدرسه", item.province.get_name_display(), item.name, "", ""] for item in schools]
     allowed_rows += [["پایه", item.school.province.get_name_display(), item.school.name, item.title, ""] for item in grades]
     allowed_rows += [["رشته", item.grade.school.province.get_name_display(), item.grade.school.name, item.grade.title, item.title] for item in fields]
     allowed_rows += [["نقش", "", "", "", label] for _, label in UserRole.choices]

@@ -73,12 +73,9 @@
 {% block content %}
 <div class="space-y-6">
     {% if user == course.author and course.approval_status == 'REJECTED' %}
-        <div class="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50/95 p-4 text-xs leading-6 text-rose-800 shadow-sm backdrop-blur-sm">
-            <i class="fa-solid fa-circle-exclamation text-base text-rose-600"></i>
-            <div>
-                <b>این دوره توسط مسئول بررسی رد شده است.</b>
-                <span class="mr-1">دلیل رد: {{ course.rejection_reason|default:'دلیلی درج نشده است.' }}</span>
-            </div>
+        <div class="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-xs leading-6 text-rose-800">
+            <i class="fa-solid fa-circle-xmark ml-2"></i><b>این دوره توسط مسئول منطقه رد شده است.</b>
+            <span class="mr-1">دلیل: {{ course.rejection_reason|default:'دلیلی ثبت نشده است.' }}</span>
         </div>
     {% endif %}
 

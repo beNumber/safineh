@@ -29,6 +29,17 @@ from users_module.models import FieldOfStudy, Grade, Province, School
 User = get_user_model()
 
 
+def _login_greeting():
+    hour = timezone.localtime().hour
+    if hour < 12:
+        return "صبح بخیر"
+    if hour < 17:
+        return "ظهر بخیر"
+    if hour < 21:
+        return "عصر بخیر"
+    return "شب بخیر"
+
+
 def _filtered_users(request):
     users = User.objects.all().order_by("-date_joined")
     query = request.GET.get("q", "").strip()
@@ -65,7 +76,8 @@ def user_management(request):
         "staff_count": User.objects.exclude(role=UserRole.STUDENT).count(),
         "roles": UserRole.choices,
         "provinces": Province.objects.all(), "cities": School.objects.select_related("province"),
-        "grades": Grade.objects.select_related("school"), "fields": FieldOfStudy.objects.select_related("grade"),
+        "grades": Grade.objects.filter(is_active=True).select_related("school"),
+        "fields": FieldOfStudy.objects.filter(is_active=True).select_related("grade"),
         "upload_form": UserSpreadsheetForm(), "import_results": import_results,
     })
 
@@ -115,6 +127,9 @@ def user_bulk_action(request):
     affected = 0
     if action in ("activate", "deactivate"):
         affected = users.update(is_active=action == "activate")
+    elif action == "delete":
+        affected = users.count()
+        users.delete()
     elif action in ("grade_up", "grade_down"):
         students = Student.objects.filter(user__in=users).select_related("field__grade__school")
         direction = 1 if action == "grade_up" else -1
@@ -206,7 +221,7 @@ class UserLoginView(LoginView):
 
         messages.success(
             self.request,
-            f"{full_name} عزیز، خوش آمدید. ورود شما با موفقیت انجام شد.",
+            f"{_login_greeting()} {full_name} عزیز؛ به فانوس خوش آمدید.",
         )
 
         return response
