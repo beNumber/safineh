@@ -22,7 +22,7 @@ from .services import create_attempt, enqueue_quiz_questions, finalize_attempt, 
 
 
 def _student_can_take(user, quiz):
-    if user.role != UserRole.STUDENT or quiz.status != Quiz.Status.APPROVED:
+    if user.role != UserRole.STUDENT or quiz.status != Quiz.Status.APPROVED or quiz.is_paused:
         return False
     if quiz.all_students:
         return True
@@ -74,15 +74,47 @@ def _mark_consultant_quiz_changed(user, quiz):
         quiz.save(update_fields=["status", "approved_by", "approved_at", "approval_note"])
 
 
+def _student_result_is_released(quiz, now=None):
+    """Return whether student-facing results may be shown."""
+    now = now or timezone.now()
+    if now < quiz.closes_at:
+        return False
+    return not quiz.answer_release_at or now >= quiz.answer_release_at
+
+
 @login_required
 def quiz_list(request):
-    quizzes = _quiz_queryset_for(request.user)
+    quizzes = list(_quiz_queryset_for(request.user))
     status = request.GET.get("status")
     if status in Quiz.Status.values:
-        quizzes = quizzes.filter(status=status)
-    for quiz in quizzes.filter(closes_at__lte=timezone.now()):
+        quizzes = [quiz for quiz in quizzes if quiz.status == status]
+    now = timezone.now()
+    for quiz in quizzes:
+        # Expose permission decisions explicitly to the template; relying on
+        # role strings there made management controls disappear for users with
+        # delegated quiz access.
+        quiz.can_manage = can_manage_quiz(request.user, quiz)
+        quiz.can_edit_questions = can_edit_quiz_questions(request.user, quiz)
+        quiz.can_view_results = can_view_results(request.user, quiz)
+        quiz.student_attempt = None
+        quiz.student_result_ready = False
+        if request.user.role == UserRole.STUDENT:
+            # Prefer the latest completed attempt.  A newer in-progress attempt
+            # must not hide a result that is already available to the student.
+            quiz.student_attempt = quiz.attempts.filter(
+                student=request.user,
+                status__in=[QuizAttempt.Status.GRADED, QuizAttempt.Status.SUBMITTED],
+            ).order_by("-finished_at", "-started_at").first()
+            if not quiz.student_attempt:
+                quiz.student_attempt = quiz.attempts.filter(student=request.user).order_by("-started_at").first()
+            quiz.student_result_ready = bool(
+                quiz.student_attempt
+                and quiz.publish_results
+                and _student_result_is_released(quiz, now)
+            )
+    for quiz in [item for item in quizzes if item.closes_at <= now]:
         enqueue_quiz_questions(quiz)
-    return render(request, "quiz_module/quiz_list.html", {"quizzes": quizzes, "can_create": can_create_quiz(request.user), "now": timezone.now()})
+    return render(request, "quiz_module/quiz_list.html", {"quizzes": quizzes, "can_create": can_create_quiz(request.user), "now": now})
 
 
 @login_required
@@ -132,7 +164,7 @@ def question_create(request, pk):
     if not can_edit_quiz_questions(request.user, quiz):
         raise Http404
     question = QuizQuestion(quiz=quiz, order=quiz.questions.count())
-    form = QuizQuestionForm(request.POST or None, request.FILES or None, instance=question)
+    form = QuizQuestionForm(request.POST or None, request.FILES or None, instance=question, quiz=quiz)
     formset = QuizChoiceFormSet(request.POST or None, request.FILES or None, instance=question)
     if request.method == "POST" and form.is_valid():
         question = form.save(commit=False)
@@ -156,7 +188,7 @@ def question_edit(request, pk, question_id):
     if not can_edit_quiz_questions(request.user, quiz):
         raise Http404
     question = get_object_or_404(QuizQuestion, pk=question_id, quiz=quiz)
-    form = QuizQuestionForm(request.POST or None, request.FILES or None, instance=question)
+    form = QuizQuestionForm(request.POST or None, request.FILES or None, instance=question, quiz=quiz)
     formset = QuizChoiceFormSet(request.POST or None, request.FILES or None, instance=question)
     if request.method == "POST" and form.is_valid() and formset.is_valid():
         with transaction.atomic():
@@ -182,6 +214,27 @@ def question_delete(request, pk, question_id):
     _mark_consultant_quiz_changed(request.user, quiz)
     messages.success(request, "سؤال حذف شد.")
     return redirect("quiz_module:quiz_builder", pk=quiz.pk)
+
+@login_required
+@require_POST
+def quiz_delete(request, pk):
+    quiz = get_object_or_404(Quiz, pk=pk)
+    if not can_manage_quiz(request.user, quiz):
+        raise Http404
+    quiz.delete()
+    messages.success(request, "آزمون حذف شد.")
+    return redirect("quiz_module:quiz_list")
+
+@login_required
+@require_POST
+def quiz_toggle_pause(request, pk):
+    quiz = get_object_or_404(Quiz, pk=pk)
+    if not can_manage_quiz(request.user, quiz):
+        raise Http404
+    quiz.is_paused = not quiz.is_paused
+    quiz.save(update_fields=["is_paused", "updated_at"])
+    messages.success(request, "آزمون متوقف شد." if quiz.is_paused else "آزمون دوباره فعال شد.")
+    return redirect("quiz_module:quiz_list")
 
 
 @login_required
@@ -260,7 +313,15 @@ def review_quiz(request, pk):
 def start_quiz(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
     if not _student_can_take(request.user, quiz):
-        raise Http404
+        if request.user.role != UserRole.STUDENT:
+            raise Http404
+        if quiz.status != Quiz.Status.APPROVED:
+            messages.error(request, "این آزمون هنوز تأیید و فعال نشده است.")
+        elif quiz.is_paused:
+            messages.warning(request, "این آزمون موقتاً متوقف شده است.")
+        else:
+            messages.error(request, "این آزمون برای حساب کاربری شما در دسترس نیست.")
+        return redirect("quiz_module:quiz_list")
     now = timezone.now()
     if now < quiz.opens_at:
         messages.warning(request, "زمان شروع آزمون هنوز نرسیده است.")
@@ -358,20 +419,32 @@ def submit_attempt(request, attempt_id):
 @login_required
 def attempt_result(request, attempt_id):
     attempt = get_object_or_404(QuizAttempt.objects.select_related("quiz", "student"), pk=attempt_id)
+    is_owner = attempt.student_id == request.user.id
     if attempt.student_id != request.user.id and not can_view_results(request.user, attempt.quiz):
         raise Http404
-    if attempt.student_id == request.user.id and not attempt.quiz.publish_results:
+    if is_owner and not _student_result_is_released(attempt.quiz):
+        messages.info(request, "کارنامه پس از پایان زمان آزمون منتشر می‌شود.")
+        return redirect("quiz_module:quiz_list")
+    if is_owner and not attempt.quiz.publish_results:
         messages.info(request, "نتیجه این آزمون هنوز توسط برگزارکننده منتشر نشده است.")
         return redirect("quiz_module:quiz_list")
-    attempts = QuizAttempt.objects.filter(quiz=attempt.quiz, status=QuizAttempt.Status.GRADED).order_by("-score", "finished_at")
+    attempts = QuizAttempt.objects.filter(
+        quiz=attempt.quiz,
+        status=QuizAttempt.Status.GRADED,
+    ).order_by("-score", "finished_at")
+    if is_owner:
+        attempts = attempts.filter(student=request.user)
     rank = list(attempts.values_list("id", flat=True)).index(attempt.id) + 1 if attempts.filter(pk=attempt.pk).exists() else None
-    scores = [float(value) for value in attempts.values_list("score", flat=True)]
+    scores = [float(value) for value in QuizAttempt.objects.filter(
+        quiz=attempt.quiz,
+        status=QuizAttempt.Status.GRADED,
+    ).values_list("score", flat=True)]
     if scores:
         average, deviation = mean(scores), pstdev(scores)
         t_score = round(max(0, min(10000, 5000 + (2000 * (float(attempt.score) - average) / deviation)))) if deviation else 5000
     else:
         t_score = None
-    release_answers = bool(attempt.quiz.answer_release_at and timezone.now() >= attempt.quiz.answer_release_at)
+    release_answers = is_owner or _student_result_is_released(attempt.quiz)
     answers = attempt.answers.select_related("question", "choice").prefetch_related("question__choices")
     return render(request, "quiz_module/attempt_result.html", {"attempt": attempt, "answers": answers, "rank": rank, "participants": attempts.count(), "t_score": t_score, "release_answers": release_answers})
 
@@ -381,7 +454,11 @@ def quiz_results(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
     if not can_view_results(request.user, quiz):
         raise Http404
-    attempts = quiz.attempts.select_related("student").exclude(status=QuizAttempt.Status.IN_PROGRESS).order_by("-score")
+    if timezone.now() < quiz.opens_at and not quiz.attempts.exists():
+        messages.info(request, "گزارش نتایج پس از شروع آزمون در دسترس قرار می‌گیرد.")
+        return redirect("quiz_module:quiz_list")
+    # مدیر/سازنده باید وضعیت زنده، حتی شرکت‌کننده‌های در حال آزمون، را ببیند.
+    attempts = quiz.attempts.select_related("student").order_by("-score", "-started_at")
     stats = attempts.aggregate(average=Avg("score"), participants=Count("id"))
     pending_count = attempts.filter(status=QuizAttempt.Status.SUBMITTED).count()
     return render(request, "quiz_module/quiz_results.html", {"quiz": quiz, "attempts": attempts, "stats": stats, "pending_count": pending_count})

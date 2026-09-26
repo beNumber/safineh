@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}ویرایش سرفصل{% else %}افزودن سرفصل جدید{% endif %}{% endblock %}
+{% block page_title %}{% if object %}ویرایش سرفصل آموزشی{% else %}تعریف سرفصل جدید{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'courses_module:course_list' %}" class="hover:text-blue-600 transition">دوره‌ها</a> /
+    <a href="{% url 'courses_module:course_detail' course.slug %}" class="hover:text-blue-600 transition">{{ course.title }}</a> /
+    <span class="text-slate-800 font-bold">{% if object %}ویرایش سرفصل{% else %}سرفصل جدید{% endif %}</span>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-glass {
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(24px) saturate(160%);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl">
+    <div class="form-glass rounded-3xl p-6 sm:p-8">
+        <!-- Header -->
+        <div class="flex items-center gap-4 border-b border-slate-100 pb-5">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-blue-50 text-blue-600">
+                <i class="fa-solid fa-folder-plus text-lg"></i>
+            </span>
+            <div>
+                <h1 class="text-base sm:text-lg font-black text-slate-800">
+                    {% if object %}ویرایش سرفصل: {{ object.title }}{% else %}افزودن سرفصل جدید{% endif %}
+                </h1>
+                <p class="text-[11px] text-slate-400 mt-0.5">سرفصل مربوط به دوره: <b class="text-slate-600">{{ course.title }}</b></p>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form method="post" class="mt-6 space-y-5">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-xs text-rose-700">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <!-- Title Field -->
+            <div>
+                <label for="{{ form.title.id_for_label }}" class="mb-1.5 block text-xs font-bold text-slate-700">
+                    عنوان سرفصل <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-heading text-xs"></i>
+                    </span>
+                    <input type="text" name="{{ form.title.name }}" id="{{ form.title.id_for_label }}"
+                           value="{{ form.title.value|default:'' }}"
+                           placeholder="مثال: فصل اول - مفاهیم پایه و مقدمات"
+                           required
+                           class="w-full rounded-xl border border-slate-200/90 bg-white/90 py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
+                </div>
+                {% if form.title.errors %}
+                    <p class="mt-1 text-[11px] text-rose-500">{{ form.title.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Order Field (if exists in form) -->
+            {% if form.order %}
+            <div>
+                <label for="{{ form.order.id_for_label }}" class="mb-1.5 block text-xs font-bold text-slate-700">
+                    ترتیب نمایش
+                </label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-arrow-down-1-9 text-xs"></i>
+                    </span>
+                    <input type="number" name="{{ form.order.name }}" id="{{ form.order.id_for_label }}"
+                           value="{{ form.order.value|default:'0' }}"
+                           class="w-full rounded-xl border border-slate-200/90 bg-white/90 py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
+                </div>
+                {% if form.order.errors %}
+                    <p class="mt-1 text-[11px] text-rose-500">{{ form.order.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Description Field -->
+            {% if form.description %}
+            <div>
+                <label for="{{ form.description.id_for_label }}" class="mb-1.5 block text-xs font-bold text-slate-700">
+                    توضیح کوتاه سرفصل <span class="text-[10px] text-slate-400 font-normal">(اختیاری)</span>
+                </label>
+                <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" rows="3"
+                          placeholder="توضیح کوتاهی درباره موضوعاتی که در این سرفصل یاد داده می‌شود..."
+                          class="w-full rounded-xl border border-slate-200/90 bg-white/90 p-3 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                    <p class="mt-1 text-[11px] text-rose-500">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <a href="{% url 'courses_module:course_detail' course.slug %}" class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+                    انصراف
+                </a>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:bg-blue-700 transition">
+                    <i class="fa-solid fa-check"></i>
+                    {% if object %}ذخیره تغییرات{% else %}ایجاد سرفصل{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
