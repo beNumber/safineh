@@ -1,5 +1,4 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -29,10 +28,7 @@ def dash_view(request):
 
     # دریافت آخرین اخبار منتشر شده (۴ خبر اخیر)
     context["latest_news"] = (
-        Article.objects.filter(
-            status=Article.Status.PUBLISHED,
-        )
-        .filter(Q(published_at__lte=now) | Q(published_at__isnull=True))
+        Article.objects.published().visible_to(request.user)
         .select_related("category")
         .order_by("-published_at", "-created_at")[:4]
     )
