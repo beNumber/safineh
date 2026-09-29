@@ -62,6 +62,22 @@ class CounselingFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
+    def test_admin_can_filter_students_by_province_and_school(self):
+        self.client.force_login(self.admin_user)
+        school_id = self.student.field.grade.school_id
+        response = self.client.get(reverse("counseling:manage"), {
+            "province": self.province.pk, "school": school_id,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertQuerySetEqual(response.context["students"], [self.student])
+        self.assertEqual(response.context["selected_school"], school_id)
+
+        other_response = self.client.get(reverse("counseling:manage"), {
+            "province": self.other_province.pk, "school": school_id,
+        })
+        self.assertQuerySetEqual(other_response.context["students"], [self.other_student])
+        self.assertIsNone(other_response.context["selected_school"])
+
     def test_admin_assigns_and_reassigns_student(self):
         self.client.force_login(self.admin_user)
         manage_page = self.client.get(reverse("counseling:manage"))

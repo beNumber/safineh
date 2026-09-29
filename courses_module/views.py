@@ -15,6 +15,7 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from auth_module.models import Student, UserRole
+from dashboard_module.location_filters import location_options
 
 from .forms import (
     CourseCreateForm,
@@ -30,6 +31,7 @@ from .models import (
     CourseRating,
     CourseResource,
     CourseSection,
+    CourseView,
 )
 
 
@@ -40,6 +42,24 @@ def course_cards(queryset, user):
         rating_count=Count("ratings", distinct=True),
         is_enrolled=Exists(enrollments),
     ).order_by("-created_at")
+
+
+def courses_for_region(queryset, province_id=None, school_id=None):
+    if province_id:
+        queryset = queryset.filter(Q(all_provinces_allowed=True) | Q(allowed_provinces__id=province_id))
+    if school_id:
+        queryset = queryset.filter(Q(allowed_cities__isnull=True) | Q(allowed_cities__id=school_id))
+    return queryset.distinct()
+
+
+def courses_for_student(queryset, user):
+    student = Student.objects.filter(user=user).select_related("field__grade__school").first()
+    if not student:
+        return queryset.filter(all_provinces_allowed=True, allowed_cities__isnull=True)
+    queryset = courses_for_region(queryset, student.field.grade.school.province_id, student.field.grade.school_id)
+    return queryset.filter(Q(all_fields_allowed=True) | Q(allowed_fields=student.field)).filter(
+        Q(all_grades_allowed=True) | Q(allowed_grades=student.field.grade)
+    ).distinct()
 
 
 class RoleRequiredMixin(LoginRequiredMixin):
@@ -74,6 +94,13 @@ class CourseListView(LoginRequiredMixin, ListView):
     context_object_name = "courses"
     paginate_by = 9
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.user.is_superuser or self.request.user.role in (UserRole.ADMIN, UserRole.CONSULTANT, UserRole.PROVINCE_TRUSTEE):
+            context.update(location_options(self.request))
+            context["show_location_filters"] = True
+        return context
+
     def get_queryset(self):
         user = self.request.user
         now = timezone.now()
@@ -89,11 +116,10 @@ class CourseListView(LoginRequiredMixin, ListView):
             queryset = Course.objects.filter(published)
         else:
             queryset = Course.objects.filter(published)
-            student = Student.objects.filter(user=user).select_related("field__grade").first()
-            if student:
-                queryset = queryset.filter(Q(all_fields_allowed=True) | Q(allowed_fields=student.field)).filter(
-                    Q(all_grades_allowed=True) | Q(allowed_grades=student.field.grade)
-                )
+            queryset = courses_for_student(queryset, user)
+        if user.is_superuser or user_role in (UserRole.ADMIN, UserRole.CONSULTANT, UserRole.PROVINCE_TRUSTEE):
+            location = location_options(self.request)
+            queryset = courses_for_region(queryset, location["selected_province"], location["selected_school"])
         return course_cards(queryset.distinct(), user)
 
 
@@ -107,19 +133,22 @@ class MyCoursesView(RoleRequiredMixin, ListView):
     def get_queryset(self):
         user_role = getattr(self.request.user, "role", None)
         if user_role == UserRole.ADMIN or self.request.user.is_superuser:
-            return Course.objects.all().select_related("author").prefetch_related(
-                "subjects", "allowed_grades", "allowed_fields", "allowed_provinces", "sections", "resources"
+            queryset = Course.objects.all().select_related("author").prefetch_related(
+                "subjects", "allowed_grades", "allowed_fields", "allowed_provinces", "allowed_cities", "sections", "resources"
             ).annotate(
                 admin_enrollment_count=Count("enrollments", distinct=True),
+                admin_viewer_count=Count("views", distinct=True),
                 admin_resource_count=Count("resources", distinct=True),
                 admin_section_count=Count("sections", distinct=True),
             )
+            location = location_options(self.request)
+            return courses_for_region(queryset, location["selected_province"], location["selected_school"])
         if user_role == UserRole.PROVINCE_TRUSTEE:
             return Course.objects.filter(approval_status=ApprovalStatus.PENDING).select_related(
                 "author").prefetch_related(
                 "subjects", "allowed_grades", "allowed_fields"
             )
-        queryset = Course.published.filter(enrollments__student=self.request.user).distinct()
+        queryset = courses_for_student(Course.published.filter(enrollments__student=self.request.user), self.request.user)
         return course_cards(queryset, self.request.user)
 
     def get_context_data(self, **kwargs):
@@ -128,6 +157,8 @@ class MyCoursesView(RoleRequiredMixin, ListView):
         context["is_trustee_queue"] = user_role == UserRole.PROVINCE_TRUSTEE
         context["is_admin_catalog"] = user_role == UserRole.ADMIN or self.request.user.is_superuser
         if context["is_admin_catalog"]:
+            context.update(location_options(self.request))
+            context["show_location_filters"] = True
             context["admin_total_courses"] = self.get_queryset().count()
             context["admin_published_courses"] = self.get_queryset().filter(approval_status=ApprovalStatus.APPROVED,
                                                                             is_active=True).count()
@@ -156,12 +187,14 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
             return Course.objects.all()
         if user_role == UserRole.CONSULTANT:
             return Course.objects.filter(Q(author=user) | Q(pk__in=Course.published.all()))
-        return Course.published.all()
+        return courses_for_student(Course.published.all(), user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
         course = self.object
+        if user.role == UserRole.STUDENT and not user.is_superuser:
+            CourseView.objects.get_or_create(course=course, user=user)
 
         can_manage = user_can_manage_course(user, course)
         sections_qs = course.sections.all()
@@ -171,13 +204,27 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
         context["sections"] = sections_qs.prefetch_related("episodes").order_by("order", "id")
         context["rating_average"] = course.average_rating
         context["rating_count"] = course.ratings.count()
-        context["is_enrolled"] = course.enrollments.filter(student=user).exists()
+        enrollment = course.enrollments.filter(student=user).first()
+        context["is_enrolled"] = enrollment is not None
+        if enrollment and getattr(user, "role", None) == UserRole.STUDENT:
+            viewed_at = timezone.now()
+            if enrollment.first_viewed_at is None:
+                enrollment.first_viewed_at = viewed_at
+            enrollment.last_viewed_at = viewed_at
+            enrollment.view_count += 1
+            enrollment.save(update_fields=["first_viewed_at", "last_viewed_at", "view_count"])
         rating = course.ratings.filter(student=user).first()
         context["user_rating"] = rating.value if rating else 0
         context["resources"] = course.resources.filter(is_active=True).order_by("order", "id")
 
         context["can_manage"] = can_manage
         context["can_delete"] = can_manage
+        if user.is_superuser or getattr(user, "role", None) == UserRole.ADMIN:
+            context["view_status_enrollments"] = course.enrollments.select_related("student").order_by("student__last_name", "student__first_name")
+        elif getattr(user, "role", None) == UserRole.CONSULTANT:
+            context["view_status_enrollments"] = course.enrollments.filter(
+                student__student_profiles__consultant_assignment__consultant=user
+            ).select_related("student").distinct().order_by("student__last_name", "student__first_name")
         return context
 
 
@@ -298,7 +345,9 @@ class EnrollCourseView(RoleRequiredMixin, View):
             if is_admin_or_super:
                 course = get_object_or_404(Course.objects.select_for_update(), slug=decoded_slug)
             else:
-                course = get_object_or_404(Course.published.select_for_update(), slug=decoded_slug)
+                course = get_object_or_404(
+                    courses_for_student(Course.published.select_for_update(), request.user), slug=decoded_slug
+                )
 
             if CourseEnrollment.objects.filter(course=course, student=request.user).exists():
                 messages.info(request, "این دوره از قبل در دوره‌های من قرار دارد.")

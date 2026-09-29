@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from auth_module.decorators import role_required
 from auth_module.models import Student, UserRole
+from dashboard_module.location_filters import location_options
 from questions_module.models import ExamSession
 from quiz_module.models import QuizAttempt
 from ticketing_module.models import (
@@ -34,7 +35,13 @@ def _student_name(student):
 def manage_assignments(request):
     query = request.GET.get("q", "").strip()
     status = request.GET.get("status", "all")
-    students = search_students(manageable_students_for(request.user), query)
+    available_students = manageable_students_for(request.user)
+    location = location_options(request, available_students)
+    students = search_students(available_students, query)
+    if location["selected_province"]:
+        students = students.filter(field__grade__school__province_id=location["selected_province"])
+    if location["selected_school"]:
+        students = students.filter(field__grade__school_id=location["selected_school"])
     if status == "assigned":
         students = students.filter(consultant_assignment__isnull=False)
     elif status == "unassigned":
@@ -60,6 +67,7 @@ def manage_assignments(request):
             "unassigned_count": total - assigned,
             "consultant_stats": consultants,
             "assignment_form": AssignmentForm(),
+            **location,
         },
     )
 
@@ -101,6 +109,11 @@ def remove_assignment(request, student_id):
 def my_students(request):
     query = request.GET.get("q", "").strip()
     assignments = assignments_for_consultant(request.user)
+    location = location_options(request, Student.objects.filter(pk__in=assignments.values("student_id")))
+    if location["selected_province"]:
+        assignments = assignments.filter(student__field__grade__school__province_id=location["selected_province"])
+    if location["selected_school"]:
+        assignments = assignments.filter(student__field__grade__school_id=location["selected_school"])
     if query:
         assignments = assignments.filter(
             Q(student__user__first_name__icontains=query)
@@ -120,7 +133,7 @@ def my_students(request):
     return render(
         request,
         "counseling_module/my_students.html",
-        {"assignments": assignments, "query": query},
+        {"assignments": assignments, "query": query, **location},
     )
 
 

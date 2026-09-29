@@ -67,6 +67,7 @@
         </div>
 
         <form method="get" class="filter-bar" id="activity-filters">
+            {% include 'dashboard_module/_location_selects.html' %}
             <input type="hidden" name="section" value="{{ active_section }}">
             <label class="search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>

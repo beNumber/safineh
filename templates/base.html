@@ -96,7 +96,18 @@
 
         .main-wrapper {
             margin-right: var(--sidebar-width);
+            transition: margin-right .3s ease;
         }
+
+        body.sidebar-collapsed { --sidebar-width: 88px; }
+        body.sidebar-collapsed .fanous-brand .min-w-0,
+        body.sidebar-collapsed .fanous-status,
+        body.sidebar-collapsed .app-sidebar nav > p,
+        body.sidebar-collapsed .sidebar-link > span:not(.sidebar-icon),
+        body.sidebar-collapsed .sidebar-link > small { display: none !important; }
+        body.sidebar-collapsed .app-sidebar nav { padding-inline: 12px; }
+        body.sidebar-collapsed .sidebar-link { justify-content: center; padding-inline: 8px; }
+        body.sidebar-collapsed .fanous-brand > div { justify-content: center; }
 
         .sidebar-link {
             position: relative;
@@ -252,8 +263,8 @@
 
                 <a href="{% url 'dashboard' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
-                    <span class="sidebar-icon text-slate-400">
-                        <i class="fa-solid fa-grid-2"></i>
+                    <span class="sidebar-icon text-white" style="background:linear-gradient(135deg,#8b5cf6,#2563eb 55%,#06b6d4);box-shadow:0 8px 20px rgba(79,70,229,.28)">
+                        <i class="fa-solid fa-shapes"></i>
                     </span>
                     <span>داشبورد</span>
                 </a>
@@ -270,12 +281,12 @@
                     <span class="sidebar-icon text-indigo-400"><i class="fa-solid fa-calendar-days"></i></span>
                     <span>برنامه شخصی من</span>
                 </a>
-                <a href="{% url 'questions_module:choose_mode' %}"
+                {% if fanous_question_bank_active %}<a href="{% url 'questions_module:choose_mode' %}"
                    data-nav-prefix="/questions/"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/questions/' in request.path %}active{% else %}text-slate-600{% endif %}">
                     <span class="sidebar-icon text-cyan-500"><i class="fa-solid fa-brain"></i></span>
                     <span>بانک سؤال</span>
-                </a>
+                </a>{% endif %}
                 {% endif %}
 
                 <a href="{% url 'ticketing:list' %}"
@@ -286,13 +297,13 @@
                     <span class="flex-1">تیکت‌های من</span>
                 </a>
 
-                <a href="{% url 'courses_module:course_list' %}"
+                {% if fanous_courses_active %}<a href="{% url 'courses_module:course_list' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400">
                         <i class="fa-solid fa-book-open-reader"></i>
                     </span>
                     <span>دوره‌ها و درس‌ها</span>
-                </a>
+                </a>{% endif %}
 
                 <a href="{% url 'news_module:article_list' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
@@ -311,11 +322,11 @@
                 </a>
 
                 {% if user.is_authenticated %}
-                <a href="{% url 'quiz_module:quiz_list' %}"
+                {% if fanous_quizzes_active %}<a href="{% url 'quiz_module:quiz_list' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                     <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-file-circle-check"></i></span>
                     <span>آزمون‌ها</span>
-                </a>
+                </a>{% endif %}
                 {% endif %}
 
             </div>
@@ -343,12 +354,12 @@
                         <span>وضعیت سؤال‌های من</span>
                     </a>
 
-                    <a href="{% url 'courses_module:course_create' %}"
+                    {% if fanous_courses_active %}<a href="{% url 'courses_module:course_create' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400"><i class="fa-solid fa-plus"></i></span>
                         <span>ساخت دوره جدید</span>
                     </a>
-                    <a href="{% url 'ticketing:list' %}"
+                    {% endif %}<a href="{% url 'ticketing:list' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-inbox"></i>
@@ -356,15 +367,15 @@
                         <span>تیکت‌های ارجاع‌شده</span>
                     </a>
 
-                    <a href=""
+                    {% if fanous_courses_active %}<a href="{% url 'courses_module:my_courses' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-chalkboard-user"></i>
                         </span>
-                        <span>درس‌های من</span>
+                        <span>دوره‌های ساخته‌شده من</span>
                     </a>
 
-                    <a href="{% url 'plans_module:board' %}"
+                    {% endif %}<a href="{% url 'plans_module:board' %}"
                        class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600">
                         <span class="sidebar-icon text-slate-400">
                             <i class="fa-solid fa-calendar-plus"></i>
@@ -391,6 +402,7 @@
             {% if user.is_authenticated and user.role == 'ADMIN' or user.is_superuser %}
                 <div class="my-6 border-t border-slate-100"></div>
                 <p class="mb-3 px-3 text-[11px] font-bold tracking-wider text-slate-400">گزارش‌های مدیریتی</p>
+                <a href="{% url 'module_settings' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-indigo-700"><span class="sidebar-icon text-indigo-500"><i class="fa-solid fa-sliders"></i></span><span>مدیریت بخش‌ها</span></a>
                 <a href="{% url 'reports_module:people_activity' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/reports/activities/' in request.path %}bg-violet-50 text-violet-700{% else %}text-slate-600{% endif %}">
                     <span class="sidebar-icon text-violet-500"><i class="fa-solid fa-chart-simple"></i></span>
                     <span>فعالیت افراد</span>
@@ -506,6 +518,11 @@
                         <i class="fa-solid fa-bars text-lg"></i>
                     </button>
 
+                    <button id="sidebar-collapse" type="button" title="جمع‌کردن منو"
+                            class="hidden h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 lg:flex">
+                        <i class="fa-solid fa-angles-right"></i>
+                    </button>
+
                     <div class="min-w-0">
                         <p class="hidden text-xs font-bold text-sky-600 sm:block">
                             {{ fanous_day_greeting }}، {{ user.first_name|default:user.username }}
@@ -521,15 +538,6 @@
 
                 <!-- Left Side -->
                 <div class="flex items-center gap-2 sm:gap-4">
-
-                    <!-- Search -->
-                    <div class="fanous-search hidden items-center rounded-xl px-3 py-2 md:flex">
-                        <i class="fa-solid fa-magnifying-glass text-sm text-slate-400"></i>
-                        <input
-                                type="text"
-                                placeholder="جستجو..."
-                                class="mr-2 w-32 border-0 bg-transparent text-sm outline-none placeholder:text-slate-400 lg:w-48">
-                    </div>
 
                     <!-- Date -->
                     <div class="hidden items-center gap-2 text-xs font-medium text-slate-400 xl:flex">
@@ -637,7 +645,7 @@
         </header>
 
         <!-- Breadcrumb / Page Header -->
-        <div class="fanous-page-head">
+        <div class="fanous-page-head relative z-10">
             <div class="px-4 py-4 sm:px-6 lg:px-8">
                 <div class="flex flex-wrap items-center justify-between gap-3">
 
@@ -739,6 +747,7 @@
         const overlay = document.getElementById('sidebar-overlay');
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const sidebarClose = document.getElementById('sidebar-close');
+        const sidebarCollapse = document.getElementById('sidebar-collapse');
 
         const profileToggle = document.getElementById('profile-toggle');
         const profileMenu = document.getElementById('profile-menu');
@@ -758,6 +767,18 @@
         sidebarToggle?.addEventListener('click', openSidebar);
         sidebarClose?.addEventListener('click', closeSidebar);
         overlay?.addEventListener('click', closeSidebar);
+
+        if (localStorage.getItem('fanous-sidebar-collapsed') === '1') {
+            document.body.classList.add('sidebar-collapsed');
+            sidebarCollapse?.querySelector('i')?.classList.replace('fa-angles-right', 'fa-angles-left');
+        }
+        sidebarCollapse?.addEventListener('click', function () {
+            document.body.classList.toggle('sidebar-collapsed');
+            const collapsed = document.body.classList.contains('sidebar-collapsed');
+            localStorage.setItem('fanous-sidebar-collapsed', collapsed ? '1' : '0');
+            sidebarCollapse.querySelector('i')?.classList.toggle('fa-angles-left', collapsed);
+            sidebarCollapse.querySelector('i')?.classList.toggle('fa-angles-right', !collapsed);
+        });
 
         document.querySelectorAll('.sidebar-link').forEach(function (link) {
             link.addEventListener('click', function () {

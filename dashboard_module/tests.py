@@ -5,6 +5,7 @@ from django.utils import timezone
 from auth_module.models import User, UserRole
 from blog_module.models import Category as BlogCategory, Post
 from news_module.models import Article, Category as NewsCategory
+from .models import ModuleAvailability, PresencePeak
 
 
 class FanousDashboardTests(TestCase):
@@ -47,3 +48,21 @@ class FanousDashboardTests(TestCase):
         self.assertEqual(response.status_code, 200)
         response = self.client.get(reverse("dashboard"))
         self.assertNotContains(response, 'id="notification-count"')
+
+    def test_disabled_courses_are_hidden_and_redirect_students(self):
+        admin = User.objects.create_user(username="toggle-admin", password="pass12345", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        self.assertEqual(self.client.post(reverse("toggle_module", args=["courses"])).status_code, 302)
+        self.assertFalse(ModuleAvailability.objects.get(code="courses").is_active)
+        self.assertNotContains(self.client.get(reverse("dashboard")), 'href="/courses/my/"')
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("courses_module:course_list"))
+        self.assertRedirects(response, reverse("dashboard"), fetch_redirect_response=False)
+
+    def test_presence_peak_records_distinct_active_users(self):
+        self.client.force_login(self.user)
+        self.client.get(reverse("dashboard"))
+        another = User.objects.create_user(username="second-presence", password="pass12345", role=UserRole.STUDENT)
+        self.client.force_login(another)
+        self.client.get(reverse("dashboard"))
+        self.assertGreaterEqual(PresencePeak.objects.get(day=timezone.localdate()).count, 2)

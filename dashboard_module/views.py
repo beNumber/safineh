@@ -1,7 +1,8 @@
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -11,6 +12,7 @@ from plans_module.models import PlanCompletion, PlanEntry
 from plans_module.services import current_week_start, student_profile_for
 from counseling_module.models import StudentConsultantAssignment
 from counseling_module.services import manageable_students_for
+from .models import ModuleAvailability
 
 # ایمپورت مدل اخبار
 from news_module.models import Article
@@ -84,8 +86,34 @@ def dash_view(request):
         context["all_unassigned_count"] = manageable_students_for(request.user).filter(
             consultant_assignment__isnull=True
         ).count()
+        from .models import PresencePeak
+        context["recent_presence_peaks"] = PresencePeak.objects.order_by("-recorded_at")[:5]
 
     return render(request, "dashboard_module/dash.html", context)
+
+
+@login_required
+def module_settings(request):
+    if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+        raise PermissionDenied
+    states = dict(ModuleAvailability.objects.values_list("code", "is_active"))
+    modules = [{"code": code, "label": label, "active": states.get(code, True)}
+               for code, label in ModuleAvailability.Code.choices]
+    return render(request, "dashboard_module/module_settings.html", {"modules": modules})
+
+
+@login_required
+@require_POST
+def toggle_module(request, code):
+    if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+        return redirect("dashboard")
+    valid_codes = {item for item, _label in ModuleAvailability.Code.choices}
+    if code not in valid_codes:
+        return redirect("dashboard")
+    state, _created = ModuleAvailability.objects.get_or_create(code=code)
+    state.is_active = not state.is_active
+    state.save(update_fields=["is_active", "updated_at"])
+    return redirect("module_settings")
 
 
 @login_required

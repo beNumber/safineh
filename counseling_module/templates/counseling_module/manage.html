@@ -12,6 +12,7 @@
         </div>
     </section>
 
+    <form method="get" class="mb-3 flex flex-wrap items-center gap-3 rounded-2xl border border-indigo-100 bg-white/80 p-4"><input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="status" value="{{ status }}">{% include 'dashboard_module/_location_selects.html' %}<button class="rounded-xl bg-indigo-700 px-4 py-2.5 text-xs font-black text-white">اعمال فیلتر</button></form>
     <section class="counseling-glass rounded-[1.75rem] p-4 sm:p-5" data-aos="fade-up">
         <form class="flex flex-col gap-3 lg:flex-row" method="get"><label class="relative flex-1"><i class="fa-solid fa-magnifying-glass absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"></i><input name="q" value="{{ query }}" class="w-full rounded-2xl border border-white bg-white/75 py-3.5 pl-4 pr-11 text-sm outline-none ring-blue-100 transition focus:ring-4" placeholder="نام، موبایل، پایه یا رشته دانش‌آموز..."></label><div class="flex gap-2"><select name="status" class="min-w-40 rounded-2xl border border-white bg-white/75 px-4 text-sm outline-none"><option value="all" {% if status == 'all' %}selected{% endif %}>همه وضعیت‌ها</option><option value="assigned" {% if status == 'assigned' %}selected{% endif %}>دارای مشاور</option><option value="unassigned" {% if status == 'unassigned' %}selected{% endif %}>بدون مشاور</option></select><button class="rounded-2xl bg-slate-900 px-6 py-3 text-xs font-black text-white shadow-lg">جست‌وجو</button></div></form>
     </section>
