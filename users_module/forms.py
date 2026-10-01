@@ -53,7 +53,7 @@ class UserCreateForm(forms.ModelForm):
         if cleaned.get("role") == UserRole.STUDENT and not cleaned.get("field"):
             self.add_error("field", "برای کاربر دانش‌آموز، انتخاب رشته الزامی است.")
         if cleaned.get("role") == UserRole.PROVINCE_TRUSTEE and not cleaned.get("province"):
-            self.add_error("province", "برای معتمد استان، انتخاب استان الزامی است.")
+            self.add_error("province", "برای مسئول منطقه، انتخاب استان الزامی است.")
         return cleaned
 
     def save(self, commit=True):

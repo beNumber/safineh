@@ -23,7 +23,7 @@ class TicketStatus(models.TextChoices):
 class TicketQueue(models.TextChoices):
     MODERATOR = "MODERATOR", "ناظر محتوا"
     CONSULTANT = "CONSULTANT", "مشاور"
-    TRUSTEE = "TRUSTEE", "معتمد استان"
+    TRUSTEE = "TRUSTEE", "مسئول منطقه"
     ADMIN = "ADMIN", "مدیر سیستم"
 
 
