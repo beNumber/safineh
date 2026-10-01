@@ -1,6 +1,8 @@
 from django import forms
 from django.utils import timezone
 
+from users_module.models import Grade, Province, School
+
 from .models import Article, Category, Tag
 
 
@@ -14,6 +16,9 @@ class ArticleForm(forms.ModelForm):
             "slug",
             "category",
             "tags",
+            "target_provinces",
+            "target_schools",
+            "target_grades",
             "summary",
             "content",
             "image",
@@ -43,6 +48,15 @@ class ArticleForm(forms.ModelForm):
                 attrs={
                     "class": "w-full rounded-lg border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500",
                 }
+            ),
+            "target_provinces": forms.SelectMultiple(
+                attrs={"class": "audience-select", "data-audience": "province"}
+            ),
+            "target_schools": forms.SelectMultiple(
+                attrs={"class": "audience-select", "data-audience": "school"}
+            ),
+            "target_grades": forms.SelectMultiple(
+                attrs={"class": "audience-select", "data-audience": "grade"}
             ),
             "summary": forms.Textarea(
                 attrs={
@@ -82,6 +96,14 @@ class ArticleForm(forms.ModelForm):
             ),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["target_provinces"].queryset = Province.objects.order_by("name")
+        self.fields["target_schools"].queryset = School.objects.select_related("province").order_by("province__name", "name")
+        self.fields["target_grades"].queryset = Grade.objects.filter(is_active=True).select_related("school__province").order_by("school__province__name", "school__name", "title")
+        self.fields["target_schools"].label_from_instance = lambda school: f"{school.name} — {school.province}"
+        self.fields["target_grades"].label_from_instance = lambda grade: f"{grade.title} — {grade.school.name}"
+
     def clean(self):
         """اگر خبر منتشر می‌شود اما زمان انتشار ندارد، زمان حال را قرار بده"""
         cleaned = super().clean()
@@ -90,6 +112,16 @@ class ArticleForm(forms.ModelForm):
 
         if status == Article.Status.PUBLISHED and published_at is None:
             cleaned["published_at"] = timezone.now()
+
+        provinces = cleaned.get("target_provinces") or Province.objects.none()
+        schools = cleaned.get("target_schools") or School.objects.none()
+        grades = cleaned.get("target_grades") or Grade.objects.none()
+        if provinces.exists() and schools.exclude(province__in=provinces).exists():
+            self.add_error("target_schools", "همه مدارس انتخاب‌شده باید متعلق به استان‌های مخاطب باشند.")
+        if schools.exists() and grades.exclude(school__in=schools).exists():
+            self.add_error("target_grades", "همه پایه‌های انتخاب‌شده باید متعلق به مدارس مخاطب باشند.")
+        if provinces.exists() and grades.exclude(school__province__in=provinces).exists():
+            self.add_error("target_grades", "همه پایه‌های انتخاب‌شده باید متعلق به استان‌های مخاطب باشند.")
 
         return cleaned
 

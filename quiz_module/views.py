@@ -271,13 +271,13 @@ def submit_for_review(request, pk):
     if not quiz.questions.exists():
         messages.error(request, "آزمون بدون سؤال قابل ارسال نیست.")
     elif request.user.role == UserRole.CONSULTANT and not quiz.province_id:
-        messages.error(request, "برای ارسال به معتمد، استان مخاطب را مشخص کنید.")
+        messages.error(request, "برای ارسال به مسئول منطقه، استان مخاطب را مشخص کنید.")
     else:
         quiz.status = Quiz.Status.APPROVED if is_quiz_admin(request.user) else Quiz.Status.PENDING
         quiz.approved_by = request.user if is_quiz_admin(request.user) else None
         quiz.approved_at = timezone.now() if is_quiz_admin(request.user) else None
         quiz.save(update_fields=["status", "approved_by", "approved_at"])
-        messages.success(request, "آزمون فعال شد." if is_quiz_admin(request.user) else "آزمون برای تأیید معتمد استان ارسال شد.")
+        messages.success(request, "آزمون فعال شد." if is_quiz_admin(request.user) else "آزمون برای تأیید مسئول منطقه ارسال شد.")
     return redirect("quiz_module:quiz_list")
 
 

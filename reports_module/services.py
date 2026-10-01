@@ -46,8 +46,8 @@ ROLE_REPORTS = {
     },
     "trustees": {
         "role": UserRole.PROVINCE_TRUSTEE,
-        "label": "معتمدان استانی",
-        "singular": "معتمد استان",
+        "label": "مسئولان مناطق",
+        "singular": "مسئول منطقه",
         "description": "بررسی محتوا، تخصیص‌ها و پاسخ‌گویی استانی",
         "icon": "fa-building-shield",
         "accent": "cyan",

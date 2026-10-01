@@ -27,10 +27,12 @@ def _require_staff(user):
 
 def article_list(request):
     """لیست اخبار منتشرشده (با فیلتر دسته و تگ و جستجو)"""
-    articles = Article.objects.filter(
-        status=Article.Status.PUBLISHED,
-        published_at__lte=timezone.now(),
-    ).select_related("category", "author").prefetch_related("tags")
+    articles = (
+        Article.objects.published()
+        .visible_to(request.user)
+        .select_related("category", "author")
+        .prefetch_related("tags", "target_provinces", "target_schools", "target_grades")
+    )
 
     category_slug = request.GET.get("category")
     tag_slug = request.GET.get("tag")
@@ -82,12 +84,7 @@ def article_detail(request, slug):
         article = get_object_or_404(articles, slug=slug)
     else:
         # بازدیدکنندهٔ عادی: فقط خبر منتشرشده
-        article = get_object_or_404(
-            articles,
-            slug=slug,
-            status=Article.Status.PUBLISHED,
-            published_at__lte=timezone.now(),
-        )
+        article = get_object_or_404(articles.published().visible_to(request.user), slug=slug)
 
     # شمارندهٔ بازدید فقط برای بازدیدهای عمومی (غیر ادمین) افزایش می‌یابد
     if not _is_staff(request.user):
@@ -97,10 +94,8 @@ def article_detail(request, slug):
         article.views_count += 1
 
     related_articles = (
-        Article.objects.filter(
+        Article.objects.published().visible_to(request.user).filter(
             category=article.category,
-            status=Article.Status.PUBLISHED,
-            published_at__lte=timezone.now(),
         )
         .exclude(pk=article.pk)
         .select_related("category")[:3]
