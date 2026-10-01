@@ -186,6 +186,45 @@
             cursor: pointer;
         }
 
+        .audience-panel {
+            margin: 26px 0;
+            padding: 22px;
+            border: 1px solid #dbeafe;
+            border-radius: 22px;
+            background: linear-gradient(145deg, #eff6ff 0%, #ffffff 60%, #f0fdfa 100%);
+            box-shadow: 0 14px 35px rgba(37, 99, 235, .08);
+        }
+
+        .audience-panel__head {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .audience-panel__icon {
+            display: grid;
+            width: 44px;
+            height: 44px;
+            flex: 0 0 44px;
+            place-items: center;
+            border-radius: 14px;
+            color: #fff;
+            background: linear-gradient(135deg, #2563eb, #14b8a6);
+            box-shadow: 0 10px 24px rgba(37, 99, 235, .22);
+        }
+
+        .audience-panel h2 { margin: 0 0 5px; font-size: 17px; }
+        .audience-panel p { margin: 0; color: #64748b; font-size: 12px; line-height: 1.9; }
+        .audience-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .audience-field { padding: 14px; border: 1px solid #e2e8f0; border-radius: 16px; background: rgba(255,255,255,.9); }
+        .audience-field label { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; color: #0f172a; font-weight: 800; }
+        .audience-select { width: 100%; min-height: 145px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 12px; background: #fff; color: #334155; outline: none; }
+        .audience-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,.12); }
+        .audience-status { margin-top: 14px; padding: 11px 14px; border-radius: 12px; background: #ecfdf5; color: #047857; font-size: 12px; font-weight: 800; }
+
+        @media (max-width: 760px) { .audience-grid { grid-template-columns: 1fr; } }
+
         .help-text {
             display: block;
             margin-top: 6px;
@@ -337,6 +376,17 @@
                 {% endif %}
 
                 {% for field in form %}
+                    {% if field.name == "target_provinces" %}
+                        <section class="audience-panel">
+                            <div class="audience-panel__head">
+                                <span class="audience-panel__icon"><i class="fa-solid fa-bullseye"></i></span>
+                                <div>
+                                    <h2>مخاطبان خبر</h2>
+                                    <p>محدوده‌های انتخاب‌شده با هم اعمال می‌شوند. برای انتشار عمومی، هر سه فهرست را خالی بگذارید.</p>
+                                </div>
+                            </div>
+                            <div class="audience-grid">
+                    {% endif %}
                     <div class="form-row">
                         {{ field.label_tag }}
 
@@ -356,6 +406,11 @@
                             </ul>
                         {% endif %}
                     </div>
+                    {% if field.name == "target_grades" %}
+                            </div>
+                            <div id="audience-status" class="audience-status">این خبر در حال حاضر برای همه منتشر می‌شود.</div>
+                        </section>
+                    {% endif %}
                 {% endfor %}
 
                 <div class="actions">
@@ -384,5 +439,24 @@
         </section>
 
     </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const selects = Array.from(document.querySelectorAll('.audience-select'));
+            const status = document.getElementById('audience-status');
+            function updateAudienceStatus() {
+                const labels = selects.flatMap(function (select) {
+                    return Array.from(select.selectedOptions).map(function (option) { return option.text; });
+                });
+                if (!status) return;
+                status.textContent = labels.length
+                    ? 'انتشار هدفمند برای ' + labels.length + ' محدوده انتخاب‌شده'
+                    : 'این خبر در حال حاضر برای همه منتشر می‌شود.';
+                status.style.background = labels.length ? '#eff6ff' : '#ecfdf5';
+                status.style.color = labels.length ? '#1d4ed8' : '#047857';
+            }
+            selects.forEach(function (select) { select.addEventListener('change', updateAudienceStatus); });
+            updateAudienceStatus();
+        });
+    </script>
 </body>
 </html>

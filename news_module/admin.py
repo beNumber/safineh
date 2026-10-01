@@ -28,16 +28,20 @@ class ArticleAdmin(admin.ModelAdmin):
         "category",
         "status",
         "is_featured",
+        "audience_display",
         "published_at",
         "views_count",
         "view_on_site_link",
     )
-    list_filter = ("status", "is_featured", "category", "tags")
+    list_filter = (
+        "status", "is_featured", "category", "tags",
+        "target_provinces", "target_schools", "target_grades",
+    )
     search_fields = ("title", "summary", "content")
     prepopulated_fields = {"slug": ("title",)}
     list_editable = ("status", "is_featured")
     list_select_related = ("category", "author")
-    filter_horizontal = ("tags",)
+    filter_horizontal = ("tags", "target_provinces", "target_schools", "target_grades")
     readonly_fields = ("views_count", "created_at", "updated_at")
     date_hierarchy = "published_at"
 
@@ -49,7 +53,10 @@ class ArticleAdmin(admin.ModelAdmin):
             "fields": ("summary", "content", "image")
         }),
         ("انتشار", {
-            "fields": ("status", "is_featured", "published_at")
+            "fields": (
+                "status", "is_featured", "published_at",
+                "target_provinces", "target_schools", "target_grades",
+            )
         }),
         ("آمار و تاریخچه", {
             "fields": ("views_count", "created_at", "updated_at"),
@@ -62,6 +69,10 @@ class ArticleAdmin(admin.ModelAdmin):
         if not change and not obj.author:
             obj.author = request.user
         super().save_model(request, obj, form, change)
+
+    @admin.display(description="مخاطب")
+    def audience_display(self, obj):
+        return "عمومی" if obj.is_public else "هدفمند"
 
     @admin.display(description="نمایش در سایت")
     def view_on_site_link(self, obj):
