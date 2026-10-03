@@ -162,6 +162,7 @@ def _board_context(student, week_start):
 
 @role_required(*ALLOWED_ROLES)
 def plan_board(request):
+    from dashboard_module.location_filters import location_options
     is_student = request.user.role == UserRole.STUDENT and not request.user.is_superuser
     visible_students = None
     selected_student = None
@@ -174,6 +175,11 @@ def plan_board(request):
             messages.error(request, "پروفایل دانش‌آموزی شما کامل نشده است.")
     else:
         visible_students = visible_students_for(request.user)
+        location = location_options(request, visible_students)
+        if location["selected_province"]:
+            visible_students = visible_students.filter(field__grade__school__province_id=location["selected_province"])
+        if location["selected_school"]:
+            visible_students = visible_students.filter(field__grade__school_id=location["selected_school"])
         if search_query:
             visible_students = visible_students.filter(
                 Q(user__first_name__icontains=search_query)
@@ -262,6 +268,7 @@ def plan_board(request):
         "search_query": search_query,
         "is_student_view": is_student,
         "activity_types": ActivityType,
+        **(location if not is_student else {}),
     }
     if selected_student:
         context.update(_board_context(selected_student, selected_week))

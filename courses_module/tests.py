@@ -6,10 +6,11 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from auth_module.models import UserRole
+from auth_module.models import Student, UserRole
+from users_module.models import FieldOfStudy, Grade, Province, School
 
 from .forms import CourseResourceForm
-from .models import ApprovalStatus, Course, CourseEnrollment, CourseRating, CourseResource
+from .models import ApprovalStatus, Course, CourseEnrollment, CourseRating, CourseResource, CourseView
 
 User = get_user_model()
 
@@ -47,6 +48,105 @@ class CourseWorkflowTests(TestCase):
         response = self.client.get(reverse("courses_module:course_create"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "ایجاد و انتشار دوره")
+
+    def test_admin_can_create_course_without_optional_filters(self):
+        admin = User.objects.create_user(username="admin-create", password="Pass123!", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        response = self.client.post(reverse("courses_module:course_create"), {
+            "title": "دوره جدید", "description": "دوره عمومی آزمایشی", "level": "ALL",
+        })
+        self.assertEqual(response.status_code, 302)
+        course = Course.objects.get(title="دوره جدید")
+        self.assertEqual(course.approval_status, ApprovalStatus.APPROVED)
+        self.assertTrue(course.all_grades_allowed)
+
+    def test_admin_can_restrict_and_restore_course_audience_when_editing(self):
+        province = Province.objects.create(name="edit-province")
+        school = School.objects.create(province=province, name="edit-school")
+        grade = Grade.objects.create(school=school, title="دهم")
+        field = FieldOfStudy.objects.create(grade=grade, title="ریاضی")
+        admin = User.objects.create_user(username="edit-admin", password="Pass123!", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        url = reverse("courses_module:course_edit", args=[self.course.pk])
+        for selected, expected in ((True, False), (False, True)):
+            data = {"title": self.course.title, "description": self.course.description, "level": "ALL"}
+            if selected:
+                data.update(allowed_grades=[grade.pk], allowed_fields=[field.pk])
+            response = self.client.post(url, data)
+            self.assertEqual(response.status_code, 302, response.context["form"].errors if response.status_code == 200 else "")
+            self.course.refresh_from_db()
+            self.assertEqual(self.course.all_grades_allowed, expected)
+            self.assertEqual(self.course.all_fields_allowed, expected)
+
+    def test_course_is_visible_only_in_selected_provinces_and_cities(self):
+        first_province = Province.objects.create(name="hormozgan")
+        second_province = Province.objects.create(name="kerman")
+        first_city = School.objects.create(province=first_province, name="شهر اول")
+        excluded_city = School.objects.create(province=first_province, name="شهر دوم")
+        second_city = School.objects.create(province=second_province, name="شهر سوم")
+        students = []
+        for index, city in enumerate((first_city, excluded_city, second_city)):
+            grade = Grade.objects.create(school=city, title="دهم")
+            field = FieldOfStudy.objects.create(grade=grade, title="ریاضی")
+            student = User.objects.create_user(username=f"region-student-{index}", password="Pass123!", role=UserRole.STUDENT)
+            Student.objects.create(user=student, field=field)
+            students.append(student)
+
+        admin = User.objects.create_user(username="region-admin", password="Pass123!", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        response = self.client.post(reverse("courses_module:course_create"), {
+            "title": "دوره مخصوص شهرها", "description": "برای دو شهر", "level": "ALL",
+            "allowed_provinces": [first_province.pk, second_province.pk],
+            "allowed_cities": [first_city.pk, second_city.pk],
+        })
+        self.assertEqual(response.status_code, 302)
+        course = Course.objects.get(title="دوره مخصوص شهرها")
+        self.assertFalse(course.all_provinces_allowed)
+        self.assertEqual(set(course.allowed_cities.values_list("id", flat=True)), {first_city.pk, second_city.pk})
+
+        for student, visible in zip(students, (True, False, True)):
+            self.client.force_login(student)
+            listing = self.client.get(reverse("courses_module:course_list"))
+            self.assertEqual(course in listing.context["courses"], visible)
+            detail = self.client.get(reverse("courses_module:course_detail", args=[course.slug]))
+            self.assertEqual(detail.status_code, 200 if visible else 404)
+            if not visible:
+                enrollment = self.client.post(reverse("courses_module:course_enroll", args=[course.slug]))
+                self.assertEqual(enrollment.status_code, 404)
+
+    def test_city_must_belong_to_selected_province(self):
+        first_province = Province.objects.create(name="hormozgan")
+        other_province = Province.objects.create(name="kerman")
+        other_city = School.objects.create(province=other_province, name="شهر خارج استان")
+        admin = User.objects.create_user(username="region-validator", password="Pass123!", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        response = self.client.post(reverse("courses_module:course_create"), {
+            "title": "دوره نامعتبر", "description": "محدوده نادرست", "level": "ALL",
+            "allowed_provinces": [first_province.pk], "allowed_cities": [other_city.pk],
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("allowed_cities", response.context["form"].errors)
+
+    def test_admin_course_management_renders(self):
+        admin = User.objects.create_user(username="admin-catalog", password="Pass123!", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        response = self.client.get(reverse("courses_module:my_courses"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.course.title)
+
+    def test_course_counts_unique_viewers_without_enrollment(self):
+        self.course.approval_status = ApprovalStatus.APPROVED
+        self.course.save(update_fields=["approval_status"])
+        self.client.force_login(self.student)
+        detail_url = reverse("courses_module:course_detail", args=[self.course.slug])
+        self.assertEqual(self.client.get(detail_url).status_code, 200)
+        self.assertEqual(self.client.get(detail_url).status_code, 200)
+        self.assertEqual(CourseView.objects.filter(course=self.course).count(), 1)
+        self.assertFalse(CourseEnrollment.objects.filter(course=self.course, student=self.student).exists())
+        admin = User.objects.create_user(username="viewer-admin", password="Pass123!", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        response = self.client.get(reverse("courses_module:my_courses"))
+        self.assertEqual(response.context["courses"][0].admin_viewer_count, 1)
 
     def test_resource_accepts_either_file_or_url(self):
         url_form = CourseResourceForm(data={

@@ -6,6 +6,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from auth_module.models import UserRole
+from dashboard_module.location_filters import location_options
 
 from .services import (
     PERIOD_MAP,
@@ -38,6 +39,18 @@ def people_activity(request):
         "trustee_provinces__province",
     )
     queryset = apply_people_filters(queryset, query, state)
+    location = location_options(request)
+    if section == "students":
+        location_path = "student_profiles__field__grade__school"
+    elif section == "consultants":
+        location_path = "counseling_assignments__student__field__grade__school"
+    else:
+        location_path = "trustee_provinces__province__schools"
+    if location["selected_province"]:
+        queryset = queryset.filter(**{f"{location_path}__province_id" if section != "trustees" else "trustee_provinces__province_id": location["selected_province"]})
+    if location["selected_school"]:
+        queryset = queryset.filter(**{f"{location_path}_id" if section != "trustees" else "trustee_provinces__province__schools__id": location["selected_school"]})
+    queryset = queryset.distinct()
 
     summary_result = queryset.aggregate(total_activity=Sum("activity_score"))
     total_people = queryset.count()
@@ -70,5 +83,6 @@ def people_activity(request):
             "activity": summary_result["total_activity"] or 0,
         },
         "generated_at": timezone.now(),
+        **location,
     }
     return render(request, "reports_module/people_activity.html", context)

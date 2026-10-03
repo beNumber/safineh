@@ -26,6 +26,7 @@
         <div class="manager-heading">
             <div><span class="mini-icon violet"><i class="fa-solid fa-users"></i></span><div><span class="step-kicker">مرحله ۱</span><h2>دانش‌آموزها را انتخاب کن</h2><p>یک یا چند نفر را تیک بزن؛ دکمه ساخت برنامه، انتخاب‌ها را نگه می‌دارد.</p></div></div>
             <form method="get" class="student-search">
+                {% include 'dashboard_module/_location_selects.html' %}
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input name="q" value="{{ search_query }}" placeholder="نام، پایه یا رشته...">
                 <button>جستجو</button>
@@ -44,7 +45,7 @@
                 </label>
                 <div class="student-card-avatar">{{ student.user.first_name|first|default:student.user.username|first }}</div>
                 <div class="student-card-info"><b>{{ student.user.get_full_name|default:student.user.username }}</b><small>{{ student.field.grade.title }} · {{ student.field.title }}</small></div>
-                <a href="?student={{ student.pk }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="student-view-action" title="دیدن برنامه"><i class="fa-solid fa-arrow-left"></i></a>
+                <a href="?student={{ student.pk }}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if selected_province %}&province={{ selected_province }}{% endif %}{% if selected_school %}&school={{ selected_school }}{% endif %}" class="student-view-action" title="دیدن برنامه"><i class="fa-solid fa-arrow-left"></i></a>
             </article>
             {% empty %}<div class="empty-inline"><i class="fa-solid fa-user-slash"></i>دانش‌آموزی در محدوده دسترسی شما پیدا نشد.</div>{% endfor %}
         </div>
@@ -74,9 +75,9 @@
                 </div>
             </div>
             <nav class="calendar-navigation" aria-label="جابجایی بین هفته‌ها">
-                <a href="?week={{ previous_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" title="هفته قبل" aria-label="هفته قبل"><i class="fa-solid fa-chevron-right"></i></a>
+                <a href="?week={{ previous_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if selected_province %}&province={{ selected_province }}{% endif %}{% if selected_school %}&school={{ selected_school }}{% endif %}" title="هفته قبل" aria-label="هفته قبل"><i class="fa-solid fa-chevron-right"></i></a>
                 <span>{{ week_month_title }}</span>
-                <a href="?week={{ next_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" title="هفته بعد" aria-label="هفته بعد"><i class="fa-solid fa-chevron-left"></i></a>
+                <a href="?week={{ next_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}{% if selected_province %}&province={{ selected_province }}{% endif %}{% if selected_school %}&school={{ selected_school }}{% endif %}" title="هفته بعد" aria-label="هفته بعد"><i class="fa-solid fa-chevron-left"></i></a>
                 {% if not is_current_week %}<a href="?week={{ current_week }}{% if not is_student_view %}&student={{ selected_student.pk }}{% endif %}{% if search_query %}&q={{ search_query|urlencode }}{% endif %}" class="calendar-today">هفته جاری</a>{% endif %}
             </nav>
         </div>
@@ -92,9 +93,10 @@
         </div>
     </section>
 
-    <section class="schedule-panel glass-panel" data-aos="fade-up">
+    <section class="schedule-panel glass-panel" id="fullscreen-plan" data-aos="fade-up">
         <div class="schedule-heading">
             <div><span class="mini-icon blue"><i class="fa-solid fa-calendar-days"></i></span><div><span class="step-kicker">مرحله ۲</span><h2>برنامه هفتگی {{ selected_student.user.get_full_name|default:selected_student.user.username }}</h2><p>از شنبه تا پنجشنبه، ساعت ۸ صبح تا ۲۴</p></div></div>
+            <button type="button" class="plan-fullscreen-toggle" onclick="document.getElementById('fullscreen-plan').classList.toggle('plan-expanded'); this.setAttribute('aria-pressed', document.getElementById('fullscreen-plan').classList.contains('plan-expanded'))" aria-pressed="false"><i class="fa-solid fa-expand"></i> نمایش تمام صفحه / بازگشت</button>
             <div class="schedule-week-control">
                 <span><i class="fa-regular fa-calendar-check"></i></span>
                 <div><small>بازه نمایش</small><b>{{ week_range_title }}</b></div>

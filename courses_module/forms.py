@@ -4,7 +4,7 @@ from django.utils import timezone
 import jdatetime
 
 from auth_module.models import UserRole
-from users_module.models import FieldOfStudy, Grade, Subject
+from users_module.models import FieldOfStudy, Grade, Province, School, Subject
 from .models import Course, CourseResource, CourseSection, CourseEpisode
 
 
@@ -18,6 +18,7 @@ class CourseCreateForm(forms.ModelForm):
                 "data-jdp": "",
                 "data-jdp-time": "true",
                 "autocomplete": "off",
+                "placeholder": "مثلاً ۱۴۰۵/۰۷/۰۷ ۱۸:۳۰",
             }
         ),
     )
@@ -30,6 +31,7 @@ class CourseCreateForm(forms.ModelForm):
                 "data-jdp": "",
                 "data-jdp-time": "true",
                 "autocomplete": "off",
+                "placeholder": "مثلاً ۱۴۰۵/۰۸/۰۷ ۱۸:۳۰",
             }
         ),
     )
@@ -41,6 +43,11 @@ class CourseCreateForm(forms.ModelForm):
         self.fields["allowed_grades"].queryset = Grade.objects.filter(is_active=True).select_related("school")
         self.fields["allowed_fields"].queryset = FieldOfStudy.objects.filter(is_active=True).select_related("grade")
         self.fields["subjects"].queryset = Subject.objects.filter(is_active=True).select_related("field")
+        self.fields["allowed_provinces"].queryset = Province.objects.order_by("name")
+        self.fields["allowed_cities"].queryset = School.objects.select_related("province").order_by("province__name", "name")
+        self.fields["allowed_cities"].label_from_instance = lambda school: f"{school.name} · {school.province}"
+        self.fields["allowed_provinces"].required = False
+        self.fields["allowed_cities"].required = False
 
         # اختیاری کردن فیلترها برای ثبت سریع دوره توسط ادمین و سوپریوزر
         self.fields["allowed_grades"].required = False
@@ -63,7 +70,7 @@ class CourseCreateForm(forms.ModelForm):
         fields = [
             "title", "description", "learning_outcomes", "prerequisites", "level",
             "estimated_duration", "capacity", "cover_image", "allowed_grades",
-            "allowed_fields", "subjects", "start_date", "end_date"
+            "allowed_fields", "subjects", "allowed_provinces", "allowed_cities", "start_date", "end_date"
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
@@ -72,6 +79,8 @@ class CourseCreateForm(forms.ModelForm):
             "allowed_grades": forms.CheckboxSelectMultiple(),
             "allowed_fields": forms.CheckboxSelectMultiple(),
             "subjects": forms.CheckboxSelectMultiple(),
+            "allowed_provinces": forms.CheckboxSelectMultiple(),
+            "allowed_cities": forms.CheckboxSelectMultiple(),
         }
 
     def _clean_jalali_datetime(self, name):
@@ -86,11 +95,11 @@ class CourseCreateForm(forms.ModelForm):
         fa_ar_digits = "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩"
         en_digits = "01234567890123456789"
         trans_table = str.maketrans(fa_ar_digits, en_digits)
-        digits = str(value).translate(trans_table).strip()
+        digits = str(value).translate(trans_table).replace("،", " ").replace("٬", " ").replace("\u200c", " ").strip()
 
         # استخراج اجزای تاریخ و ساعت
         pattern = r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?"
-        match = re.search(pattern, digits)
+        match = re.fullmatch(pattern, digits)
 
         if not match:
             raise forms.ValidationError("فرمت تاریخ یا ساعت وارد شده نامعتبر است.")
@@ -109,13 +118,20 @@ class CourseCreateForm(forms.ModelForm):
             raise forms.ValidationError("تاریخ یا ساعت وارد شده در تقویم وجود ندارد.")
 
     def clean_start_date(self):
-        return self._clean_jalali_datetime("start_date")
+        value = self._clean_jalali_datetime("start_date")
+        if not value and not (self.user and (self.user.is_superuser or self.user.role == UserRole.ADMIN)):
+            raise forms.ValidationError("تاریخ شروع دوره را وارد کنید.")
+        return value or timezone.now()
 
     def clean_end_date(self):
         return self._clean_jalali_datetime("end_date")
 
     def clean(self):
         cleaned = super().clean()
+        provinces = cleaned.get("allowed_provinces")
+        cities = cleaned.get("allowed_cities")
+        if provinces and cities and cities.exclude(province__in=provinces).exists():
+            self.add_error("allowed_cities", "شهرهای انتخاب‌شده باید در استان‌های انتخاب‌شده باشند.")
         start = cleaned.get("start_date")
         end = cleaned.get("end_date")
 
@@ -143,22 +159,18 @@ class CourseCreateForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        is_admin_or_super = False
-        if self.user:
-            user_role = getattr(self.user, "role", None)
-            if self.user.is_superuser or self.user.is_staff or user_role in [UserRole.ADMIN, "ADMIN"]:
-                is_admin_or_super = True
-
-        # اگر ادمین مقداری تعیین نکرده باشد، دوره عمومی لحاظ می‌شود
-        if is_admin_or_super:
-            if not self.cleaned_data.get("allowed_grades"):
-                instance.all_grades_allowed = True
-            if not self.cleaned_data.get("allowed_fields"):
-                instance.all_fields_allowed = True
+        provinces = self.cleaned_data.get("allowed_provinces")
+        cities = self.cleaned_data.get("allowed_cities")
+        instance.all_provinces_allowed = not bool(provinces or cities)
+        # گزینه‌های انتخاب‌شده باید در هر ویرایش با وضعیت عمومی دوره هماهنگ باشند.
+        instance.all_grades_allowed = not bool(self.cleaned_data.get("allowed_grades"))
+        instance.all_fields_allowed = not bool(self.cleaned_data.get("allowed_fields"))
 
         if commit:
             instance.save()
             self.save_m2m()
+            if cities and not provinces:
+                instance.allowed_provinces.set(Province.objects.filter(schools__in=cities).distinct())
         return instance
 
 

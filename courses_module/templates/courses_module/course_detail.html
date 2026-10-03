@@ -320,6 +320,19 @@
         </section>
 
         <aside class="space-y-4">
+            {% if view_status_enrollments %}
+            <div class="detail-glass rounded-3xl p-5">
+                <h3 class="text-xs font-black text-slate-800"><i class="fa-solid fa-eye ml-1 text-indigo-500"></i> وضعیت مشاهده دانش‌آموزان</h3>
+                <div class="mt-4 space-y-2">
+                    {% for enrollment in view_status_enrollments %}
+                    <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white/70 p-3 text-[11px]">
+                        <div><b class="block text-slate-700">{{ enrollment.student.get_full_name|default:enrollment.student.username }}</b>{% if enrollment.last_viewed_at %}<small class="text-slate-400">آخرین مشاهده: {{ enrollment.last_viewed_at|date:'Y/m/d H:i' }}</small>{% endif %}</div>
+                        {% if enrollment.first_viewed_at %}<span class="rounded-full bg-emerald-100 px-2.5 py-1 font-black text-emerald-700">دیده شده · {{ enrollment.view_count }}</span>{% else %}<span class="rounded-full bg-amber-100 px-2.5 py-1 font-black text-amber-700">هنوز ندیده</span>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
             <div class="detail-glass rounded-3xl p-5">
                 <h3 class="text-xs font-black text-slate-800 pb-2 border-b border-slate-100">ویژگی‌ها و مخاطبان دوره</h3>
                 <div class="mt-4 space-y-3.5 text-xs leading-6 text-slate-600">
@@ -369,6 +382,7 @@
     </div>
 </div>
 
+{% if resources %}<section class="mt-8 rounded-3xl border border-blue-100 bg-white/80 p-6 shadow-lg"><h2 class="mb-5 text-lg font-black text-slate-800">محتوای دوره</h2><div class="grid gap-4 sm:grid-cols-2">{% for resource in resources %}<article class="rounded-2xl border border-slate-100 bg-gradient-to-l from-blue-50 to-white p-5"><h3 class="mb-3 font-black text-slate-800">{{ resource.title }}</h3>{% if resource.resource_type == 'video' and resource.video_embed_url %}<iframe src="{{ resource.video_embed_url }}" title="{{ resource.title }}" loading="lazy" allowfullscreen class="aspect-video w-full rounded-xl"></iframe>{% elif resource.resource_type == 'image' and resource.source_url %}<img src="{{ resource.source_url }}" alt="{{ resource.title }}" loading="lazy" class="max-h-72 w-full rounded-xl object-contain">{% elif resource.source_url %}<a href="{{ resource.source_url }}" target="_blank" rel="noopener noreferrer" class="text-sm font-bold text-blue-700">نمایش / دانلود محتوا</a>{% endif %}</article>{% endfor %}</div></section>{% endif %}
 <div id="mediaModalBackdrop" class="fixed inset-0 z-[1050] hidden items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 transition-all duration-300">
     <div class="relative w-full max-w-4xl overflow-hidden rounded-3xl bg-slate-900 border border-white/10 shadow-2xl">
         <div class="flex items-center justify-between border-b border-white/10 px-5 py-3.5 bg-slate-950/90">

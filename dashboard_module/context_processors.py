@@ -96,3 +96,15 @@ def fanous_shell(request):
         "fanous_unread_count": len(items),
         "fanous_has_class": has_class_indicator,
     }
+from .models import ModuleAvailability
+
+
+def module_availability(request):
+    states = {code: True for code, _label in ModuleAvailability.Code.choices}
+    states.update(dict(ModuleAvailability.objects.values_list("code", "is_active")))
+    return {
+        "fanous_modules": states,
+        "fanous_question_bank_active": states[ModuleAvailability.Code.QUESTION_BANK],
+        "fanous_courses_active": states[ModuleAvailability.Code.COURSES],
+        "fanous_quizzes_active": states[ModuleAvailability.Code.QUIZZES],
+    }

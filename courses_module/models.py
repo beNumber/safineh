@@ -73,6 +73,12 @@ class Course(models.Model):
         related_name="courses_allowed_provinces",
         blank=True,
     )
+    allowed_cities = models.ManyToManyField(
+        to=School,
+        verbose_name="شهرهای مجاز",
+        related_name="courses_allowed_cities",
+        blank=True,
+    )
 
     start_date = models.DateTimeField("تاریخ و ساعت شروع", default=timezone.now)
     end_date = models.DateTimeField("تاریخ و ساعت پایان", null=True, blank=True)
@@ -312,6 +318,15 @@ class CourseResource(models.Model):
         return ""
 
 
+class CourseView(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="views")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="viewed_courses")
+    first_viewed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["course", "user"], name="unique_course_viewer")]
+
+
 class CourseEnrollment(models.Model):
     course = models.ForeignKey(
         to=Course,
@@ -326,6 +341,9 @@ class CourseEnrollment(models.Model):
         verbose_name="دانش‌آموز",
     )
     created_at = models.DateTimeField("تاریخ ثبت‌نام", auto_now_add=True)
+    first_viewed_at = models.DateTimeField("اولین مشاهده", null=True, blank=True)
+    last_viewed_at = models.DateTimeField("آخرین مشاهده", null=True, blank=True)
+    view_count = models.PositiveIntegerField("تعداد مشاهده", default=0)
 
     class Meta:
         ordering = ["-created_at"]
