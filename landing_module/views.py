@@ -1,6 +1,4 @@
 from django.shortcuts import render
-from django.utils import timezone
-
 from blog_module.models import Post
 from news_module.models import Article
 
@@ -54,10 +52,12 @@ def landing_home_view(request):
     ]
 
     published_posts = Post.published.select_related('category', 'author').prefetch_related('tags')
-    published_news = Article.objects.filter(
-        status=Article.Status.PUBLISHED,
-        published_at__lte=timezone.now(),
-    ).select_related('category', 'author').prefetch_related('tags')
+    published_news = (
+        Article.objects.published()
+        .visible_to(request.user)
+        .select_related('category', 'author')
+        .prefetch_related('tags')
+    )
 
     # سوالات متداول سامانه
     school_faqs = [
