@@ -1,18 +1,11 @@
 #!/bin/sh
-
 set -e
 
 echo "Collecting static files..."
 python manage.py collectstatic --noinput
 
-
-echo "Running makemigrations..."
-python manage.py makemigrations --merge --noinput
-
 echo "Running migrations..."
-python manage.py migrate
-
-
+python manage.py migrate --noinput
 
 echo "Starting Gunicorn..."
 gunicorn safineh.wsgi:application \

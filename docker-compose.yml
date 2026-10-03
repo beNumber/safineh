@@ -1,10 +1,35 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: safineh-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: safineh_db
+      POSTGRES_USER: safineh_user
+      POSTGRES_PASSWORD: strong_safineh_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safineh_user -d safineh_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   web:
     build: .
     container_name: safineh-web
     restart: unless-stopped
     ports:
       - "127.0.0.1:8030:80"
+    environment:
+      - DB_NAME=safineh_db
+      - DB_USER=safineh_user
+      - DB_PASSWORD=strong_safineh_password
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - .:/code
       - static_volume:/code/statics
@@ -13,4 +38,4 @@ services:
 volumes:
   static_volume:
   media_volume:
-
+  postgres_data:
