@@ -47,11 +47,10 @@ def fanous_shell(request):
         .only("title", "slug", "published_at")[:6]
     )
     articles = list(
-        Article.objects.filter(
-            status=Article.Status.PUBLISHED,
-            published_at__lte=now,
-            published_at__gt=last_seen,
-        ).only("title", "slug", "published_at")[:6]
+        Article.objects.published()
+        .visible_to(request.user)
+        .filter(published_at__gt=last_seen)
+        .only("title", "slug", "published_at")[:6]
     )
     items = [
         {
