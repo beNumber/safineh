@@ -5,6 +5,7 @@ app_name = "classroom_module"
 urlpatterns = [
     path("", views.class_list, name="list"),
     path("new/", views.class_form, name="create"),
+    path("<int:pk>/join/", views.class_join, name="join"),
     path("<int:pk>/edit/", views.class_form, name="edit"),
     path("<int:pk>/delete/", views.class_delete, name="delete"),
 ]

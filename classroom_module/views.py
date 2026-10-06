@@ -22,6 +22,19 @@ def class_list(request):
 
 
 @login_required
+def class_join(request, pk):
+    item = get_object_or_404(OnlineClass, pk=pk, is_active=True)
+    now = timezone.now()
+    if now < item.starts_at:
+        messages.warning(request, "ورود به کلاس تا زمان شروع آن امکان‌پذیر نیست.")
+        return redirect("classroom_module:list")
+    if now > item.ends_at:
+        messages.warning(request, "زمان این کلاس به پایان رسیده است.")
+        return redirect("classroom_module:list")
+    return redirect(item.meeting_url)
+
+
+@login_required
 def class_form(request, pk=None):
     if not _is_admin(request.user):
         raise PermissionDenied
