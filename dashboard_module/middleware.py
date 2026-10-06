@@ -24,7 +24,7 @@ class ModuleAvailabilityMiddleware:
         if user and user.is_authenticated:
             now = timezone.now()
             presence, created = UserPresence.objects.get_or_create(user=user, defaults={"last_seen": now})
-            if created or presence.last_seen < now - timedelta(seconds=60):
+            if created or presence.last_seen < now - timedelta(seconds=30):
                 if not created:
                     UserPresence.objects.filter(pk=presence.pk).update(last_seen=now)
                 count = UserPresence.objects.filter(last_seen__gte=now - timedelta(minutes=5)).count()

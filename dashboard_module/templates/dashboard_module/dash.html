@@ -8,372 +8,461 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'dashboard_module/fanous-dashboard.css' %}">
 <style>
-  /* استایل‌های اختصاصی و مینی‌مال بخش اخبار */
-  .dash-news-grid {
+  /* ===================================================
+     استایل‌های مدرن نئونی، شیشه‌ای و انیمیشن‌های پیشرفته
+  =================================================== */
+
+  /* گرید فید اخبار و مقالات */
+  .fanous-feed-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
   }
-  .dash-news-card {
+
+  /* کارت مدرن با افکت شیشه‌ای و مرز نوری */
+  .fanous-glass-card {
+    position: relative;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
-    border-radius: 1rem;
-    border: 1px solid rgba(226, 232, 240, 0.9);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 1.25rem;
+    border: 1px solid rgba(226, 232, 240, 0.8);
     overflow: hidden;
-    transition: all 0.25s ease;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     text-decoration: none;
+    box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
   }
-  .dash-news-card:hover {
-    border-color: rgba(56, 189, 248, 0.6);
-    box-shadow: 0 10px 25px -5px rgba(56, 189, 248, 0.15);
-    transform: translateY(-2px);
+
+  /* لایه بازتاب نور هنگام هاور */
+  .fanous-glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-25deg);
+    transition: left 0.75s ease;
+    z-index: 5;
+    pointer-events: none;
   }
-  .dash-news-thumb {
+
+  .fanous-glass-card:hover::before {
+    left: 150%;
+  }
+
+  .fanous-glass-card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 20px 35px -10px rgba(99, 102, 241, 0.15), 0 1px 3px rgba(0,0,0,0.05);
+    border-color: rgba(99, 102, 241, 0.35);
+  }
+
+  /* کارت خبر با تم فیروزه‌ای */
+  .fanous-news-card:hover {
+    box-shadow: 0 20px 35px -10px rgba(14, 165, 233, 0.15);
+    border-color: rgba(14, 165, 233, 0.35);
+  }
+
+  /* قاب عکس با افکت زوم نرم */
+  .fanous-card-media {
     position: relative;
     width: 100%;
-    height: 140px;
+    height: 170px;
     background: #f1f5f9;
     overflow: hidden;
   }
-  .dash-news-thumb img {
+
+  .fanous-card-media img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-  .dash-news-card:hover .dash-news-thumb img {
-    transform: scale(1.05);
-  }
-  .dash-news-tag {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    background: rgba(0, 113, 108, 0.75);
-    backdrop-filter: blur(4px);
-    color: #ffffff;
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-weight: 600;
-  }
-  .dash-news-body {
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-  }
-  .dash-news-title {
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: #1e293b;
-    margin-bottom: 0.4rem;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .dash-news-summary {
-    font-size: 0.78rem;
-    color: #64748b;
-    line-height: 1.6;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    margin-bottom: 1rem;
-  }
-  .dash-news-footer {
-    margin-top: auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 11px;
-    color: #94a3b8;
-    border-top: 1px solid #f8fafc;
-    padding-top: 0.6rem;
-  }
-  .dash-news-link {
-    color: #0284c7;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  /* استایل‌های اختصاصی بخش وبلاگ */
-  .dash-blog-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.25rem;
+  .fanous-glass-card:hover .fanous-card-media img {
+    transform: scale(1.08);
   }
-  .dash-blog-card {
-    display: flex;
-    flex-direction: column;
-    background: #ffffff;
-    border-radius: 1.25rem;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    overflow: hidden;
-    transition: all 0.25s ease;
-    text-decoration: none;
-  }
-  .dash-blog-card:hover {
-    border-color: rgba(99, 102, 241, 0.5);
-    box-shadow: 0 12px 30px -8px rgba(99, 102, 241, 0.18);
-    transform: translateY(-3px);
-  }
-  .dash-blog-thumb {
-    position: relative;
-    width: 100%;
-    height: 150px;
-    background: #f8fafc;
-    overflow: hidden;
-  }
-  .dash-blog-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.35s ease;
-  }
-  .dash-blog-card:hover .dash-blog-thumb img {
-    transform: scale(1.06);
-  }
-  .dash-blog-tag {
+
+  /* تگ روی تصویر کریستالی */
+  .fanous-floating-badge {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(15, 23, 42, 0.78);
-    backdrop-filter: blur(6px);
+    bottom: 12px;
+    right: 12px;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: #ffffff;
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 8px;
-    font-weight: 600;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 2;
   }
-  .dash-blog-body {
-    padding: 1.15rem;
+
+  /* بدنه کارت */
+  .fanous-card-content {
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
+    position: relative;
+    z-index: 2;
   }
-  .dash-blog-title {
-    font-size: 0.95rem;
+
+  .fanous-card-title {
+    font-size: 1rem;
     font-weight: 800;
-    color: #1e293b;
-    margin-bottom: 0.5rem;
+    color: #0f172a;
     line-height: 1.5;
+    margin-bottom: 0.5rem;
     display: -webkit-box;
     -webkit-line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    transition: color 0.2s ease;
   }
-  .dash-blog-summary {
-    font-size: 0.8rem;
+
+  .fanous-glass-card:hover .fanous-card-title {
+    color: #4f46e5;
+  }
+  .fanous-news-card:hover .fanous-card-title {
+    color: #0284c7;
+  }
+
+  .fanous-card-desc {
+    font-size: 0.82rem;
     color: #64748b;
-    line-height: 1.7;
+    line-height: 1.65;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     margin-bottom: 1.25rem;
   }
-  .dash-blog-footer {
+
+  /* فوتر کارت */
+  .fanous-card-meta {
     margin-top: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 11.5px;
+    font-size: 0.75rem;
     color: #94a3b8;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 0.75rem;
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 0.85rem;
   }
-  .dash-blog-link {
-    color: #6366f1;
-    font-weight: 700;
+
+  .fanous-action-btn {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    transition: gap 0.2s ease;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
   }
-  .dash-blog-card:hover .dash-blog-link {
-    gap: 8px;
+
+  .fanous-glass-card:hover .fanous-action-btn {
+    gap: 10px;
+    transform: translateX(-3px);
+  }
+
+  /* ===================================================
+     پنل پایش زنده (Live Presence Dashboard) فوق پیشرفته
+  =================================================== */
+  .presence-futuristic-panel {
+    position: relative;
+    background: radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 0% 100%, rgba(52, 211, 153, 0.06) 0%, transparent 45%),
+                #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.85);
+    border-radius: 1.5rem;
+    padding: 1.6rem;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.03), 0 20px 25px -5px rgba(16, 185, 129, 0.02);
+    overflow: hidden;
+  }
+
+  /* نوار زمان‌سنج بروزرسانی خودکار */
+  .presence-refresh-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform linear;
+  }
+
+  /* استایل یکدست و سبز کم‌رنگ پاستلی برای همه کارت‌ها */
+  .presence-neon-btn {
+    position: relative;
+    border-radius: 1.15rem;
+    padding: 1rem;
+    text-align: right;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    user-select: none;
+    background: linear-gradient(145deg, #f8fdfb 0%, #ecfdf5 100%);
+    border: 1px solid #a7f3d0;
+    box-shadow: 0 2px 8px -2px rgba(16, 185, 129, 0.05);
+  }
+
+  .presence-neon-btn:hover {
+    transform: translateY(-3px);
+    background: #d1fae5;
+    border-color: #34d399;
+    box-shadow: 0 10px 22px -5px rgba(16, 185, 129, 0.2);
+  }
+
+  /* وضعیت فعال (کارت انتخاب‌شده) */
+  .presence-neon-btn.active-group {
+    background: #d1fae5 !important;
+    border-color: #10b981 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.35), 0 12px 24px -5px rgba(16, 185, 129, 0.25) !important;
+  }
+
+  .presence-neon-btn.active-group::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 6px;
+    background: #10b981;
+    clip-path: polygon(50% 100%, 0 0, 100% 0);
+  }
+
+  /* پالس سبز رنگ زنده */
+  .pulse-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: #10b981;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: livePulse 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+  }
+
+  @keyframes livePulse {
+    to {
+      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+    }
+  }
+
+  /* اسکلتون لودینگ کارت‌ها */
+  .presence-skeleton-card {
+    height: 86px;
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 1.15rem;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="fanous-dashboard space-y-6">
+<div class="fanous-dashboard space-y-8">
 
-  <!-- Hero -->
-  <section class="dash-hero" data-aos="fade-up">
+  <!-- Hero Section -->
+  <section class="dash-hero relative overflow-hidden" data-aos="fade-up">
     <span class="dash-hero-glow dash-hero-glow-one" aria-hidden="true"></span>
     <span class="dash-hero-glow dash-hero-glow-two" aria-hidden="true"></span>
     <span class="dash-hero-grid" aria-hidden="true"></span>
 
-    <div class="dash-hero-content">
+    <div class="dash-hero-content relative z-10">
       <div class="dash-hero-copy">
-        <span class="dash-greeting-badge">
-          <i class="fa-solid fa-sun"></i>
+        <span class="dash-greeting-badge shadow-sm">
+          <i class="fa-solid fa-sun text-amber-400"></i>
           <span>{{ fanous_day_greeting }}</span>
         </span>
 
-        <h1>
+        <h1 class="mt-2 font-black tracking-tight">
           {{ fanous_day_greeting }} {{ user.first_name|default:user.username }} جان؛
-          <span>به فانوس خوش آمدی</span>
+          <span class="bg-gradient-to-l from-indigo-600 to-sky-500 bg-clip-text text-transparent">به فانوس خوش آمدی</span>
         </h1>
 
-        <p>{{ fanous_role_message }}</p>
-        <span class="sr-only">{{ fanous_role_title }}</span>
+        <p class="text-slate-500 mt-1">{{ fanous_role_message }}</p>
       </div>
-
     </div>
   </section>
 
+  <!-- Live Command Center for Admins -->
   {% if user.role == 'ADMIN' or user.is_superuser %}
-  <section class="dash-section"><div class="dash-section-head"><div class="dash-section-title"><span><i class="fa-solid fa-users-viewfinder"></i></span><div><strong>فعالیت‌های اخیر · اوج حضور همزمان</strong><small>کاربران فعال در پنج دقیقه اخیر شمرده می‌شوند.</small></div></div></div><div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{% for peak in recent_presence_peaks %}<div class="rounded-2xl border border-indigo-100 bg-white/80 p-5 shadow-sm"><strong class="text-xl text-indigo-700">{{ peak.count }} نفر همزمان</strong><p class="mt-2 text-xs text-slate-500">در ساعت {{ peak.recorded_at|date:'H:i' }} · {{ peak.recorded_at|date:'Y/m/d' }} داخل سایت بودند</p></div>{% empty %}<p class="text-sm text-slate-500">هنوز آماری ثبت نشده است.</p>{% endfor %}</div></section>
+  <section class="dash-section presence-futuristic-panel" id="live-presence" data-presence-url="{{ presence_api_url }}" data-aos="fade-up">
+    <!-- نوار زمان‌سنج بروزرسانی خودکار -->
+    <div class="presence-refresh-bar" data-refresh-bar></div>
+
+    <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-5">
+      <div class="flex items-center gap-3">
+        <span class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-inner border border-emerald-100/60">
+          <i class="fa-solid fa-bolt-lightning animate-bounce" style="animation-duration: 2.5s;"></i>
+        </span>
+        <div>
+          <div class="text-[11px] font-extrabold text-emerald-600 tracking-wider flex items-center gap-2">
+            <span class="pulse-indicator"></span>
+            LIVE COMMAND CENTER
+          </div>
+          <strong class="text-lg text-slate-800 font-black">مانیتورینگ برخط کاربران</strong>
+          <small class="block text-xs text-slate-400 mt-0.5">وضعیت زنده نشست‌ها؛ برای مشاهده لیست افراد، روی هر نقش کلیک کنید.</small>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <!-- دکمه رفرش دستی -->
+        <button type="button" data-presence-refresh-btn title="بروزرسانی لحظه‌ای"
+                class="w-10 h-10 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-500 hover:text-emerald-600 transition active:scale-95">
+          <i class="fa-solid fa-arrows-rotate text-sm" data-refresh-icon></i>
+        </button>
+
+        <!-- کانتر کل آنلاین‌ها -->
+        <div class="flex items-center gap-3 bg-slate-50/90 px-4 py-2 rounded-2xl border border-slate-200/70 shadow-sm">
+          <div class="text-left">
+            <span class="text-[11px] text-slate-500 font-bold block">مجموع برخط</span>
+            <span data-presence-updated class="block text-[10px] text-slate-400 font-mono">در حال دریافت...</span>
+          </div>
+          <div class="h-8 w-[1px] bg-slate-200"></div>
+          <strong data-presence-total class="text-2xl text-emerald-600 font-black tracking-tight font-mono">۰</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- کانتینر کارت‌ها (با اسکلتون لودینگ اولیه) -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" data-presence-cards>
+      <div class="presence-skeleton-card"></div>
+      <div class="presence-skeleton-card"></div>
+      <div class="presence-skeleton-card"></div>
+      <div class="presence-skeleton-card"></div>
+      <div class="presence-skeleton-card"></div>
+      <div class="presence-skeleton-card"></div>
+    </div>
+
+    <!-- پنل لیست جزئیات کاربران انتخاب‌شده -->
+    <div class="mt-4 hidden p-4 bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-100 shadow-xl transition-all" data-presence-details>
+      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 mb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
+          <strong class="text-sm text-slate-800 font-bold" data-presence-title></strong>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-bold font-mono" data-presence-count-badge>۰</span>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <!-- جستجوی آنی در کاربران گروه باز شده -->
+          <div class="relative flex-grow sm:w-56">
+            <input type="text" data-presence-search placeholder="جستجوی نام یا نام‌کاربری..."
+                   class="w-full text-xs rounded-xl bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 focus:outline-none focus:border-emerald-500 focus:bg-white transition">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+          </div>
+
+          <button type="button" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition" data-presence-close>
+            <i class="fa-solid fa-xmark text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- لیست اسامی کاربران -->
+      <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 max-h-60 overflow-y-auto pr-1" data-presence-users></div>
+    </div>
+  </section>
   {% endif %}
 
-
-  {% if user.role == 'STUDENT' and not user.is_superuser %}
-
   <!-- Student Quick Actions -->
+  {% if user.role == 'STUDENT' and not user.is_superuser %}
   <section class="dash-grid four dash-action-grid" data-aos="fade-up">
-
     <a href="{% url 'plans_module:board' %}" class="dash-card tone-violet">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-calendar-check"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-calendar-check"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>برنامه امروز من</h2>
-        <p>
-          {{ today_plans_count|default:0 }} فعالیت داری و
-          {{ today_completed_count|default:0 }} مورد را انجام داده‌ای.
-        </p>
+        <p>{{ today_plans_count|default:0 }} فعالیت داری و {{ today_completed_count|default:0 }} مورد را انجام داده‌ای.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مشاهده برنامه
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مشاهده برنامه <i class="fa-solid fa-arrow-left"></i></span>
     </a>
 
-    {% if fanous_question_bank_active %}<a href="{% url 'questions_module:choose_mode' %}" class="dash-card tone-cyan">
+    {% if fanous_question_bank_active %}
+    <a href="{% url 'questions_module:choose_mode' %}" class="dash-card tone-cyan">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-brain"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-brain"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>بانک سؤال</h2>
-        <p>
-          تمرین شخصی بساز، آزمون بده و روند پیشرفتت را ببین.
-        </p>
+        <p>تمرین شخصی بساز، آزمون بده و روند پیشرفتت را ببین.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        ورود به بانک سؤال
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">ورود به بانک سؤال <i class="fa-solid fa-arrow-left"></i></span>
     </a>
+    {% endif %}
 
-    {% endif %}{% if fanous_courses_active %}<a href="{% url 'courses_module:my_courses' %}" class="dash-card tone-blue">
+    {% if fanous_courses_active %}
+    <a href="{% url 'courses_module:my_courses' %}" class="dash-card tone-blue">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-book-open-reader"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-book-open-reader"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>دوره‌های من</h2>
-        <p>
-          {{ my_courses_count|default:0 }} دوره در مسیر یادگیری تو قرار دارد.
-        </p>
+        <p>{{ my_courses_count|default:0 }} دوره در مسیر یادگیری تو قرار دارد.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مشاهده دوره‌ها
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مشاهده دوره‌ها <i class="fa-solid fa-arrow-left"></i></span>
     </a>
+    {% endif %}
 
-    {% endif %}<a href="{% url 'counseling:my_consultant' %}" class="dash-card tone-emerald">
+    <a href="{% url 'counseling:my_consultant' %}" class="dash-card tone-emerald">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-user-shield"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-user-shield"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>مشاور اختصاصی</h2>
         <p>
           {% if consultant_assignment %}
-            {{ consultant_assignment.consultant.get_full_name|default:consultant_assignment.consultant.username }}
-            همراه مسیر توست.
+            {{ consultant_assignment.consultant.get_full_name|default:consultant_assignment.consultant.username }} همراه مسیر توست.
           {% else %}
             وضعیت انتخاب مشاور اختصاصی خودت را دنبال کن.
           {% endif %}
         </p>
       </div>
-
-      <span class="dash-card-bottom">
-        مشاهده مشاور
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مشاهده مشاور <i class="fa-solid fa-arrow-left"></i></span>
     </a>
-
   </section>
-
 
   <!-- Student Details -->
   <section class="dash-grid two">
-
     <div class="dash-section" data-aos="fade-up">
       <div class="dash-section-head">
         <div class="dash-section-title">
-          <span>
-            <i class="fa-solid fa-list-check"></i>
-          </span>
-
+          <span><i class="fa-solid fa-list-check"></i></span>
           <div>
             <strong>برنامه امروز</strong>
             <small>قدم‌های کوچک و پیوسته</small>
           </div>
         </div>
-
-        <a href="{% url 'plans_module:board' %}" class="dash-section-link">
-          مشاهده برنامه
-          <i class="fa-solid fa-chevron-left"></i>
-        </a>
+        <a href="{% url 'plans_module:board' %}" class="dash-section-link">مشاهده برنامه <i class="fa-solid fa-chevron-left"></i></a>
       </div>
 
       <div class="dash-items-list">
         {% for item in today_plans %}
           <div class="dash-mini-item">
-            <span class="dash-mini-icon violet">
-              <i class="fa-solid fa-clock"></i>
-            </span>
-
+            <span class="dash-mini-icon violet"><i class="fa-solid fa-clock"></i></span>
             <div class="dash-mini-content">
               <strong>{{ item.display_title }}</strong>
-              <small>
-                <i class="fa-regular fa-clock"></i>
-                ساعت {{ item.start_hour }}:۰۰
-              </small>
+              <small><i class="fa-regular fa-clock"></i> ساعت {{ item.start_hour }}:۰۰</small>
             </div>
-
             <span class="dash-mini-status"></span>
           </div>
         {% empty %}
           <div class="dash-empty-state">
-            <span class="dash-empty-icon">
-              <i class="fa-solid fa-mug-hot"></i>
-            </span>
-
+            <span class="dash-empty-icon"><i class="fa-solid fa-mug-hot"></i></span>
             <strong>امروز هنوز برنامه‌ای ثبت نشده است.</strong>
             <p>با ساختن یک برنامه کوچک، روزت را بهتر شروع کن.</p>
           </div>
@@ -381,207 +470,119 @@
       </div>
     </div>
 
-
-    {% if fanous_courses_active %}<div class="dash-section" data-aos="fade-up" data-aos-delay="80">
+    {% if fanous_courses_active %}
+    <div class="dash-section" data-aos="fade-up" data-aos-delay="80">
       <div class="dash-section-head">
         <div class="dash-section-title">
-          <span>
-            <i class="fa-solid fa-bookmark"></i>
-          </span>
-
+          <span><i class="fa-solid fa-bookmark"></i></span>
           <div>
             <strong>ادامه یادگیری</strong>
             <small>دوره‌های اخیر تو</small>
           </div>
         </div>
-
-        <a href="{% url 'courses_module:my_courses' %}" class="dash-section-link">
-          همه دوره‌ها
-          <i class="fa-solid fa-chevron-left"></i>
-        </a>
+        <a href="{% url 'courses_module:my_courses' %}" class="dash-section-link">همه دوره‌ها <i class="fa-solid fa-chevron-left"></i></a>
       </div>
 
       <div class="dash-course-list">
         {% for enrollment in my_course_enrollments %}
-          <a
-            href="{% url 'courses_module:course_detail' enrollment.course.slug %}"
-            class="dash-mini-item dash-course-item"
-          >
-            <span class="dash-mini-icon blue">
-              <i class="fa-solid fa-play"></i>
-            </span>
-
+          <a href="{% url 'courses_module:course_detail' enrollment.course.slug %}" class="dash-mini-item dash-course-item">
+            <span class="dash-mini-icon blue"><i class="fa-solid fa-play"></i></span>
             <div class="dash-mini-content">
               <strong>{{ enrollment.course.title }}</strong>
-              <small>
-                {{ enrollment.course.author.get_full_name|default:enrollment.course.author.username }}
-              </small>
+              <small>{{ enrollment.course.author.get_full_name|default:enrollment.course.author.username }}</small>
             </div>
-
             <i class="fa-solid fa-chevron-left dash-mini-arrow"></i>
           </a>
         {% empty %}
           <div class="dash-empty-state">
-            <span class="dash-empty-icon">
-              <i class="fa-solid fa-book-open"></i>
-            </span>
-
+            <span class="dash-empty-icon"><i class="fa-solid fa-book-open"></i></span>
             <strong>هنوز دوره‌ای انتخاب نکرده‌ای.</strong>
             <p>مسیر یادگیری مناسب خودت را پیدا کن.</p>
-
-            <a
-              href="{% url 'courses_module:course_list' %}"
-              class="dash-empty-button"
-            >
-              دیدن دوره‌ها
-              <i class="fa-solid fa-arrow-left"></i>
-            </a>
+            <a href="{% url 'courses_module:course_list' %}" class="dash-empty-button">دیدن دوره‌ها <i class="fa-solid fa-arrow-left"></i></a>
           </div>
         {% endfor %}
       </div>
-    </div>{% endif %}
-
+    </div>
+    {% endif %}
   </section>
 
-
   {% elif user.role == 'CONSULTANT' %}
-
   <!-- Consultant Quick Actions -->
   <section class="dash-grid four dash-action-grid" data-aos="fade-up">
-
     <a href="{% url 'counseling:my_students' %}" class="dash-card tone-emerald">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-user-group"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-user-group"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>دانش‌آموزان من</h2>
-        <p>
-          {{ my_students_count|default:0 }} دانش‌آموز اختصاصی؛
-          برنامه و عملکردشان را یکجا ببین.
-        </p>
+        <p>{{ my_students_count|default:0 }} دانش‌آموز اختصاصی؛ عملکردشان را یکجا ببین.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مشاهده دانش‌آموزان
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مشاهده دانش‌آموزان <i class="fa-solid fa-arrow-left"></i></span>
     </a>
 
     <a href="{% url 'plans_module:board' %}" class="dash-card tone-violet">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-calendar-plus"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-calendar-plus"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>طراحی برنامه</h2>
-        <p>
-          برنامه شخصی یا گروهی دانش‌آموزان را هوشمندانه بچین.
-        </p>
+        <p>برنامه شخصی یا گروهی دانش‌آموزان را هوشمندانه بچین.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        طراحی برنامه
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">طراحی برنامه <i class="fa-solid fa-arrow-left"></i></span>
     </a>
 
-    {% if fanous_question_bank_active %}<a href="{% url 'questions_module:choose_mode' %}" class="dash-card tone-cyan">
+    {% if fanous_question_bank_active %}
+    <a href="{% url 'questions_module:choose_mode' %}" class="dash-card tone-cyan">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-list-check"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-list-check"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>بانک سؤال</h2>
-        <p>
-          سؤال بساز و وضعیت بررسی محتوای خودت را دنبال کن.
-        </p>
+        <p>سؤال بساز و وضعیت بررسی محتوای خودت را دنبال کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        ورود به بانک سؤال
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">ورود به بانک سؤال <i class="fa-solid fa-arrow-left"></i></span>
     </a>
+    {% endif %}
 
-    {% endif %}{% if fanous_courses_active %}<a href="{% url 'courses_module:course_create' %}" class="dash-card tone-blue">
+    {% if fanous_courses_active %}
+    <a href="{% url 'courses_module:course_create' %}" class="dash-card tone-blue">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-clapperboard"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-clapperboard"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>دوره جدید</h2>
-        <p>
-          یک تجربه آموزشی تازه بساز و برای تأیید ارسال کن.
-        </p>
+        <p>یک تجربه آموزشی تازه بساز و برای تأیید ارسال کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        ساخت دوره جدید
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
-    </a>{% endif %}
-
+      <span class="dash-card-bottom">ساخت دوره جدید <i class="fa-solid fa-arrow-left"></i></span>
+    </a>
+    {% endif %}
   </section>
-
 
   <section class="dash-section" data-aos="fade-up">
     <div class="dash-section-head">
       <div class="dash-section-title">
-        <span>
-          <i class="fa-solid fa-users-viewfinder"></i>
-        </span>
-
+        <span><i class="fa-solid fa-users-viewfinder"></i></span>
         <div>
           <strong>آخرین دانش‌آموزان تحت مشاوره</strong>
           <small>دسترسی سریع به پرونده‌ها</small>
         </div>
       </div>
-
-      <a href="{% url 'counseling:my_students' %}" class="dash-section-link">
-        مشاهده همه
-        <i class="fa-solid fa-chevron-left"></i>
-      </a>
+      <a href="{% url 'counseling:my_students' %}" class="dash-section-link">مشاهده همه <i class="fa-solid fa-chevron-left"></i></a>
     </div>
 
     <div class="dash-student-grid">
       {% for item in recent_student_assignments %}
-        <a
-          href="{% url 'counseling:student_performance' item.student_id %}"
-          class="dash-mini-item dash-student-item"
-        >
-          <span class="dash-student-avatar">
-            {{ item.student.user.first_name|default:item.student.user.username|slice:":1" }}
-          </span>
-
+        <a href="{% url 'counseling:student_performance' item.student_id %}" class="dash-mini-item dash-student-item">
+          <span class="dash-student-avatar">{{ item.student.user.first_name|default:item.student.user.username|slice:":1" }}</span>
           <div class="dash-mini-content">
-            <strong>
-              {{ item.student.user.get_full_name|default:item.student.user.username }}
-            </strong>
-
-            <small>
-              {{ item.student.field.grade.title }}
-              <span>·</span>
-              مشاهده عملکرد
-            </small>
+            <strong>{{ item.student.user.get_full_name|default:item.student.user.username }}</strong>
+            <small>{{ item.student.field.grade.title }} <span>·</span> مشاهده عملکرد</small>
           </div>
-
           <i class="fa-solid fa-chevron-left dash-mini-arrow"></i>
         </a>
       {% empty %}
         <div class="dash-empty-state dash-empty-wide">
-          <span class="dash-empty-icon">
-            <i class="fa-solid fa-user-group"></i>
-          </span>
-
+          <span class="dash-empty-icon"><i class="fa-solid fa-user-group"></i></span>
           <strong>هنوز دانش‌آموزی به شما تخصیص داده نشده است.</strong>
           <p>پس از تخصیص دانش‌آموز، اطلاعات او در این قسمت نمایش داده می‌شود.</p>
         </div>
@@ -589,211 +590,133 @@
     </div>
   </section>
 
-
   {% elif user.role == 'PROVINCE_TRUSTEE' %}
-
   <!-- Province Trustee Actions -->
   <section class="dash-grid four dash-action-grid" data-aos="fade-up">
-
     <a href="{% url 'counseling:manage' %}" class="dash-card tone-emerald">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-people-arrows-left-right"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-people-arrows-left-right"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>تخصیص مشاور</h2>
-        <p>
-          {{ province_unassigned_count|default:0 }} نفر از
-          {{ province_students_count|default:0 }} دانش‌آموز هنوز مشاور ندارند.
-        </p>
+        <p>{{ province_unassigned_count|default:0 }} نفر از {{ province_students_count|default:0 }} دانش‌آموز هنوز مشاور ندارند.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مدیریت تخصیص
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مدیریت تخصیص <i class="fa-solid fa-arrow-left"></i></span>
     </a>
 
-    {% if fanous_courses_active %}<a href="{% url 'courses_module:my_courses' %}" class="dash-card tone-amber">
+    {% if fanous_courses_active %}
+    <a href="{% url 'courses_module:my_courses' %}" class="dash-card tone-amber">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-shield-check"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-shield-check"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>بررسی دوره‌ها</h2>
-        <p>
-          دوره‌های تازه استان را با دقت بررسی و تعیین وضعیت کن.
-        </p>
+        <p>دوره‌های تازه استان را با دقت بررسی و تعیین وضعیت کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        بررسی دوره‌ها
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">بررسی دوره‌ها <i class="fa-solid fa-arrow-left"></i></span>
     </a>
+    {% endif %}
 
-    {% endif %}{% if fanous_question_bank_active %}<a href="{% url 'questions_module:approval_queue' %}" class="dash-card tone-cyan">
+    {% if fanous_question_bank_active %}
+    <a href="{% url 'questions_module:approval_queue' %}" class="dash-card tone-cyan">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-spell-check"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-spell-check"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>تأیید سؤال‌ها</h2>
-        <p>
-          سؤال‌های ثبت‌شده مشاوران استان را بررسی کن.
-        </p>
+        <p>سؤال‌های ثبت‌شده مشاوران استان را بررسی کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مشاهده سؤال‌ها
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مشاهده سؤال‌ها <i class="fa-solid fa-arrow-left"></i></span>
     </a>
+    {% endif %}
 
-    {% endif %}<a href="{% url 'ticketing:list' %}" class="dash-card tone-rose">
+    <a href="{% url 'ticketing:list' %}" class="dash-card tone-rose">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-inbox"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-inbox"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>تیکت‌های استان</h2>
-        <p>
-          درخواست‌ها و پیگیری‌های تازه را مدیریت کن.
-        </p>
+        <p>درخواست‌ها و پیگیری‌های تازه را مدیریت کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مشاهده تیکت‌ها
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مشاهده تیکت‌ها <i class="fa-solid fa-arrow-left"></i></span>
     </a>
-
   </section>
-
   {% endif %}
 
-
-  {% if user.role == 'ADMIN' or user.is_superuser %}
-
   <!-- Admin Actions -->
+  {% if user.role == 'ADMIN' or user.is_superuser %}
   <section class="dash-grid four dash-action-grid" data-aos="fade-up">
-
     <a href="{% url 'reports_module:people_activity' %}" class="dash-card tone-violet">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-chart-simple"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-chart-simple"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>مرکز گزارش‌ها</h2>
-        <p>
-          فعالیت نقش‌های مختلف سامانه را دقیق و زنده تحلیل کن.
-        </p>
+        <p>فعالیت نقش‌های مختلف سامانه را دقیق و زنده تحلیل کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        ورود به گزارش‌ها
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">ورود به گزارش‌ها <i class="fa-solid fa-arrow-left"></i></span>
     </a>
 
     <a href="{% url 'counseling:manage' %}" class="dash-card tone-emerald">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-people-roof"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-people-roof"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>مدیریت مشاوران</h2>
-        <p>
-          {{ all_unassigned_count|default:0 }} نفر از
-          {{ all_students_count|default:0 }} دانش‌آموز هنوز مشاور ندارند.
-        </p>
+        <p>{{ all_unassigned_count|default:0 }} نفر از {{ all_students_count|default:0 }} دانش‌آموز هنوز مشاور ندارند.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مدیریت مشاوران
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مدیریت مشاوران <i class="fa-solid fa-arrow-left"></i></span>
     </a>
 
     <a href="{% url 'plans_module:board' %}" class="dash-card tone-blue">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-calendar-days"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-calendar-days"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>مدیریت برنامه‌ها</h2>
-        <p>
-          برنامه‌های عمومی، گروهی و اختصاصی را کنترل کن.
-        </p>
+        <p>برنامه‌های عمومی، گروهی و اختصاصی را کنترل کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مدیریت برنامه‌ها
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
+      <span class="dash-card-bottom">مدیریت برنامه‌ها <i class="fa-solid fa-arrow-left"></i></span>
     </a>
 
-    {% if fanous_question_bank_active %}<a href="{% url 'questions_module:choose_mode' %}" class="dash-card tone-cyan">
+    {% if fanous_question_bank_active %}
+    <a href="{% url 'questions_module:choose_mode' %}" class="dash-card tone-cyan">
       <span class="dash-card-shine" aria-hidden="true"></span>
-      <span class="dash-card-icon">
-        <i class="fa-solid fa-database"></i>
-      </span>
+      <span class="dash-card-icon"><i class="fa-solid fa-database"></i></span>
       <i class="dash-card-arrow fa-solid fa-arrow-left"></i>
-
       <div class="dash-card-content">
         <h2>مدیریت بانک سؤال</h2>
-        <p>
-          محتوا و ساختار آموزشی بانک سؤال را مدیریت کن.
-        </p>
+        <p>محتوا و ساختار آموزشی بانک سؤال را مدیریت کن.</p>
       </div>
-
-      <span class="dash-card-bottom">
-        مدیریت بانک سؤال
-        <i class="fa-solid fa-arrow-left"></i>
-      </span>
-    </a>{% endif %}
-
+      <span class="dash-card-bottom">مدیریت بانک سؤال <i class="fa-solid fa-arrow-left"></i></span>
+    </a>
+    {% endif %}
   </section>
-
   {% endif %}
 
-  <!-- Blog Section (بخش تازه‌ترین مقالات وبلاگ) -->
+  <!-- Blog Section (بخش مقالات وبلاگ) -->
   <section class="dash-section" data-aos="fade-up">
     <div class="dash-section-head">
       <div class="dash-section-title">
-        <span>
+        <span class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
           <i class="fa-solid fa-pen-nib"></i>
         </span>
         <div>
-          <strong>تازه‌ترین یادداشت‌های وبلاگ</strong>
-          <small>مقالات آموزشی، مشاوره‌ای و انگیزشی</small>
+          <strong class="text-base text-slate-800">تازه‌ترین یادداشت‌های وبلاگ</strong>
+          <small class="text-slate-400">مقالات آموزشی، مشاوره‌ای و انگیزشی اختصاصی</small>
         </div>
       </div>
 
-      <a href="{% url 'blog:post_list' %}" class="dash-section-link">
-        مشاهده همه وبلاگ
-        <i class="fa-solid fa-chevron-left"></i>
+      <a href="{% url 'blog:post_list' %}" class="dash-section-link group">
+        <span>مشاهده همه مقالات</span>
+        <i class="fa-solid fa-arrow-left-long group-hover:-translate-x-1 transition-transform"></i>
       </a>
     </div>
 
-    <div class="dash-blog-grid">
+    <div class="fanous-feed-grid">
       {% for post in latest_posts %}
-        <a href="{% url 'blog:post_detail' post.slug %}" class="dash-blog-card">
-          <div class="dash-blog-thumb">
+        <a href="{% url 'blog:post_detail' post.slug %}" class="fanous-glass-card">
+          <div class="fanous-card-media">
             {% if post.cover %}
               <img src="{{ post.cover.url }}" alt="{{ post.title }}" loading="lazy">
             {% elif post.image %}
@@ -804,31 +727,29 @@
               </div>
             {% endif %}
             {% if post.category %}
-              <span class="dash-blog-tag">{{ post.category.name }}</span>
+              <span class="fanous-floating-badge">{{ post.category.name }}</span>
             {% endif %}
           </div>
 
-          <div class="dash-blog-body">
-            <h3 class="dash-blog-title">{{ post.title }}</h3>
-            <p class="dash-blog-summary">{{ post.summary|truncatewords:25 }}</p>
+          <div class="fanous-card-content">
+            <h3 class="fanous-card-title">{{ post.title }}</h3>
+            <p class="fanous-card-desc">{{ post.summary|truncatewords:20 }}</p>
 
-            <div class="dash-blog-footer">
-              <span>
-                <i class="fa-regular fa-calendar ml-1"></i>
+            <div class="fanous-card-meta">
+              <span class="flex items-center gap-1.5 font-medium">
+                <i class="fa-regular fa-clock text-slate-400"></i>
                 {{ post.published_at|date:"Y/m/d"|default:post.created_at|date:"Y/m/d" }}
               </span>
-              <span class="dash-blog-link">
-                ادامه مطلب
-                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+              <span class="fanous-action-btn text-indigo-600">
+                مطالعه یادداشت
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
               </span>
             </div>
           </div>
         </a>
       {% empty %}
-        <div class="dash-empty-state dash-empty-wide">
-          <span class="dash-empty-icon">
-            <i class="fa-solid fa-feather-pointed"></i>
-          </span>
+        <div class="dash-empty-state dash-empty-wide col-span-full">
+          <span class="dash-empty-icon"><i class="fa-solid fa-feather-pointed"></i></span>
           <strong>مقاله‌ای برای نمایش وجود ندارد.</strong>
           <p>به زودی مقالات جدیدی در وبلاگ منتشر خواهد شد.</p>
         </div>
@@ -840,25 +761,25 @@
   <section class="dash-section" data-aos="fade-up">
     <div class="dash-section-head">
       <div class="dash-section-title">
-        <span>
+        <span class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
           <i class="fa-regular fa-newspaper"></i>
         </span>
         <div>
-          <strong>تازه‌ترین اخبار</strong>
-          <small>اطلاعیه‌ها و رویدادهای اخیر</small>
+          <strong class="text-base text-slate-800">تازه‌ترین اخبار و رویدادها</strong>
+          <small class="text-slate-400">اطلاعیه‌های رسمی و رویدادهای پیش رو</small>
         </div>
       </div>
 
-      <a href="{% url 'news_module:article_list' %}" class="dash-section-link">
-        همه اخبار
-        <i class="fa-solid fa-chevron-left"></i>
+      <a href="{% url 'news_module:article_list' %}" class="dash-section-link group">
+        <span>مشاهده همه اخبار</span>
+        <i class="fa-solid fa-arrow-left-long group-hover:-translate-x-1 transition-transform"></i>
       </a>
     </div>
 
-    <div class="dash-news-grid">
+    <div class="fanous-feed-grid">
       {% for item in latest_news %}
-        <a href="{{ item.get_absolute_url }}" class="dash-news-card">
-          <div class="dash-news-thumb">
+        <a href="{{ item.get_absolute_url }}" class="fanous-glass-card fanous-news-card">
+          <div class="fanous-card-media">
             {% if item.image %}
               <img src="{{ item.image.url }}" alt="{{ item.title }}" loading="lazy">
             {% else %}
@@ -867,37 +788,221 @@
               </div>
             {% endif %}
             {% if item.category %}
-              <span class="dash-news-tag">{{ item.category.name }}</span>
+              <span class="fanous-floating-badge">{{ item.category.name }}</span>
             {% endif %}
           </div>
 
-          <div class="dash-news-body">
-            <h3 class="dash-news-title">{{ item.title }}</h3>
-            <p class="dash-news-summary">{{ item.summary }}</p>
+          <div class="fanous-card-content">
+            <h3 class="fanous-card-title">{{ item.title }}</h3>
+            <p class="fanous-card-desc">{{ item.summary|truncatewords:20 }}</p>
 
-            <div class="dash-news-footer">
-              <span>
-                <i class="fa-regular fa-calendar ml-1"></i>
+            <div class="fanous-card-meta">
+              <span class="flex items-center gap-1.5 font-medium">
+                <i class="fa-regular fa-clock text-slate-400"></i>
                 {{ item.published_at|date:"Y/m/d"|default:item.created_at|date:"Y/m/d" }}
               </span>
-              <span class="dash-news-link">
-                ادامه خبر
-                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+              <span class="fanous-action-btn text-sky-600">
+                مشاهده اطلاعیه
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
               </span>
             </div>
           </div>
         </a>
       {% empty %}
-        <div class="dash-empty-state dash-empty-wide">
-          <span class="dash-empty-icon">
-            <i class="fa-regular fa-newspaper"></i>
-          </span>
+        <div class="dash-empty-state dash-empty-wide col-span-full">
+          <span class="dash-empty-icon"><i class="fa-regular fa-newspaper"></i></span>
           <strong>خبری برای نمایش وجود ندارد.</strong>
-          <p>تازه ترین اطلاعیه‌ها در این قسمت نمایش داده خواهند شد.</p>
+          <p>تازه‌ترین اطلاعیه‌ها در این قسمت نمایش داده خواهند شد.</p>
         </div>
       {% endfor %}
     </div>
   </section>
 
 </div>
+
+<script>
+(() => {
+  const root = document.querySelector('[data-presence-url]');
+  if (!root) return;
+
+  const cards = root.querySelector('[data-presence-cards]');
+  const total = root.querySelector('[data-presence-total]');
+  const details = root.querySelector('[data-presence-details]');
+  const users = root.querySelector('[data-presence-users]');
+  const title = root.querySelector('[data-presence-title]');
+  const countBadge = root.querySelector('[data-presence-count-badge]');
+  const updated = root.querySelector('[data-presence-updated]');
+  const refreshBtn = root.querySelector('[data-presence-refresh-btn]');
+  const refreshIcon = root.querySelector('[data-refresh-icon]');
+  const refreshBar = root.querySelector('[data-refresh-bar]');
+  const searchInput = root.querySelector('[data-presence-search]');
+
+  const labels = {
+    superusers: 'سوپر ادمین‌ها',
+    admins: 'مدیران سامانه',
+    consultants: 'مشاوران',
+    trustees: 'معتمدان استان',
+    moderators: 'ناظران محتوا',
+    students: 'دانش‌آموزان'
+  };
+
+  const icons = {
+    superusers: 'fa-crown text-emerald-600',
+    admins: 'fa-shield-halved text-emerald-600',
+    consultants: 'fa-headset text-emerald-600',
+    trustees: 'fa-location-dot text-emerald-600',
+    moderators: 'fa-eye text-emerald-600',
+    students: 'fa-graduation-cap text-emerald-600'
+  };
+
+  let data = {};
+  let activeGroup = null;
+  const INTERVAL_TIME = 30000;
+  let intervalTimer = null;
+
+  // انیمیشن خط زمان‌سنج بالای پنل
+  function resetProgressBar() {
+    if (!refreshBar) return;
+    refreshBar.style.transition = 'none';
+    refreshBar.style.transform = 'scaleX(0)';
+    setTimeout(() => {
+      refreshBar.style.transition = `transform ${INTERVAL_TIME}ms linear`;
+      refreshBar.style.transform = 'scaleX(1)';
+    }, 50);
+  }
+
+  // نمایش لیست افراد نقش انتخاب‌شده با قابلیت فیلتر متنی
+  function renderUsers(groupKey, filterText = '') {
+    const group = data[groupKey];
+    if (!group) return;
+
+    let list = group.users || [];
+    if (filterText.trim()) {
+      const q = filterText.trim().toLowerCase();
+      list = list.filter(u =>
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.username && u.username.toLowerCase().includes(q))
+      );
+    }
+
+    if (!list.length) {
+      users.innerHTML = `<p class="text-xs text-slate-400 col-span-full py-4 text-center">
+        ${filterText ? 'کاربری با این مشخصات یافت نشد.' : 'در حال حاضر هیچ کاربری در این گروه آنلاین نیست.'}
+      </p>`;
+      return;
+    }
+
+    users.innerHTML = list.map(u => `
+      <div class="rounded-xl bg-slate-50/80 hover:bg-emerald-50/50 p-2.5 border border-slate-100 hover:border-emerald-200 transition flex items-center justify-between">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+            ${(u.name || u.username || 'U').charAt(0)}
+          </span>
+          <div class="truncate">
+            <strong class="block text-xs text-slate-800 truncate">${u.name || u.username}</strong>
+            <small class="text-[10px] text-slate-400 font-mono block truncate">${u.username}</small>
+          </div>
+        </div>
+        <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shrink-0"></span>
+      </div>
+    `).join('');
+  }
+
+  async function refresh() {
+    if (refreshIcon) refreshIcon.classList.add('fa-spin');
+    try {
+      const r = await fetch(root.dataset.presenceUrl);
+      if (!r.ok) throw new Error();
+      data = (await r.json()).groups;
+
+      const sum = Object.values(data).reduce((acc, g) => acc + (g.count || 0), 0);
+      total.textContent = sum.toLocaleString('fa-IR');
+
+      cards.innerHTML = Object.entries(labels).map(([k, l]) => `
+        <div class="presence-neon-btn group ${activeGroup === k ? 'active-group' : ''}" data-presence-group="${k}">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs text-slate-600 font-bold">${l}</span>
+            <span class="w-8 h-8 rounded-xl bg-white shadow-sm border border-emerald-100 flex items-center justify-center transition group-hover:scale-110">
+              <i class="fa-solid ${icons[k]} text-xs"></i>
+            </span>
+          </div>
+          <div class="flex items-baseline justify-between mt-1">
+            <strong class="text-2xl font-black text-slate-800 font-mono tracking-tight group-hover:text-emerald-700 transition">
+              ${(data[k]?.count || 0).toLocaleString('fa-IR')}
+            </strong>
+            <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> فعال
+            </span>
+          </div>
+        </div>
+      `).join('');
+
+      updated.textContent = 'بروز: ' + new Date().toLocaleTimeString('fa-IR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
+      if (activeGroup && data[activeGroup]) {
+        countBadge.textContent = (data[activeGroup].count || 0).toLocaleString('fa-IR');
+        renderUsers(activeGroup, searchInput ? searchInput.value : '');
+      }
+
+      // رویداد کلیک برای کارت‌های گروه‌ها
+      cards.querySelectorAll('[data-presence-group]').forEach(c => {
+        c.onclick = () => {
+          const groupKey = c.dataset.presenceGroup;
+
+          if (activeGroup === groupKey && !details.classList.contains('hidden')) {
+            details.classList.add('hidden');
+            activeGroup = null;
+            c.classList.remove('active-group');
+            return;
+          }
+
+          activeGroup = groupKey;
+          cards.querySelectorAll('[data-presence-group]').forEach(el => el.classList.remove('active-group'));
+          c.classList.add('active-group');
+
+          title.textContent = labels[groupKey] + ' برخط';
+          countBadge.textContent = (data[groupKey]?.count || 0).toLocaleString('fa-IR');
+          if (searchInput) searchInput.value = '';
+
+          renderUsers(groupKey);
+          details.classList.remove('hidden');
+        };
+      });
+
+      resetProgressBar();
+    } catch (e) {
+      updated.textContent = 'عدم ارتباط با سرور';
+    } finally {
+      if (refreshIcon) setTimeout(() => refreshIcon.classList.remove('fa-spin'), 600);
+    }
+  }
+
+  // بستن لیست جزئیات
+  root.querySelector('[data-presence-close]').onclick = () => {
+    details.classList.add('hidden');
+    activeGroup = null;
+    cards.querySelectorAll('[data-presence-group]').forEach(el => el.classList.remove('active-group'));
+  };
+
+  // جستجوی لحظه‌ای در اسامی
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      if (activeGroup) renderUsers(activeGroup, e.target.value);
+    });
+  }
+
+  // دکمه تازه‌سازی دستی
+  if (refreshBtn) {
+    refreshBtn.onclick = () => {
+      clearInterval(intervalTimer);
+      refresh();
+      intervalTimer = setInterval(refresh, INTERVAL_TIME);
+    };
+  }
+
+  // راه‌اندازی اولیه
+  refresh();
+  intervalTimer = setInterval(refresh, INTERVAL_TIME);
+})();
+</script>
 {% endblock %}

@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
+from django.urls import reverse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -12,7 +13,7 @@ from plans_module.models import PlanCompletion, PlanEntry
 from plans_module.services import current_week_start, student_profile_for
 from counseling_module.models import StudentConsultantAssignment
 from counseling_module.services import manageable_students_for
-from .models import ModuleAvailability
+from .models import ModuleAvailability, UserPresence
 
 # ایمپورت مدل اخبار
 from news_module.models import Article
@@ -88,8 +89,25 @@ def dash_view(request):
         ).count()
         from .models import PresencePeak
         context["recent_presence_peaks"] = PresencePeak.objects.order_by("-recorded_at")[:5]
+        context["presence_api_url"] = reverse("dashboard_presence")
 
     return render(request, "dashboard_module/dash.html", context)
+
+
+@login_required
+def presence_status(request):
+    if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+        raise PermissionDenied
+    online_since = timezone.now() - timezone.timedelta(minutes=5)
+    presences = UserPresence.objects.filter(last_seen__gte=online_since, user__is_active=True).select_related("user").order_by("user__role", "user__first_name", "user__last_name", "user__username")
+    groups = {"superusers": [], "admins": [], "consultants": [], "trustees": [], "moderators": [], "students": []}
+    role_groups = {UserRole.STUDENT: "students", UserRole.CONSULTANT: "consultants", UserRole.ADMIN: "admins", UserRole.PROVINCE_TRUSTEE: "trustees", UserRole.CONTENT_MODERATOR: "moderators"}
+    for presence in presences:
+        user = presence.user
+        group_name = "superusers" if user.is_superuser else role_groups.get(user.role)
+        if group_name:
+            groups[group_name].append({"id": user.pk, "name": user.get_full_name().strip() or user.username, "username": user.username, "last_seen": presence.last_seen.isoformat()})
+    return JsonResponse({"updated_at": timezone.now().isoformat(), "groups": {key: {"count": len(users), "users": users} for key, users in groups.items()}})
 
 
 @login_required
