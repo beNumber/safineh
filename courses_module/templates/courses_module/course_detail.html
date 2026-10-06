@@ -80,6 +80,7 @@
     {% endif %}
 
     {% if can_manage %}
+        <!-- نوار مدیریت دوره مخصوص ادمین و مدرس -->
         <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white/80 p-3 shadow-xs backdrop-blur-md">
             <div class="flex items-center gap-2.5 text-xs font-bold text-slate-700">
                 <span class="inline-flex h-2.5 w-2.5 rounded-full {% if course.approval_status == 'APPROVED' %}bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]{% elif course.approval_status == 'PENDING' %}bg-amber-400 animate-pulse{% else %}bg-rose-500{% endif %}"></span>
@@ -90,13 +91,13 @@
             </div>
             <div class="flex items-center gap-2">
                 <a href="{% url 'courses_module:course_edit' course.pk %}" class="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/80 px-3.5 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-100">
-                    <i class="fa-solid fa-pen text-[11px]"></i> ویرایش اطلاعات دوره
+                    <i class="fa-solid fa-pen text-[11px]"></i> ویرایش دوره
                 </a>
                 {% if can_delete %}
                     <form method="post" action="{% url 'courses_module:course_delete' course.pk %}" onsubmit="return confirm('آیا از حذف کامل دوره و تمامی محتواها اطمینان دارید؟')" class="inline">
                         {% csrf_token %}
                         <button type="submit" class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100">
-                            <i class="fa-regular fa-trash-can text-[11px]"></i> حذف
+                            <i class="fa-regular fa-trash-can text-[11px]"></i> حذف دوره
                         </button>
                     </form>
                 {% endif %}
@@ -104,6 +105,7 @@
         </div>
     {% endif %}
 
+    <!-- بنر معرفی دوره -->
     <section class="hero-detail relative overflow-hidden rounded-[30px] p-6 shadow-2xl sm:p-9">
         <div class="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl pointer-events-none"></div>
         <div class="relative z-10 grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -150,7 +152,7 @@
                         {% endif %}
                     {% endif %}
 
-                    {% if user.role == 'ADMIN' or user.is_superuser %}
+                    {% if can_manage %}
                         <div class="border-t border-white/15 pt-4">
                             <form method="post" action="{% url 'courses_module:course_close' course.pk %}">
                                 {% csrf_token %}
@@ -165,6 +167,7 @@
         </div>
     </section>
 
+    <!-- لیست سرفصل‌ها و جلسات -->
     <div class="grid gap-6 lg:grid-cols-[1fr_310px]">
         <section id="syllabus" class="space-y-4">
             <div class="flex items-center justify-between">
@@ -172,7 +175,7 @@
                     <h2 class="text-base font-black text-slate-800 flex items-center gap-2">
                         <i class="fa-solid fa-cubes-stacked text-blue-600"></i> سرفصل‌ها و جلسات آموزشی
                     </h2>
-                    <p class="mt-0.5 text-[11px] text-slate-400">جلسات را انتخاب کرده و محتوای آموزشی را مشاهده یا بارگیری نمایید</p>
+                    <p class="mt-0.5 text-[11px] text-slate-400">جلسات را انتخاب کرده و ویدیوها یا فایل‌های آموزشی را مشاهده فرمایید</p>
                 </div>
                 {% if can_manage %}
                     <a href="{% url 'courses_module:section_create' course.pk %}" class="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700">
@@ -197,15 +200,16 @@
                         </button>
                         <div class="mr-2 flex items-center gap-2">
                             {% if can_manage %}
-                                <a href="{% url 'courses_module:episode_create' section.pk %}" title="بارگذاری محتوا / جلسه جدید" class="grid h-8 w-8 place-items-center rounded-xl bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition">
+                                <a href="{% url 'courses_module:episode_create' section.pk %}" title="بارگذاری ویدیو / جلسه جدید در این سرفصل" class="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition border border-emerald-200">
                                     <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    <span class="hidden sm:inline">افزودن جلسه</span>
                                 </a>
-                                <a href="{% url 'courses_module:section_edit' section.pk %}" title="ویرایش سرفصل" class="grid h-8 w-8 place-items-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700 hover:bg-blue-100 transition">
+                                <a href="{% url 'courses_module:section_edit' section.pk %}" title="ویرایش سرفصل" class="grid h-8 w-8 place-items-center rounded-xl bg-blue-50 text-xs font-bold text-blue-700 hover:bg-blue-100 transition border border-blue-200">
                                     <i class="fa-solid fa-pen"></i>
                                 </a>
-                                <form method="post" action="{% url 'courses_module:section_delete' section.pk %}" onsubmit="return confirm('آیا از حذف این سرفصل مطمئنید؟')" class="inline">
+                                <form method="post" action="{% url 'courses_module:section_delete' section.pk %}" onsubmit="return confirm('آیا از حذف این سرفصل و تمام جلسات آن مطمئنید؟')" class="inline">
                                     {% csrf_token %}
-                                    <button type="submit" title="حذف سرفصل" class="grid h-8 w-8 place-items-center rounded-xl bg-rose-50 text-xs font-bold text-rose-700 hover:bg-rose-100 transition">
+                                    <button type="submit" title="حذف سرفصل" class="grid h-8 w-8 place-items-center rounded-xl bg-rose-50 text-xs font-bold text-rose-700 hover:bg-rose-100 transition border border-rose-200">
                                         <i class="fa-regular fa-trash-can"></i>
                                     </button>
                                 </form>
@@ -247,7 +251,7 @@
                                                     {% with media_link=episode.file.url %}
                                                         {% if episode.file_type == 'pdf' or '.pdf' in media_link|lower %}
                                                             <a href="{% url 'courses_module:episode_download' episode.pk %}" download class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100">
-                                                                <i class="fa-solid fa-file-pdf text-[11px]"></i> دانلود جزوه PDF
+                                                                <i class="fa-solid fa-file-pdf text-[11px]"></i> دانلود PDF
                                                             </a>
                                                         {% elif episode.file_type == 'video' or '.mp4' in media_link|lower %}
                                                             <button type="button" onclick="launchModalPlayer('video', '{{ media_link|escapejs }}', '{{ episode.title|escapejs }}')"
@@ -269,7 +273,7 @@
                                                     {% with media_link=episode.url %}
                                                         {% if episode.file_type == 'pdf' or '.pdf' in media_link|lower %}
                                                             <a href="{{ media_link }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100">
-                                                                <i class="fa-solid fa-file-pdf text-[11px]"></i> دانلود جزوه PDF
+                                                                <i class="fa-solid fa-file-pdf text-[11px]"></i> دانلود PDF
                                                             </a>
                                                         {% elif episode.file_type == 'video' or 'aparat' in media_link or 'youtu' in media_link or '.mp4' in media_link|lower %}
                                                             <button type="button" onclick="launchModalPlayer('video', '{{ media_link|escapejs }}', '{{ episode.title|escapejs }}')"
@@ -319,6 +323,7 @@
             {% endfor %}
         </section>
 
+        <!-- سایدبار اطلاعات دوره -->
         <aside class="space-y-4">
             {% if view_status_enrollments %}
             <div class="detail-glass rounded-3xl p-5">
@@ -333,6 +338,7 @@
                 </div>
             </div>
             {% endif %}
+
             <div class="detail-glass rounded-3xl p-5">
                 <h3 class="text-xs font-black text-slate-800 pb-2 border-b border-slate-100">ویژگی‌ها و مخاطبان دوره</h3>
                 <div class="mt-4 space-y-3.5 text-xs leading-6 text-slate-600">
@@ -382,7 +388,7 @@
     </div>
 </div>
 
-{% if resources %}<section class="mt-8 rounded-3xl border border-blue-100 bg-white/80 p-6 shadow-lg"><h2 class="mb-5 text-lg font-black text-slate-800">محتوای دوره</h2><div class="grid gap-4 sm:grid-cols-2">{% for resource in resources %}<article class="rounded-2xl border border-slate-100 bg-gradient-to-l from-blue-50 to-white p-5"><h3 class="mb-3 font-black text-slate-800">{{ resource.title }}</h3>{% if resource.resource_type == 'video' and resource.video_embed_url %}<iframe src="{{ resource.video_embed_url }}" title="{{ resource.title }}" loading="lazy" allowfullscreen class="aspect-video w-full rounded-xl"></iframe>{% elif resource.resource_type == 'image' and resource.source_url %}<img src="{{ resource.source_url }}" alt="{{ resource.title }}" loading="lazy" class="max-h-72 w-full rounded-xl object-contain">{% elif resource.source_url %}<a href="{{ resource.source_url }}" target="_blank" rel="noopener noreferrer" class="text-sm font-bold text-blue-700">نمایش / دانلود محتوا</a>{% endif %}</article>{% endfor %}</div></section>{% endif %}
+<!-- مودال مدیاپلیر (ویدیو و تصویر) -->
 <div id="mediaModalBackdrop" class="fixed inset-0 z-[1050] hidden items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 transition-all duration-300">
     <div class="relative w-full max-w-4xl overflow-hidden rounded-3xl bg-slate-900 border border-white/10 shadow-2xl">
         <div class="flex items-center justify-between border-b border-white/10 px-5 py-3.5 bg-slate-950/90">

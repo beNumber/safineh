@@ -40,12 +40,23 @@
             </div>
         </div>
 
-        <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5">
+        <form method="post" enctype="multipart/form-data" class="mt-6 space-y-5" novalidate>
             {% csrf_token %}
 
-            {% if form.non_field_errors %}
-                <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700">
-                    {{ form.non_field_errors }}
+            <!-- نمایش جامع تمام خطاها (حتی خطاهای فیلدهای پنهان) -->
+            {% if form.errors %}
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-700 space-y-1">
+                    <div class="font-bold flex items-center gap-1.5 mb-1 text-rose-800">
+                        <i class="fa-solid fa-circle-exclamation"></i> لطفاً خطاهای زیر را برطرف کنید:
+                    </div>
+                    {% if form.non_field_errors %}
+                        <div>{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <div><b>{{ field.label }}:</b> {{ field.errors|striptags }}</div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
             {% endif %}
 
@@ -101,6 +112,9 @@
                                placeholder="مثال: ۱۵ دقیقه یا ۲۰ صفحه"
                                class="w-full rounded-xl border border-slate-200/90 bg-white/90 py-2.5 pr-10 pl-4 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition">
                     </div>
+                    {% if form.duration_or_pages.errors %}
+                        <p class="mt-1 text-[11px] text-rose-500">{{ form.duration_or_pages.errors.0 }}</p>
+                    {% endif %}
                 </div>
             </div>
 
@@ -196,7 +210,6 @@
     tabUpload.addEventListener('click', () => activateTab('upload'));
     tabLink.addEventListener('click', () => activateTab('link'));
 
-    // اگر هنگام ویرایش یا بازگشت با خطا مقدار URL پر بود، خودکار تب لینک باز شود
     if (urlInput && urlInput.value.trim() !== '') {
         activateTab('link');
     }
@@ -205,7 +218,7 @@
         if (input.files && input.files[0]) {
             const fileName = input.files[0].name;
             const fileSize = (input.files[0].size / (1024 * 1024)).toFixed(2) + ' MB';
-            document.getElementById('fileUploadPrompt').innerHTML = `<span class="text-blue-600">${fileName}</span> <span class="text-slate-400 font-normal">(${fileSize})</span>`;
+            document.getElementById('fileUploadPrompt').innerHTML = `<span class="text-blue-600 font-bold">${fileName}</span> <span class="text-slate-400 font-normal">(${fileSize})</span>`;
         }
     }
 </script>

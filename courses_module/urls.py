@@ -1,5 +1,4 @@
 from django.urls import path
-
 from . import views
 
 app_name = "courses_module"
@@ -19,7 +18,7 @@ urlpatterns = [
     # عملیات ادمین
     path("admin/<int:pk>/close/", views.AdminCourseCloseView.as_view(), name="course_close"),
     path("admin/<int:pk>/delete/", views.AdminCourseDeleteView.as_view(), name="admin_course_delete"),
-    path("admin/<int:course_pk>/resources/create/", views.CourseResourceCreateView.as_view(), name="resource_create"),
+    # خط مربوط به CourseResourceCreateView از این بخش حذف شد ✅
 
     # مدیریت سرفصل‌ها (Course Sections)
     path("sections/<int:course_pk>/create/", views.SectionCreateView.as_view(), name="section_create"),
@@ -33,7 +32,6 @@ urlpatterns = [
     path("episodes/<int:pk>/download/", views.EpisodeDownloadView.as_view(), name="episode_download"),
 
     # تعاملات دوره و صفحه جزئیات
-    # توجه: این مسیرها در انتها قرار گرفته‌اند تا الگوی <path:slug> مانع مسیرهای بالا نشود
     path("<path:slug>/enroll/", views.EnrollCourseView.as_view(), name="course_enroll"),
     path("<path:slug>/rate/", views.RateCourseView.as_view(), name="course_rate"),
     path("<path:slug>/", views.CourseDetailView.as_view(), name="course_detail"),
