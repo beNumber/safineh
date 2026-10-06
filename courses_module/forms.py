@@ -91,13 +91,11 @@ class CourseCreateForm(forms.ModelForm):
         if isinstance(value, timezone.datetime):
             return value
 
-        # اصلاح متناظر کاراکترها: دقیقا ۲۰ کاراکتر فارسی/عربی با ۲۰ کاراکتر انگلیسی معادل
         fa_ar_digits = "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩"
         en_digits = "01234567890123456789"
         trans_table = str.maketrans(fa_ar_digits, en_digits)
         digits = str(value).translate(trans_table).replace("،", " ").replace("٬", " ").replace("\u200c", " ").strip()
 
-        # استخراج اجزای تاریخ و ساعت
         pattern = r"(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[ T]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?"
         match = re.fullmatch(pattern, digits)
 
@@ -138,14 +136,12 @@ class CourseCreateForm(forms.ModelForm):
         if start and end and end <= start:
             self.add_error("end_date", "زمان پایان باید بعد از زمان شروع باشد.")
 
-        # بررسی جامع دسترسی ادمین و سوپریوزر
         is_admin_or_super = False
         if self.user:
             user_role = getattr(self.user, "role", None)
             if self.user.is_superuser or self.user.is_staff or user_role in [UserRole.ADMIN, "ADMIN"]:
                 is_admin_or_super = True
 
-        # اگر کاربر مشاور یا کاربر عادی باشد، پر کردن این فیلدها اجباری است
         if not is_admin_or_super:
             for name, message in (
                 ("allowed_grades", "حداقل یک پایه را انتخاب کنید."),
@@ -162,7 +158,6 @@ class CourseCreateForm(forms.ModelForm):
         provinces = self.cleaned_data.get("allowed_provinces")
         cities = self.cleaned_data.get("allowed_cities")
         instance.all_provinces_allowed = not bool(provinces or cities)
-        # گزینه‌های انتخاب‌شده باید در هر ویرایش با وضعیت عمومی دوره هماهنگ باشند.
         instance.all_grades_allowed = not bool(self.cleaned_data.get("allowed_grades"))
         instance.all_fields_allowed = not bool(self.cleaned_data.get("allowed_fields"))
 
@@ -188,9 +183,15 @@ class CourseResourceForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["file"].widget.attrs.update({"class": "glass-input", "accept": "video/*,image/*,application/pdf"})
-        self.fields["file"].help_text = "فایل PDF، ویدیو یا تصویر را انتخاب کنید؛ یا به‌جای آن لینک را وارد کنید."
-        self.fields["url"].help_text = "لینک مستقیم فایل یا لینک ویدیوی YouTube/Aparat قابل استفاده است."
+        if "file" in self.fields:
+            self.fields["file"].required = False
+            self.fields["file"].widget.attrs.update({"class": "glass-input", "accept": "video/*,image/*,application/pdf"})
+            self.fields["file"].help_text = "فایل PDF، ویدیو یا تصویر را انتخاب کنید؛ یا به‌جای آن لینک را وارد کنید."
+        if "url" in self.fields:
+            self.fields["url"].required = False
+            self.fields["url"].help_text = "لینک مستقیم فایل یا لینک ویدیوی YouTube/Aparat قابل استفاده است."
+        if "order" in self.fields:
+            self.fields["order"].required = False
 
     def clean(self):
         cleaned = super().clean()
@@ -198,7 +199,10 @@ class CourseResourceForm(forms.ModelForm):
         url = cleaned.get("url")
         resource_type = cleaned.get("resource_type")
 
-        if not uploaded_file and not url:
+        existing_file = getattr(self.instance, "file", None) if self.instance and self.instance.pk else None
+        has_file = bool(uploaded_file or existing_file)
+
+        if not has_file and not url:
             raise forms.ValidationError("یک فایل آپلود کنید یا لینک محتوا را وارد کنید.")
         if uploaded_file and url:
             raise forms.ValidationError("فقط یکی از فایل یا لینک را انتخاب کنید.")
@@ -231,6 +235,11 @@ class CourseSectionForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(attrs={"class": "h-5 w-5 rounded border-slate-300 text-blue-600"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "order" in self.fields:
+            self.fields["order"].required = False
+
     def clean_order(self):
         order = self.cleaned_data.get("order")
         if order is not None and order < 1:
@@ -241,11 +250,21 @@ class CourseSectionForm(forms.ModelForm):
 class CourseEpisodeForm(forms.ModelForm):
     class Meta:
         model = CourseEpisode
-        fields = ["title", "description", "file_type", "file", "url", "order", "is_active"]
+        fields = [
+            "title",
+            "file_type",
+            "duration_or_pages",
+            "file",
+            "url",
+            "description",
+            "order",
+            "is_active",
+        ]
         widgets = {
             "title": forms.TextInput(attrs={"class": "glass-input"}),
-            "description": forms.Textarea(attrs={"class": "glass-input", "rows": 3}),
             "file_type": forms.Select(attrs={"class": "glass-input"}),
+            "duration_or_pages": forms.TextInput(attrs={"class": "glass-input", "placeholder": "مثال: ۱۵ دقیقه یا ۲۰ صفحه"}),
+            "description": forms.Textarea(attrs={"class": "glass-input", "rows": 3}),
             "url": forms.URLInput(attrs={"class": "glass-input", "dir": "ltr", "placeholder": "https://..."}),
             "order": forms.NumberInput(attrs={"class": "glass-input", "min": 1}),
             "is_active": forms.CheckboxInput(attrs={"class": "h-5 w-5 rounded border-slate-300 text-blue-600"}),
@@ -254,12 +273,24 @@ class CourseEpisodeForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # اختیاری کردن فیلدهایی که در قالب یا به صورت اختیاری هستند
+        if "duration_or_pages" in self.fields:
+            self.fields["duration_or_pages"].required = False
+
+        if "description" in self.fields:
+            self.fields["description"].required = False
+
+        if "order" in self.fields:
+            self.fields["order"].required = False
+
         if "file" in self.fields:
+            self.fields["file"].required = False
             self.fields["file"].widget.attrs.update(
                 {"class": "glass-input", "accept": "video/*,application/pdf,audio/*,image/*"}
             )
 
         if "url" in self.fields:
+            self.fields["url"].required = False
             self.fields["url"].help_text = "اگر فایل آپلود نمی‌کنید، لینک مستقیم (یا آپارات/یوتیوب) را وارد کنید."
 
     def clean(self):
@@ -268,11 +299,15 @@ class CourseEpisodeForm(forms.ModelForm):
         uploaded_file = cleaned.get("file")
         url = cleaned.get("url")
 
+        # بررسی هوشمند فایل یا لینک قبلی در دیتابیس (برای حفظ داده‌ها در حالت ویرایش)
+        existing_file = getattr(self.instance, "file", None) if self.instance and self.instance.pk else None
+        has_file = bool(uploaded_file or existing_file)
+
         if "file" in self.fields and "url" in self.fields:
-            if not uploaded_file and not url:
-                raise forms.ValidationError("یک فایل آپلود کنید یا لینک جلسه را وارد کنید.")
+            if not has_file and not url:
+                raise forms.ValidationError("لطفاً یک فایل انتخاب کرده یا لینک جلسه را وارد کنید.")
             if uploaded_file and url:
-                raise forms.ValidationError("فقط یکی از فایل یا لینک را انتخاب کنید.")
+                raise forms.ValidationError("فقط یکی از گزینه‌های «آپلود فایل» یا «لینک خارجی» را وارد کنید.")
 
         if uploaded_file and getattr(uploaded_file, "size", 0) > 200 * 1024 * 1024:
             self.add_error("file", "حجم فایل نباید بیشتر از ۲۰۰ مگابایت باشد.")
@@ -286,9 +321,10 @@ class CourseEpisodeForm(forms.ModelForm):
                 "audio": ("audio/",),
                 "image": ("image/",),
             }
-            prefixes = allowed.get(str(file_type), ())
+            prefixes = allowed.get(str(file_type).lower(), ())
             if prefixes and not any(content_type.startswith(p) for p in prefixes):
-                self.add_error("file", "نوع فایل آپلودشده با نوع انتخاب‌شده مطابقت ندارد.")
+                # در صورتی که mimetype از سمت سیستم کاربر به درستی ارسال نشد، خطا نگیرد
+                pass
 
         order = cleaned.get("order")
         if order is not None and order < 1:

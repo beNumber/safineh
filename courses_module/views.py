@@ -20,7 +20,6 @@ from dashboard_module.location_filters import location_options
 from .forms import (
     CourseCreateForm,
     CourseEpisodeForm,
-    CourseResourceForm,
     CourseSectionForm,
 )
 from .models import (
@@ -29,7 +28,6 @@ from .models import (
     CourseEnrollment,
     CourseEpisode,
     CourseRating,
-    CourseResource,
     CourseSection,
     CourseView,
 )
@@ -80,7 +78,8 @@ def user_can_manage_course(user, course):
     if not user.is_authenticated:
         return False
     # ادمین و سوپریوزر دسترسی کامل دارند
-    if user.is_superuser or getattr(user, "role", None) == UserRole.ADMIN:
+    user_role = getattr(user, "role", None)
+    if user.is_superuser or user_role in (UserRole.ADMIN, "ADMIN"):
         return True
     # اگر کاربر خود نویسنده دوره باشد
     if course.author_id == user.id:
@@ -134,11 +133,10 @@ class MyCoursesView(RoleRequiredMixin, ListView):
         user_role = getattr(self.request.user, "role", None)
         if user_role == UserRole.ADMIN or self.request.user.is_superuser:
             queryset = Course.objects.all().select_related("author").prefetch_related(
-                "subjects", "allowed_grades", "allowed_fields", "allowed_provinces", "allowed_cities", "sections", "resources"
+                "subjects", "allowed_grades", "allowed_fields", "allowed_provinces", "allowed_cities", "sections"
             ).annotate(
                 admin_enrollment_count=Count("enrollments", distinct=True),
                 admin_viewer_count=Count("views", distinct=True),
-                admin_resource_count=Count("resources", distinct=True),
                 admin_section_count=Count("sections", distinct=True),
             )
             location = location_options(self.request)
@@ -215,7 +213,6 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
             enrollment.save(update_fields=["first_viewed_at", "last_viewed_at", "view_count"])
         rating = course.ratings.filter(student=user).first()
         context["user_rating"] = rating.value if rating else 0
-        context["resources"] = course.resources.filter(is_active=True).order_by("order", "id")
 
         context["can_manage"] = can_manage
         context["can_delete"] = can_manage
@@ -244,7 +241,6 @@ class CourseCreateView(RoleRequiredMixin, CreateView):
         form.instance.author = self.request.user
         is_admin_or_super = self.request.user.is_superuser or getattr(self.request.user, "role", None) == UserRole.ADMIN
 
-        # اگر ادمین یا سوپریوزر بود مستقیماً تایید و فعال شود
         if is_admin_or_super:
             form.instance.approval_status = ApprovalStatus.APPROVED
             form.instance.is_active = True
@@ -274,7 +270,6 @@ class CourseCreateView(RoleRequiredMixin, CreateView):
         return response
 
     def get_success_url(self):
-        # پس از ساخت، مستقیماً وارد صفحه خود دوره شویم تا بتوان سرفصل‌ها را اضافه کرد
         return reverse_lazy("courses_module:course_detail", kwargs={"slug": self.object.slug})
 
 
@@ -427,7 +422,6 @@ class AdminCourseCloseView(RoleRequiredMixin, View):
 
     def post(self, request, pk):
         course = get_object_or_404(Course, pk=pk)
-        # تاگل کردن وضعیت فعال/غیرفعال بودن
         course.is_active = not course.is_active
         course.save(update_fields=["is_active", "updated_at"])
         status_msg = "فعال و بازگشایی شد." if course.is_active else "بسته شد و از دید دانش‌آموزان خارج گردید."
@@ -448,35 +442,8 @@ class AdminCourseDeleteView(RoleRequiredMixin, View):
 
 
 # ==============================================================================
-# مدیریت سرفصل‌ها و جلسات (CourseSection & Episode & Resource)
+# مدیریت سرفصل‌ها و جلسات (CourseSection & Episode)
 # ==============================================================================
-
-class CourseResourceCreateView(RoleRequiredMixin, CreateView):
-    allowed_roles = (UserRole.ADMIN, UserRole.CONSULTANT)
-    allow_superuser = True
-    model = CourseResource
-    form_class = CourseResourceForm
-    template_name = "courses_module/resource_form.html"
-
-    def dispatch(self, request, *args, **kwargs):
-        self.course = get_object_or_404(Course, pk=kwargs["course_pk"])
-        if not user_can_manage_course(request.user, self.course):
-            raise PermissionDenied
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        form.instance.course = self.course
-        messages.success(self.request, "محتوای دوره با موفقیت اضافه شد.")
-        return super().form_valid(form)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["course"] = self.course
-        return context
-
-    def get_success_url(self):
-        return reverse_lazy("courses_module:course_detail", kwargs={"slug": self.course.slug})
-
 
 class SectionCreateView(LoginRequiredMixin, CreateView):
     model = CourseSection
