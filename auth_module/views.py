@@ -110,6 +110,8 @@ def user_template(request):
 
 @staff_admin_required
 def user_bulk_action(request):
+    if not (request.user.is_superuser or request.user.role == UserRole.ADMIN):
+        raise PermissionDenied
     if request.method != "POST":
         return redirect("auth_module:user-management")
     action = request.POST.get("action")
