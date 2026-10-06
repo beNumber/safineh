@@ -1,18 +1,477 @@
-{% extends "base.html" %}{% load static %}
-{% block title %}کلاس‌ها | فانوس{% endblock %}{% block page_title %}کلاس‌ها{% endblock %}{% block breadcrumb %}کلاس‌های آنلاین{% endblock %}
-{% block page_actions %}{% if can_manage %}<a href="{% url 'classroom_module:create' %}" class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white"><i class="fa-solid fa-plus ml-1"></i>کلاس جدید</a>{% endif %}{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}کلاس‌ها | فانوس{% endblock %}
+{% block page_title %}کلاس‌ها{% endblock %}
+{% block breadcrumb %}کلاس‌های آنلاین{% endblock %}
+
+{% block extra_css %}
+<style>
+  .class-modern-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    border-radius: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.7));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 20px 45px -10px rgba(30, 41, 59, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .class-modern-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 28px 55px -12px rgba(99, 102, 241, 0.2);
+    border-color: rgba(165, 180, 252, 0.8);
+  }
+  .class-card-glow {
+    position: absolute;
+    top: -5rem;
+    left: -3rem;
+    width: 13rem;
+    height: 13rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(129, 140, 248, 0.28) 0%, rgba(129, 140, 248, 0) 70%);
+    pointer-events: none;
+  }
+  .class-card-top, .class-meta, .class-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+  .class-icon {
+    display: grid;
+    place-items: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 1.15rem;
+    color: #fff;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    box-shadow: 0 10px 22px rgba(79, 70, 229, 0.3);
+  }
+  .class-status {
+    border-radius: 9999px;
+    padding: 0.35rem 0.85rem;
+    color: #64748b;
+    background: rgba(255, 255, 255, 0.85);
+    font-size: 0.7rem;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+  .is-live .class-status {
+    color: #047857;
+    background: #d1fae5;
+    border-color: #a7f3d0;
+  }
+  .is-upcoming .class-status {
+    color: #4338ca;
+    background: #e0e7ff;
+    border-color: #c7d2fe;
+  }
+  .class-modern-card h2 {
+    position: relative;
+    margin-top: 1.25rem;
+    color: #0f172a;
+    font-size: 1.2rem;
+    font-weight: 900;
+    line-height: 1.4;
+  }
+  .class-description {
+    position: relative;
+    margin-top: 0.45rem;
+    min-height: 2.6rem;
+    color: #64748b;
+    font-size: 0.76rem;
+    line-height: 1.75;
+  }
+  .class-meta {
+    justify-content: flex-start;
+    margin-top: 1rem;
+    color: #64748b;
+    font-size: 0.72rem;
+    gap: 1.25rem;
+  }
+  .class-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .class-meta i {
+    color: #6366f1;
+  }
+
+  /* ================== تایم‌باکس مدرن و شیک ================== */
+  .class-countdown-wrapper {
+    position: relative;
+    margin-top: 1.2rem;
+    border-radius: 1.4rem;
+    padding: 0.9rem;
+    background: linear-gradient(135deg, rgba(248, 250, 252, 0.85), rgba(238, 242, 255, 0.6));
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.95);
+  }
+  .class-countdown-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.65rem;
+    padding: 0 0.25rem;
+  }
+  .class-countdown-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #475569;
+    font-size: 0.68rem;
+    font-weight: 800;
+  }
+  .class-countdown-label i {
+    color: #6366f1;
+    font-size: 0.75rem;
+  }
+  .class-countdown-live-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: #94a3b8;
+  }
+  .is-upcoming .class-countdown-live-dot {
+    background: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  }
+  .is-live .class-countdown-live-dot {
+    background: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.22);
+    animation: class-live-pulse 1.4s infinite;
+  }
+  .is-ended .class-countdown-live-dot {
+    background: #cbd5e1;
+  }
+
+  /* بلوک‌های زمان‌سنج */
+  .timer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.45rem;
+    direction: rtl;
+  }
+  .timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.2rem;
+    border-radius: 0.95rem;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s ease;
+  }
+  .timer-value {
+    font-family: inherit;
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #1e1b4b;
+    line-height: 1.1;
+  }
+  .timer-title {
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: #64748b;
+    margin-top: 0.2rem;
+  }
+
+  /* استایل حالت Live */
+  .is-live .class-countdown-wrapper {
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.8), rgba(209, 250, 229, 0.5));
+    border-color: rgba(167, 243, 208, 0.8);
+  }
+  .is-live .timer-unit {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(167, 243, 208, 0.9);
+  }
+  .is-live .timer-value {
+    color: #065f46;
+  }
+  .is-live .timer-title {
+    color: #047857;
+  }
+
+  /* پیام زمان تمام شده */
+  .timer-ended-msg {
+    display: none;
+    text-align: center;
+    padding: 0.7rem 0.5rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: 0.95rem;
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+  }
+  .is-ended .timer-grid {
+    display: none;
+  }
+  .is-ended .timer-ended-msg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+
+  @keyframes class-live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  /* دکمه‌ها و اکشن‌ها */
+  .class-actions {
+    margin-top: 1.15rem;
+  }
+  .class-join-button {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 1.1rem;
+    padding: 0.8rem;
+    color: #fff;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    font-size: 0.78rem;
+    font-weight: 900;
+    box-shadow: 0 8px 18px rgba(79, 70, 229, 0.22);
+    transition: all 0.25s ease;
+    text-decoration: none;
+  }
+  .class-join-button:hover {
+    background: linear-gradient(135deg, #4338ca, #4f46e5);
+    box-shadow: 0 10px 22px rgba(79, 70, 229, 0.32);
+    transform: translateY(-1px);
+  }
+  .class-join-button.is-disabled {
+    cursor: not-allowed;
+    color: #94a3b8;
+    background: #e2e8f0;
+    box-shadow: none;
+    transform: none;
+  }
+  .class-action-edit, .class-action-delete {
+    display: grid;
+    place-items: center;
+    width: 2.85rem;
+    height: 2.85rem;
+    border-radius: 1.1rem;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    color: #64748b;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.03);
+    transition: 0.2s;
+    text-decoration: none;
+  }
+  .class-action-edit:hover {
+    color: #4f46e5;
+    background: #eef2ff;
+  }
+  .class-action-delete {
+    border: 1px solid rgba(254, 205, 211, 0.6);
+    color: #f43f5e;
+    cursor: pointer;
+  }
+  .class-action-delete:hover {
+    background: #fff1f2;
+    color: #e11d48;
+  }
+  .class-modern-card.is-ended {
+    opacity: 0.72;
+    filter: grayscale(0.2);
+  }
+</style>
+{% endblock %}
+
+{% block page_actions %}
+  {% if can_manage %}
+    <a href="{% url 'classroom_module:create' %}" class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition shadow-sm shadow-indigo-200">
+      <i class="fa-solid fa-plus ml-1"></i>کلاس جدید
+    </a>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <section class="mx-auto max-w-6xl">
-  <div class="mb-6 rounded-3xl bg-gradient-to-l from-indigo-600 to-sky-500 p-7 text-white shadow-xl"><span class="text-xs font-bold text-indigo-100">کلاس آنلاین فانوس</span><h1 class="mt-2 text-2xl font-black">برنامه کلاس‌ها و لینک ورود</h1><p class="mt-2 text-sm text-indigo-50">زمان هر کلاس را ببین و در موعد مقرر مستقیم وارد جلسه شو.</p></div>
-  <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-  {% for item in classes %}
-    <article class="relative overflow-hidden rounded-3xl border {% if item.is_live %}border-emerald-300 bg-emerald-50/50{% else %}border-slate-200 bg-white{% endif %} p-5 shadow-sm">
-      {% if item.is_live %}<span class="absolute left-4 top-4 flex items-center gap-1 rounded-full bg-rose-500 px-3 py-1 text-[10px] font-black text-white"><i class="fa-solid fa-circle text-[6px] animate-pulse"></i>در حال برگزاری</span>{% endif %}
-      <span class="grid h-12 w-12 place-items-center rounded-2xl bg-indigo-100 text-indigo-600"><i class="fa-solid fa-chalkboard-user text-xl"></i></span>
-      <h2 class="mt-4 text-lg font-black text-slate-800">{{ item.title }}</h2>{% if item.description %}<p class="mt-2 text-xs leading-6 text-slate-500">{{ item.description }}</p>{% endif %}
-      <div class="mt-4 space-y-2 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600"><p><i class="fa-regular fa-calendar ml-2 text-indigo-500"></i>{{ item.jalali_date }}</p><p><i class="fa-regular fa-clock ml-2 text-indigo-500"></i>{{ item.starts_at|time:"H:i" }} تا {{ item.ends_at|time:"H:i" }}</p></div>
-      <div class="mt-4 flex gap-2"><a href="{{ item.meeting_url }}" target="_blank" rel="noopener noreferrer" class="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-center text-xs font-black text-white"><i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>ورود به کلاس</a>{% if can_manage %}<a href="{% url 'classroom_module:edit' item.pk %}" class="rounded-xl bg-amber-50 px-3 py-3 text-amber-600"><i class="fa-solid fa-pen"></i></a><form method="post" action="{% url 'classroom_module:delete' item.pk %}" onsubmit="return confirm('کلاس حذف شود؟')">{% csrf_token %}<button class="rounded-xl bg-rose-50 px-3 py-3 text-rose-500"><i class="fa-solid fa-trash"></i></button></form>{% endif %}</div>
-    </article>
-  {% empty %}<div class="col-span-full rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-500"><i class="fa-solid fa-calendar-xmark mb-3 block text-3xl text-slate-300"></i>هنوز کلاسی ثبت نشده است.</div>{% endfor %}
+  <div class="mb-6 rounded-3xl bg-gradient-to-l from-indigo-600 via-indigo-700 to-sky-500 p-7 text-white shadow-xl shadow-indigo-100">
+    <span class="text-xs font-bold text-indigo-100">کلاس آنلاین فانوس</span>
+    <h1 class="mt-2 text-2xl font-black">برنامه کلاس‌ها و ورود مستقیم</h1>
+    <p class="mt-2 text-sm text-indigo-50">زمان دقیق تا شروع یا پایان هر کلاس را مشاهده کنید و سر وقت وارد جلسه شوید.</p>
   </div>
-</section>{% endblock %}
+
+  <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+  {% for item in classes %}
+    <article class="class-modern-card {% if item.is_live %}is-live{% elif item.starts_at > now %}is-upcoming{% else %}is-ended{% endif %}"
+             data-class-start="{{ item.starts_at|date:'c' }}"
+             data-class-end="{{ item.ends_at|date:'c' }}">
+      <div class="class-card-glow"></div>
+
+      <div class="class-card-top">
+        <span class="class-icon"><i class="fa-solid fa-chalkboard-user"></i></span>
+        <span class="class-status" data-class-status>در حال بررسی</span>
+      </div>
+
+      <h2>{{ item.title }}</h2>
+      {% if item.description %}
+        <p class="class-description">{{ item.description }}</p>
+      {% endif %}
+
+      <div class="class-meta">
+        <span><i class="fa-regular fa-calendar"></i>{{ item.jalali_date }}</span>
+        <span><i class="fa-regular fa-clock"></i>{{ item.starts_at|time:"H:i" }} تا {{ item.ends_at|time:"H:i" }}</span>
+      </div>
+
+      <!-- ویجت زمان‌سنج دیجیتال مدرن -->
+      <div class="class-countdown-wrapper">
+        <div class="class-countdown-head">
+          <span class="class-countdown-label">
+            <i class="fa-regular fa-stopwatch"></i>
+            <span data-countdown-title>شمارش معکوس تا شروع</span>
+          </span>
+          <span class="class-countdown-live-dot"></span>
+        </div>
+
+        <div class="timer-grid" data-timer-grid>
+          <div class="timer-unit">
+            <span class="timer-value" data-unit-days>۰۰</span>
+            <span class="timer-title">روز</span>
+          </div>
+          <div class="timer-unit">
+            <span class="timer-value" data-unit-hours>۰۰</span>
+            <span class="timer-title">ساعت</span>
+          </div>
+          <div class="timer-unit">
+            <span class="timer-value" data-unit-minutes>۰۰</span>
+            <span class="timer-title">دقیقه</span>
+          </div>
+          <div class="timer-unit">
+            <span class="timer-value" data-unit-seconds>۰۰</span>
+            <span class="timer-title">ثانیه</span>
+          </div>
+        </div>
+
+        <div class="timer-ended-msg" data-timer-ended>
+          <i class="fa-regular fa-circle-check text-slate-400"></i>
+          <span>زمان برگزاری این کلاس به پایان رسیده است</span>
+        </div>
+      </div>
+
+      <div class="class-actions">
+        <a href="{% url 'classroom_module:join' item.pk %}" data-class-join class="class-join-button">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+          <span>ورود به کلاس</span>
+        </a>
+        {% if can_manage %}
+          <a href="{% url 'classroom_module:edit' item.pk %}" class="class-action-edit" title="ویرایش">
+            <i class="fa-solid fa-pen"></i>
+          </a>
+          <form method="post" action="{% url 'classroom_module:delete' item.pk %}" onsubmit="return confirm('کلاس حذف شود؟')" style="margin: 0;">
+            {% csrf_token %}
+            <button class="class-action-delete" title="حذف">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </article>
+  {% empty %}
+    <div class="col-span-full rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-500">
+      <i class="fa-solid fa-calendar-xmark mb-3 block text-3xl text-slate-300"></i>
+      هنوز کلاسی ثبت نشده است.
+    </div>
+  {% endfor %}
+  </div>
+</section>
+
+<script>
+(() => {
+  const cards = document.querySelectorAll('[data-class-start]');
+
+  // تبدیل اعداد به دو رقم فارسی
+  const toFaTwoDigits = (num) => {
+    const padded = String(Math.max(0, num)).padStart(2, '0');
+    return padded.replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+  };
+
+  const updateCountdownUnits = (card, ms) => {
+    let totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const days = Math.floor(totalSeconds / 86400);
+    totalSeconds %= 86400;
+    const hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    const elDays = card.querySelector('[data-unit-days]');
+    const elHours = card.querySelector('[data-unit-hours]');
+    const elMinutes = card.querySelector('[data-unit-minutes]');
+    const elSeconds = card.querySelector('[data-unit-seconds]');
+
+    if (elDays) elDays.textContent = toFaTwoDigits(days);
+    if (elHours) elHours.textContent = toFaTwoDigits(hours);
+    if (elMinutes) elMinutes.textContent = toFaTwoDigits(minutes);
+    if (elSeconds) elSeconds.textContent = toFaTwoDigits(seconds);
+  };
+
+  const tick = () => {
+    const now = Date.now();
+    cards.forEach(c => {
+      const start = new Date(c.dataset.classStart).getTime();
+      const end = new Date(c.dataset.classEnd).getTime();
+      const status = c.querySelector('[data-class-status]');
+      const title = c.querySelector('[data-countdown-title]');
+      const join = c.querySelector('[data-class-join]');
+
+      if (now < start) {
+        // قبل از شروع
+        status.textContent = 'به‌زودی';
+        if (title) title.textContent = 'زمان باقی‌مانده تا شروع';
+        updateCountdownUnits(c, start - now);
+
+        join.classList.add('is-disabled');
+        join.setAttribute('aria-disabled', 'true');
+        join.onclick = (e) => e.preventDefault();
+
+        c.classList.remove('is-live', 'is-ended');
+        c.classList.add('is-upcoming');
+      } else if (now <= end) {
+        // در حال برگزاری
+        status.textContent = 'در حال برگزاری';
+        if (title) title.textContent = 'زمان باقی‌مانده تا اتمام';
+        updateCountdownUnits(c, end - now);
+
+        join.classList.remove('is-disabled');
+        join.removeAttribute('aria-disabled');
+        join.onclick = null;
+
+        c.classList.remove('is-upcoming', 'is-ended');
+        c.classList.add('is-live');
+      } else {
+        // پایان‌یافته
+        status.textContent = 'پایان‌یافته';
+        if (title) title.textContent = 'پایان یافته';
+
+        join.classList.add('is-disabled');
+        join.setAttribute('aria-disabled', 'true');
+        join.onclick = (e) => e.preventDefault();
+
+        c.classList.remove('is-live', 'is-upcoming');
+        c.classList.add('is-ended');
+      }
+    });
+  };
+
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+{% endblock %}
