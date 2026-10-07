@@ -31,6 +31,8 @@ def consultant_scope_ids(user, student, subject, psychology=False):
     scopes = Consultant.objects.filter(consultant=user).prefetch_related("accesses")
     ids = []
     for scope in scopes:
+        if not scope.matches_ticket_gender(student):
+            continue
         if psychology:
             if scope.can_answer_psychology:
                 ids.append(scope.pk)
@@ -39,9 +41,14 @@ def consultant_scope_ids(user, student, subject, psychology=False):
     return ids
 
 
+def consultant_matches_ticket_gender(user, student):
+    scopes = list(Consultant.objects.filter(consultant=user))
+    return not scopes or any(scope.matches_ticket_gender(student) for scope in scopes)
+
+
 def consultant_can_access(user, ticket):
     if ticket.current_assignee_user_id == user.id:
-        return True
+        return consultant_matches_ticket_gender(user, ticket.student)
     if ticket.current_queue != TicketQueue.CONSULTANT:
         return False
     return bool(
@@ -63,21 +70,20 @@ def trustee_can_access(user, ticket):
 def can_access_ticket(user, ticket):
     if user.is_superuser or user.role == UserRole.ADMIN:
         return True
+    if user.role == UserRole.CONTENT_MODERATOR:
+        return user.matches_moderation_gender(ticket.student)
     if ticket.is_private_consultation:
         if user.role == UserRole.STUDENT:
             return ticket.student.user_id == user.id
-        if user.role == UserRole.CONTENT_MODERATOR:
-            return True
         if user.role == UserRole.CONSULTANT:
             return (
                 ticket.current_queue == TicketQueue.CONSULTANT
                 and ticket.current_assignee_user_id == user.id
+                and consultant_matches_ticket_gender(user, ticket.student)
             )
         return False
     if user.role == UserRole.STUDENT:
         return ticket.student.user_id == user.id
-    if user.role == UserRole.CONTENT_MODERATOR:
-        return True
     if user.role == UserRole.PROVINCE_TRUSTEE:
         return trustee_can_access(user, ticket)
     if user.role == UserRole.CONSULTANT:
@@ -95,7 +101,9 @@ def visible_tickets_for(user):
     if user.is_superuser or user.role == UserRole.ADMIN:
         return queryset
     if user.role == UserRole.CONTENT_MODERATOR:
-        return queryset
+        if user.moderation_student_gender == user.ModerationStudentGender.BOTH:
+            return queryset
+        return queryset.filter(student__user__gender=user.moderation_student_gender)
     if user.role == UserRole.STUDENT:
         return queryset.filter(student__user=user)
     if user.role == UserRole.PROVINCE_TRUSTEE:
@@ -105,11 +113,15 @@ def visible_tickets_for(user):
             is_private_consultation=False,
         )
     if user.role == UserRole.CONSULTANT:
-        private_ids = queryset.filter(
-            is_private_consultation=True,
-            current_queue=TicketQueue.CONSULTANT,
-            current_assignee_user=user,
-        ).values_list("pk", flat=True)
+        private_ids = [
+            ticket.pk
+            for ticket in queryset.filter(
+                is_private_consultation=True,
+                current_queue=TicketQueue.CONSULTANT,
+                current_assignee_user=user,
+            )
+            if can_access_ticket(user, ticket)
+        ]
         candidate_ids = []
         for ticket in queryset.filter(
             Q(current_queue=TicketQueue.CONSULTANT) | Q(current_assignee_user=user),

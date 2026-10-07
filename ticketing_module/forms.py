@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-from auth_module.models import UserRole
+from auth_module.models import Consultant, UserRole
 from users_module.models import Subject
 
 from .models import Ticket, TicketMessage, TicketQueue, TicketStatus, TicketType
@@ -95,21 +95,30 @@ class ReferralForm(forms.Form):
     def __init__(self, *args, actor=None, ticket=None, **kwargs):
         super().__init__(*args, **kwargs)
         User = get_user_model()
-        eligible = Q(role__in=[UserRole.CONTENT_MODERATOR, UserRole.ADMIN]) | Q(
-            is_superuser=True
-        )
+        moderators = Q(role=UserRole.CONTENT_MODERATOR)
         if ticket:
+            allowed_genders = [User.ModerationStudentGender.BOTH]
+            if ticket.student.user.gender in {"MALE", "FEMALE"}:
+                allowed_genders.append(ticket.student.user.gender)
+            moderators &= Q(moderation_student_gender__in=allowed_genders)
+        eligible = moderators | Q(role=UserRole.ADMIN) | Q(is_superuser=True)
+        if ticket:
+            gender_scope = Q(
+                scopes__ticket_student_gender=Consultant.TicketStudentGender.BOTH
+            )
+            if ticket.student.user.gender in {"MALE", "FEMALE"}:
+                gender_scope |= Q(scopes__ticket_student_gender=ticket.student.user.gender)
             eligible |= Q(
                 role=UserRole.PROVINCE_TRUSTEE,
                 trustee_provinces__province_id=ticket.province.id,
             )
             if ticket.ticket_type == TicketType.PSYCHOLOGY:
-                eligible |= Q(
+                eligible |= gender_scope & Q(
                     role=UserRole.CONSULTANT,
                     scopes__can_answer_psychology=True,
                 )
             elif ticket.ticket_type == TicketType.LESSON and ticket.subject_id:
-                eligible |= Q(
+                eligible |= gender_scope & Q(
                     role=UserRole.CONSULTANT,
                     scopes__accesses__name="ticket",
                     scopes__accesses__subject_id=ticket.subject_id,
