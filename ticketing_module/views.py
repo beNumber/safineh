@@ -414,6 +414,7 @@ def moderation_queue(request):
     pending = (
         TicketMessage.objects.filter(
             moderation_status=ModerationStatus.PENDING,
+            ticket__in=visible_tickets_for(request.user),
         )
         .select_related(
             "ticket__student__user",
@@ -447,6 +448,9 @@ def moderate_message(request, message_id):
         ),
         pk=message_id,
     )
+
+    if not can_access_ticket(request.user, item.ticket):
+        raise PermissionDenied
 
     form = ModerationForm(request.POST)
 
