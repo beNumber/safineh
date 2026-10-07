@@ -14,6 +14,11 @@ class UserRole(models.TextChoices):
 
 
 class User(AbstractUser):
+    class ModerationStudentGender(models.TextChoices):
+        BOTH = "BOTH", "دختران و پسران"
+        FEMALE = "FEMALE", "فقط دختران"
+        MALE = "MALE", "فقط پسران"
+
     role = models.CharField(
         max_length=20, choices=UserRole.choices, default=UserRole.STUDENT
     )
@@ -31,6 +36,20 @@ class User(AbstractUser):
         verbose_name='دسترسی‌ها',
         help_text='برای کاربران غیر دانش‌آموز، دسترسی‌های مجاز را انتخاب کنید.',
     )
+
+    moderation_student_gender = models.CharField(
+        "جنسیت دانش‌آموزان مجاز برای نظارت بر تیکت",
+        max_length=10,
+        choices=ModerationStudentGender.choices,
+        default=ModerationStudentGender.BOTH,
+        help_text="فقط برای ناظر محتوا اعمال می‌شود و سایر دسترسی‌ها را تغییر نمی‌دهد.",
+    )
+
+    def matches_moderation_gender(self, student):
+        return (
+            self.moderation_student_gender == self.ModerationStudentGender.BOTH
+            or self.moderation_student_gender == student.user.gender
+        )
 
     @property
     def mobile(self):
@@ -55,11 +74,23 @@ class User(AbstractUser):
 class Consultant(models.Model):
     """پروفایل مشاور و مجموعه دسترسی‌های موضوعی او."""
 
+    class TicketStudentGender(models.TextChoices):
+        BOTH = "BOTH", "دختران و پسران"
+        FEMALE = "FEMALE", "فقط دختران"
+        MALE = "MALE", "فقط پسران"
+
     consultant = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="scopes"
     )
     accesses = models.ManyToManyField(Access, blank=True)
     can_answer_psychology = models.BooleanField(default=False)
+    ticket_student_gender = models.CharField(
+        "جنسیت دانش‌آموزان مجاز برای پاسخ‌گویی به تیکت",
+        max_length=10,
+        choices=TicketStudentGender.choices,
+        default=TicketStudentGender.BOTH,
+        help_text="این محدودیت فقط برای تیکت‌ها است و سایر دسترسی‌ها را تغییر نمی‌دهد.",
+    )
 
     class Meta:
         verbose_name = "محدوده دسترسی مشاور"
@@ -86,7 +117,15 @@ class Consultant(models.Model):
         return self.accesses.filter(name=access_name, subject=subject).exists()
 
     def matches_student(self, student, subject=None):
-        return self.has_access("ticket", student=student, subject=subject)
+        return self.matches_ticket_gender(student) and self.has_access(
+            "ticket", student=student, subject=subject
+        )
+
+    def matches_ticket_gender(self, student):
+        return (
+            self.ticket_student_gender == self.TicketStudentGender.BOTH
+            or self.ticket_student_gender == student.user.gender
+        )
 
 
 class Student(models.Model):

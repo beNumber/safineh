@@ -8,15 +8,18 @@ from .models import Consultant, ProvinceTrustee, Student, User
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         ("اطلاعات سامانه", {"fields": ("role", "phone_number", "gender")}),
+        ("محدوده نظارت بر تیکت", {"fields": ("moderation_student_gender",)}),
     )
     list_display = ("username", "get_full_name", "role", "phone_number", "is_active")
-    list_filter = UserAdmin.list_filter + ("role", "gender")
+    list_filter = UserAdmin.list_filter + ("role", "gender", "moderation_student_gender")
 
 
 @admin.register(Consultant)
 class ConsultantScopeAdmin(admin.ModelAdmin):
-    list_display = ("consultant", "accesses_display", "can_answer_psychology")
-    list_filter = ("can_answer_psychology", "accesses__name")
+    list_display = (
+        "consultant", "accesses_display", "can_answer_psychology", "ticket_student_gender"
+    )
+    list_filter = ("can_answer_psychology", "accesses__name", "ticket_student_gender")
     filter_horizontal = ("accesses",)
     autocomplete_fields = ("consultant",)
 
