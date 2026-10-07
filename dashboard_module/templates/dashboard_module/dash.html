@@ -248,13 +248,11 @@
     .dash-section-link {
       align-self: flex-end;
     }
-    .presence-header-actions {
-      width: 100%;
-      justify-content: space-between;
-      margin-top: 0.75rem;
-    }
   }
 </style>
+{% if user.role == 'ADMIN' or user.is_superuser %}
+{% include 'dashboard_module/_presence_styles.html' %}
+{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -850,7 +848,7 @@
     }
 
     if (!list.length) {
-      users.innerHTML = `<p class="text-xs text-slate-400 col-span-full py-4 text-center">
+      users.innerHTML = `<p class="presence-empty">
         ${filterText ? 'کاربری با این مشخصات یافت نشد.' : 'در حال حاضر هیچ کاربری در این گروه آنلاین نیست.'}
       </p>`;
       return;
@@ -858,16 +856,16 @@
 
     users.innerHTML = list.map(u => `
       <div class="presence-user">
-        <div class="flex items-center gap-2.5 min-w-0">
+        <div class="presence-user-info">
           <span class="presence-user-avatar">
             ${(u.name || u.username || 'U').charAt(0)}
           </span>
-          <div class="truncate">
-            <strong class="block text-xs text-slate-800 truncate">${u.name || u.username}</strong>
-            <small class="presence-user-username block truncate" dir="ltr">${u.username}</small>
+          <div class="presence-user-text">
+            <strong class="presence-user-name">${u.name || u.username}</strong>
+            <small class="presence-user-username" dir="ltr">${u.username}</small>
           </div>
         </div>
-        <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shrink-0"></span>
+        <span class="presence-user-online" aria-hidden="true"></span>
       </div>
     `).join('');
   }
