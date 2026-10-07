@@ -66,3 +66,19 @@ class FanousDashboardTests(TestCase):
         self.client.force_login(another)
         self.client.get(reverse("dashboard"))
         self.assertGreaterEqual(PresencePeak.objects.get(day=timezone.localdate()).count, 2)
+
+    def test_admin_presence_panel_uses_glass_layout_and_persian_number_font(self):
+        admin = User.objects.create_user(username="glass-presence-admin", role=UserRole.ADMIN)
+        self.client.force_login(admin)
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, 'class="dash-section presence-glass-panel"')
+        self.assertContains(response, 'class="presence-card-number presence-number"')
+        self.assertContains(response, 'aria-label="به‌روزرسانی کاربران برخط"')
+        self.assertContains(response, 'aria-controls="presence-details"')
+        panel = response.content.decode().split('id="live-presence"', 1)[1].split('</section>', 1)[0]
+        self.assertNotIn("font-mono", panel)
+        self.assertNotContains(response, "presence-neon-btn")
+
+    def test_student_dashboard_does_not_show_admin_presence_panel(self):
+        response = self.client.get(reverse("dashboard"))
+        self.assertNotContains(response, 'id="live-presence"')
