@@ -896,21 +896,24 @@ a.dash-mini-item:hover .dash-mini-arrow {
   border-bottom: 1px solid rgba(148, 163, 184, .18);
 }
 
-.presence-command-title { min-width: 0; }
+.presence-command-title { flex: 1 1 18rem; min-width: 0; }
+.presence-command-title > div { min-width: 0; overflow-wrap: anywhere; }
+.presence-header-actions { flex: 1 1 16rem; min-width: 0; justify-content: flex-end; }
 .presence-command-title h2 { margin: 0; color: #1e293b; font-size: 1.15rem; font-weight: 700; line-height: 1.7; }
 .presence-command-title small { display: block; color: #64748b; font-size: .73rem; line-height: 1.9; }
 .presence-eyebrow { display: flex; align-items: center; gap: .55rem; color: #4f46e5; font-size: .66rem; font-weight: 700; margin-bottom: .2rem; }
 .presence-live-orb { display: grid; place-items: center; flex-shrink: 0; width: 3.1rem; height: 3.1rem; border: 1px solid rgba(255, 255, 255, .95); border-radius: 1.1rem; color: #4f46e5; background: linear-gradient(145deg, rgba(255, 255, 255, .85), rgba(199, 210, 254, .5)); box-shadow: 0 8px 18px -10px rgba(79, 70, 229, .4), inset 0 1px 0 #fff; font-size: 1.15rem; }
 
 .presence-pulse { display: inline-block; flex-shrink: 0; width: .4rem; height: .4rem; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 4px rgba(16, 185, 129, .1); animation: presence-pulse 2.5s ease-in-out infinite; }
-.presence-total { display: flex; align-items: center; gap: 1.2rem; padding: .7rem 1rem; border: 1px solid rgba(255, 255, 255, .95); border-radius: 1.15rem; background: rgba(255, 255, 255, .6); box-shadow: inset 0 1px 0 #fff, 0 4px 14px rgba(79, 70, 229, .04); }
+.presence-total { display: flex; align-items: center; gap: 1.2rem; min-width: 0; padding: .7rem 1rem; border: 1px solid rgba(255, 255, 255, .95); border-radius: 1.15rem; background: rgba(255, 255, 255, .6); box-shadow: inset 0 1px 0 #fff, 0 4px 14px rgba(79, 70, 229, .04); }
+.presence-total > div { min-width: 0; overflow-wrap: anywhere; }
 .presence-total-label { display: block; color: #475569; font-size: .72rem; font-weight: 700; }
-.presence-updated { display: block; color: #64748b; font-size: .65rem; margin-top: .3rem; min-width: 7.5rem; }
+.presence-updated { display: block; color: #64748b; font-size: .65rem; margin-top: .3rem; }
 #live-presence .presence-total strong { color: #4338ca; font-size: 2rem; font-weight: 700; line-height: 1.2; }
 .presence-icon-button { display: grid; place-items: center; flex-shrink: 0; width: 2.6rem; height: 2.6rem; border: 1px solid rgba(255, 255, 255, .95); border-radius: .9rem; background: rgba(255, 255, 255, .65); color: #64748b; box-shadow: inset 0 1px 0 #fff; cursor: pointer; transition: background .2s, color .2s, box-shadow .2s; }
 .presence-icon-button:hover { color: #4f46e5; background: rgba(255, 255, 255, .95); }
 
-#live-presence .presence-cards { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .85rem; width: 100%; min-width: 0; }
+#live-presence .presence-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: .85rem; width: 100%; min-width: 0; }
 #live-presence .presence-glass-card {
   --presence-accent: #4f46e5;
   --presence-tint: rgba(99, 102, 241, .09);
@@ -946,7 +949,7 @@ a.dash-mini-item:hover .dash-mini-arrow {
 .presence-card-head { display: flex; align-items: center; justify-content: space-between; gap: .35rem; }
 .presence-card-label { color: #475569; font-size: .73rem; font-weight: 700; line-height: 1.7; }
 .presence-card-icon { display: grid; place-items: center; flex-shrink: 0; width: 2.1rem; height: 2.1rem; border: 1px solid rgba(255, 255, 255, .9); border-radius: .75rem; color: var(--presence-accent); background: var(--presence-tint); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8); }
-.presence-card-bottom { display: flex; align-items: baseline; justify-content: space-between; gap: .4rem; margin-top: auto; }
+.presence-card-bottom { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .4rem; margin-top: auto; }
 #live-presence .presence-card-number { color: #1e293b; font-size: 2.1rem; font-weight: 700; line-height: 1.25; }
 .presence-card-status { display: inline-flex; align-items: center; gap: .35rem; color: #64748b; font-size: .63rem; white-space: nowrap; }
 .presence-card-status::before { content: ''; width: .3rem; height: .3rem; border-radius: 50%; background: #10b981; }
@@ -954,15 +957,16 @@ a.dash-mini-item:hover .dash-mini-arrow {
 
 .presence-detail-dock { margin-top: 1rem; padding: 1.1rem; border: 1px solid rgba(255, 255, 255, .95); border-radius: 1.25rem; background: rgba(255, 255, 255, .6); box-shadow: inset 0 1px 0 #fff; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
 .presence-detail-head { justify-content: space-between; flex-wrap: wrap; padding-bottom: .9rem; margin-bottom: .9rem; border-bottom: 1px solid rgba(148, 163, 184, .15); }
-.presence-detail-title { gap: .65rem; }
+.presence-detail-title { min-width: 0; flex-wrap: wrap; gap: .65rem; }
+.presence-detail-actions { min-width: 0; max-width: 100%; }
 .presence-detail-title h3 { color: #334155; font-size: .85rem; font-weight: 700; margin: 0; }
 #live-presence .presence-count-badge { display: inline-grid; place-items: center; min-width: 1.8rem; min-height: 1.5rem; padding: .15rem .5rem; border: 1px solid rgba(199, 210, 254, .65); border-radius: .55rem; background: rgba(224, 231, 255, .6); color: #4f46e5; font-size: .75rem; font-weight: 700; }
-.presence-search { position: relative; width: 15rem; }
+.presence-search { position: relative; width: 15rem; min-width: 0; }
 .presence-search input { width: 100%; padding: .65rem .85rem .65rem 2.3rem; border: 1px solid rgba(203, 213, 225, .65); border-radius: .8rem; color: #334155; background: rgba(255, 255, 255, .7); font: inherit; font-size: .73rem; }
 .presence-search input::placeholder { color: #64748b; }
 .presence-search i { position: absolute; left: .85rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: .8rem; pointer-events: none; }
 .presence-close { width: 2.3rem; height: 2.3rem; }
-.presence-users { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; max-height: 16rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #c7d2fe transparent; }
+.presence-users { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .6rem; max-height: 16rem; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #c7d2fe transparent; }
 .presence-user { display: flex; align-items: center; justify-content: space-between; gap: .75rem; min-width: 0; padding: .75rem; border: 1px solid rgba(255, 255, 255, .95); border-radius: .9rem; background: rgba(255, 255, 255, .65); }
 .presence-user-avatar { display: grid; place-items: center; flex-shrink: 0; width: 2.25rem; height: 2.25rem; border: 1px solid rgba(199, 210, 254, .6); border-radius: .75rem; color: #4f46e5; background: rgba(224, 231, 255, .5); font-size: .8rem; font-weight: 700; }
 .presence-user-username { font-size: .67rem; color: #64748b; text-align: right; }
@@ -974,9 +978,6 @@ a.dash-mini-item:hover .dash-mini-arrow {
 @keyframes presence-pulse { 50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, .04); } }
 @keyframes presence-shimmer { to { background-position: -200% 0; } }
 
-@media (max-width: 1200px) {
-  #live-presence .presence-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
 @media (max-width: 700px) {
   #live-presence { padding: 1.1rem; border-radius: 1.4rem; }
   .presence-header-actions { width: 100%; }
@@ -985,9 +986,14 @@ a.dash-mini-item:hover .dash-mini-arrow {
   #live-presence .presence-glass-card { padding: .85rem; }
   .presence-detail-actions { width: 100%; }
   .presence-search { flex: 1; width: auto; min-width: 0; }
-  .presence-users { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .presence-search input { font-size: 1rem; }
 }
 @media (max-width: 420px) {
+  #live-presence { padding: .85rem; }
+  .presence-command-header { gap: .85rem; }
+  .presence-header-actions { gap: .5rem; }
+  .presence-total { gap: .5rem; padding: .65rem; }
+  .presence-detail-dock { padding: .75rem; }
   .presence-command-title { align-items: flex-start; gap: .65rem; }
   .presence-command-title h2 { font-size: 1rem; }
   .presence-live-orb { width: 2.6rem; height: 2.6rem; border-radius: .9rem; }
