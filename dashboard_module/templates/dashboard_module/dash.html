@@ -171,105 +171,6 @@
     transform: translateX(-3px);
   }
 
-  /* ===================================================
-     پنل پایش زنده (Live Presence Dashboard) فوق پیشرفته
-  =================================================== */
-  .presence-futuristic-panel {
-    position: relative;
-    background: radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 45%),
-                radial-gradient(circle at 0% 100%, rgba(52, 211, 153, 0.06) 0%, transparent 45%),
-                #ffffff;
-    border: 1px solid rgba(226, 232, 240, 0.85);
-    border-radius: 1.5rem;
-    padding: 1.6rem;
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.03), 0 20px 25px -5px rgba(16, 185, 129, 0.02);
-    overflow: hidden;
-  }
-
-  /* نوار زمان‌سنج بروزرسانی خودکار */
-  .presence-refresh-bar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #10b981, #34d399);
-    transform-origin: left;
-    transform: scaleX(0);
-    transition: transform linear;
-  }
-
-  /* استایل یکدست و سبز کم‌رنگ پاستلی برای همه کارت‌ها */
-  .presence-neon-btn {
-    position: relative;
-    border-radius: 1.15rem;
-    padding: 1rem;
-    text-align: right;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    cursor: pointer;
-    user-select: none;
-    background: linear-gradient(145deg, #f8fdfb 0%, #ecfdf5 100%);
-    border: 1px solid #a7f3d0;
-    box-shadow: 0 2px 8px -2px rgba(16, 185, 129, 0.05);
-  }
-
-  .presence-neon-btn:hover {
-    transform: translateY(-3px);
-    background: #d1fae5;
-    border-color: #34d399;
-    box-shadow: 0 10px 22px -5px rgba(16, 185, 129, 0.2);
-  }
-
-  /* وضعیت فعال (کارت انتخاب‌شده) */
-  .presence-neon-btn.active-group {
-    background: #d1fae5 !important;
-    border-color: #10b981 !important;
-    transform: translateY(-2px);
-    box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.35), 0 12px 24px -5px rgba(16, 185, 129, 0.25) !important;
-  }
-
-  .presence-neon-btn.active-group::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 12px;
-    height: 6px;
-    background: #10b981;
-    clip-path: polygon(50% 100%, 0 0, 100% 0);
-  }
-
-  /* پالس سبز رنگ زنده */
-  .pulse-indicator {
-    width: 8px;
-    height: 8px;
-    background-color: #10b981;
-    border-radius: 50%;
-    display: inline-block;
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-    animation: livePulse 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
-  }
-
-  @keyframes livePulse {
-    to {
-      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
-    }
-  }
-
-  /* اسکلتون لودینگ کارت‌ها */
-  .presence-skeleton-card {
-    height: 86px;
-    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: 1.15rem;
-  }
-
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
 </style>
 {% endblock %}
 
@@ -299,81 +200,61 @@
     </div>
   </section>
 
-  <!-- Live Command Center for Admins -->
   {% if user.role == 'ADMIN' or user.is_superuser %}
-  <section class="dash-section presence-futuristic-panel" id="live-presence" data-presence-url="{{ presence_api_url }}" data-aos="fade-up">
-    <!-- نوار زمان‌سنج بروزرسانی خودکار -->
-    <div class="presence-refresh-bar" data-refresh-bar></div>
+  <section class="dash-section presence-glass-panel" id="live-presence" data-presence-url="{{ presence_api_url }}" data-aos="fade-up" aria-labelledby="presence-heading">
+    <div class="presence-refresh-bar" data-refresh-bar aria-hidden="true"></div>
 
-    <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-5">
-      <div class="flex items-center gap-3">
-        <span class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl shadow-inner border border-emerald-100/60">
-          <i class="fa-solid fa-bolt-lightning animate-bounce" style="animation-duration: 2.5s;"></i>
-        </span>
+    <div class="presence-command-header">
+      <div class="presence-command-title">
+        <span class="presence-live-orb" aria-hidden="true"><i class="fa-solid fa-signal"></i></span>
         <div>
-          <div class="text-[11px] font-extrabold text-emerald-600 tracking-wider flex items-center gap-2">
-            <span class="pulse-indicator"></span>
-            LIVE COMMAND CENTER
-          </div>
-          <strong class="text-lg text-slate-800 font-black">مانیتورینگ برخط کاربران</strong>
-          <small class="block text-xs text-slate-400 mt-0.5">وضعیت زنده نشست‌ها؛ برای مشاهده لیست افراد، روی هر نقش کلیک کنید.</small>
+          <span class="presence-eyebrow"><span class="presence-pulse" aria-hidden="true"></span> نمای زنده سامانه</span>
+          <h2 id="presence-heading">مانیتورینگ برخط کاربران</h2>
+          <small></small>
         </div>
       </div>
 
-      <div class="flex items-center gap-2.5">
-        <!-- دکمه رفرش دستی -->
-        <button type="button" data-presence-refresh-btn title="بروزرسانی لحظه‌ای"
-                class="w-10 h-10 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-sm flex items-center justify-center text-slate-500 hover:text-emerald-600 transition active:scale-95">
-          <i class="fa-solid fa-arrows-rotate text-sm" data-refresh-icon></i>
+      <div class="presence-header-actions">
+        <div class="presence-total">
+          <div>
+            <span class="presence-total-label">مجموع کاربران برخط</span>
+            <span data-presence-updated class="presence-updated" role="status">در حال دریافت...</span>
+          </div>
+          <strong data-presence-total class="presence-number">۰</strong>
+        </div>
+        <button type="button" data-presence-refresh-btn title="به‌روزرسانی لحظه‌ای" aria-label="به‌روزرسانی کاربران برخط" class="presence-icon-button">
+          <i class="fa-solid fa-arrows-rotate" data-refresh-icon aria-hidden="true"></i>
         </button>
-
-        <!-- کانتر کل آنلاین‌ها -->
-        <div class="flex items-center gap-3 bg-slate-50/90 px-4 py-2 rounded-2xl border border-slate-200/70 shadow-sm">
-          <div class="text-left">
-            <span class="text-[11px] text-slate-500 font-bold block">مجموع برخط</span>
-            <span data-presence-updated class="block text-[10px] text-slate-400 font-mono">در حال دریافت...</span>
-          </div>
-          <div class="h-8 w-[1px] bg-slate-200"></div>
-          <strong data-presence-total class="text-2xl text-emerald-600 font-black tracking-tight font-mono">۰</strong>
-        </div>
       </div>
     </div>
 
-    <!-- کانتینر کارت‌ها (با اسکلتون لودینگ اولیه) -->
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" data-presence-cards>
-      <div class="presence-skeleton-card"></div>
-      <div class="presence-skeleton-card"></div>
-      <div class="presence-skeleton-card"></div>
-      <div class="presence-skeleton-card"></div>
-      <div class="presence-skeleton-card"></div>
-      <div class="presence-skeleton-card"></div>
+    <div class="presence-cards" data-presence-cards aria-label="کاربران برخط به تفکیک نقش">
+      <div class="presence-skeleton-card" aria-hidden="true"></div>
+      <div class="presence-skeleton-card" aria-hidden="true"></div>
+      <div class="presence-skeleton-card" aria-hidden="true"></div>
+      <div class="presence-skeleton-card" aria-hidden="true"></div>
+      <div class="presence-skeleton-card" aria-hidden="true"></div>
+      <div class="presence-skeleton-card" aria-hidden="true"></div>
     </div>
 
-    <!-- پنل لیست جزئیات کاربران انتخاب‌شده -->
-    <div class="mt-4 hidden p-4 bg-white/95 backdrop-blur-md rounded-2xl border border-emerald-100 shadow-xl transition-all" data-presence-details>
-      <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 mb-3">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-          <strong class="text-sm text-slate-800 font-bold" data-presence-title></strong>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-bold font-mono" data-presence-count-badge>۰</span>
+    <div class="presence-detail-dock hidden" id="presence-details" data-presence-details>
+      <div class="presence-detail-head">
+        <div class="presence-detail-title">
+          <span class="presence-pulse" aria-hidden="true"></span>
+          <h3 data-presence-title></h3>
+          <span class="presence-count-badge presence-number" data-presence-count-badge>۰</span>
         </div>
-
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <!-- جستجوی آنی در کاربران گروه باز شده -->
-          <div class="relative flex-grow sm:w-56">
-            <input type="text" data-presence-search placeholder="جستجوی نام یا نام‌کاربری..."
-                   class="w-full text-xs rounded-xl bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 focus:outline-none focus:border-emerald-500 focus:bg-white transition">
-            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+        <div class="presence-detail-actions">
+          <div class="presence-search">
+            <input type="search" data-presence-search placeholder="جستجوی نام یا نام کاربری..." aria-label="جستجو در کاربران برخط">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
           </div>
-
-          <button type="button" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition" data-presence-close>
-            <i class="fa-solid fa-xmark text-xs"></i>
+          <button type="button" class="presence-icon-button presence-close" data-presence-close aria-label="بستن فهرست کاربران">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
         </div>
       </div>
-
-      <!-- لیست اسامی کاربران -->
-      <div class="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 max-h-60 overflow-y-auto pr-1" data-presence-users></div>
+      <div class="presence-users" data-presence-users></div>
     </div>
   </section>
   {% endif %}
@@ -847,12 +728,12 @@
   };
 
   const icons = {
-    superusers: 'fa-crown text-emerald-600',
-    admins: 'fa-shield-halved text-emerald-600',
-    consultants: 'fa-headset text-emerald-600',
-    trustees: 'fa-location-dot text-emerald-600',
-    moderators: 'fa-eye text-emerald-600',
-    students: 'fa-graduation-cap text-emerald-600'
+    superusers: 'fa-crown',
+    admins: 'fa-shield-halved',
+    consultants: 'fa-headset',
+    trustees: 'fa-location-dot',
+    moderators: 'fa-eye',
+    students: 'fa-graduation-cap'
   };
 
   let data = {};
@@ -893,14 +774,14 @@
     }
 
     users.innerHTML = list.map(u => `
-      <div class="rounded-xl bg-slate-50/80 hover:bg-emerald-50/50 p-2.5 border border-slate-100 hover:border-emerald-200 transition flex items-center justify-between">
+      <div class="presence-user">
         <div class="flex items-center gap-2.5 min-w-0">
-          <span class="w-8 h-8 rounded-lg bg-white border border-slate-200/80 text-emerald-700 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
+          <span class="presence-user-avatar">
             ${(u.name || u.username || 'U').charAt(0)}
           </span>
           <div class="truncate">
             <strong class="block text-xs text-slate-800 truncate">${u.name || u.username}</strong>
-            <small class="text-[10px] text-slate-400 font-mono block truncate">${u.username}</small>
+            <small class="presence-user-username block truncate" dir="ltr">${u.username}</small>
           </div>
         </div>
         <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shrink-0"></span>
@@ -918,24 +799,26 @@
       const sum = Object.values(data).reduce((acc, g) => acc + (g.count || 0), 0);
       total.textContent = sum.toLocaleString('fa-IR');
 
-      cards.innerHTML = Object.entries(labels).map(([k, l]) => `
-        <div class="presence-neon-btn group ${activeGroup === k ? 'active-group' : ''}" data-presence-group="${k}">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-slate-600 font-bold">${l}</span>
-            <span class="w-8 h-8 rounded-xl bg-white shadow-sm border border-emerald-100 flex items-center justify-center transition group-hover:scale-110">
-              <i class="fa-solid ${icons[k]} text-xs"></i>
+      const focusedGroup = cards.contains(document.activeElement) ? document.activeElement.dataset.presenceGroup : null;
+      cards.innerHTML = Object.entries(labels).map(([groupKey, label]) => `
+        <button type="button" class="presence-glass-card ${activeGroup === groupKey ? 'active-group' : ''}" data-presence-group="${groupKey}" aria-expanded="${activeGroup === groupKey}" aria-controls="presence-details">
+          <span class="presence-card-head">
+            <span class="presence-card-label">${label}</span>
+            <span class="presence-card-icon">
+              <i class="fa-solid ${icons[groupKey]}" aria-hidden="true"></i>
             </span>
-          </div>
-          <div class="flex items-baseline justify-between mt-1">
-            <strong class="text-2xl font-black text-slate-800 font-mono tracking-tight group-hover:text-emerald-700 transition">
-              ${(data[k]?.count || 0).toLocaleString('fa-IR')}
+          </span>
+          <span class="presence-card-bottom">
+            <strong class="presence-card-number presence-number">
+              ${(data[groupKey]?.count || 0).toLocaleString('fa-IR')}
             </strong>
-            <span class="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> فعال
+            <span class="presence-card-status ${(data[groupKey]?.count || 0) ? '' : 'is-empty'}">
+              ${(data[groupKey]?.count || 0) ? 'برخط' : 'بدون کاربر'}
             </span>
-          </div>
-        </div>
+          </span>
+        </button>
       `).join('');
+      if (focusedGroup) cards.querySelector(`[data-presence-group="${focusedGroup}"]`)?.focus({preventScroll: true});
 
       updated.textContent = 'بروز: ' + new Date().toLocaleTimeString('fa-IR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 
@@ -953,12 +836,17 @@
             details.classList.add('hidden');
             activeGroup = null;
             c.classList.remove('active-group');
+            c.setAttribute('aria-expanded', 'false');
             return;
           }
 
           activeGroup = groupKey;
-          cards.querySelectorAll('[data-presence-group]').forEach(el => el.classList.remove('active-group'));
+          cards.querySelectorAll('[data-presence-group]').forEach(el => {
+            el.classList.remove('active-group');
+            el.setAttribute('aria-expanded', 'false');
+          });
           c.classList.add('active-group');
+          c.setAttribute('aria-expanded', 'true');
 
           title.textContent = labels[groupKey] + ' برخط';
           countBadge.textContent = (data[groupKey]?.count || 0).toLocaleString('fa-IR');
@@ -979,9 +867,14 @@
 
   // بستن لیست جزئیات
   root.querySelector('[data-presence-close]').onclick = () => {
+    const selectedCard = cards.querySelector(`[data-presence-group="${activeGroup}"]`);
     details.classList.add('hidden');
     activeGroup = null;
-    cards.querySelectorAll('[data-presence-group]').forEach(el => el.classList.remove('active-group'));
+    cards.querySelectorAll('[data-presence-group]').forEach(el => {
+      el.classList.remove('active-group');
+      el.setAttribute('aria-expanded', 'false');
+    });
+    selectedCard?.focus({preventScroll: true});
   };
 
   // جستجوی لحظه‌ای در اسامی
