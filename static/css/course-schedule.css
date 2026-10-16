@@ -1,0 +1,10 @@
+.course-schedule .schedule-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.course-schedule .schedule-field{min-width:0}
+.course-schedule .schedule-control{position:relative}
+.course-schedule .schedule-control>.fa-calendar{position:absolute;right:15px;top:50%;transform:translateY(-50%);pointer-events:none;color:#6366a4}
+.course-schedule .schedule-control input{direction:ltr;text-align:left;unicode-bidi:plaintext;padding:13px 43px 13px 15px;min-height:48px;font-variant-numeric:tabular-nums}
+.course-schedule .schedule-control input::placeholder{font-size:11px;text-align:left}
+.course-schedule .schedule-help{margin-top:9px;line-height:1.9;font-size:11px;color:#64748b}
+.course-schedule .errorlist{font-size:12px;line-height:1.9;color:#be3455;margin-top:8px}
+.jdp-container{z-index:2000!important;direction:rtl}
+@media(max-width:640px){.course-schedule .schedule-grid{grid-template-columns:minmax(0,1fr)}}

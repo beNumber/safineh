@@ -24,3 +24,13 @@ class PresencePeak(models.Model):
     day = models.DateField(unique=True)
     count = models.PositiveIntegerField(default=0)
     recorded_at = models.DateTimeField()
+
+
+class NotificationReceipt(models.Model):
+    user = models.ForeignKey('auth_module.User', on_delete=models.CASCADE)
+    kind = models.CharField(max_length=16)
+    object_id = models.PositiveBigIntegerField()
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'kind', 'object_id'], name='unique_notification_receipt')]

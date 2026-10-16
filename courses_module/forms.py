@@ -5,10 +5,14 @@ import jdatetime
 
 from auth_module.models import UserRole
 from users_module.models import FieldOfStudy, Grade, Province, School, Subject
+from users_module.choices import UniqueTitleMultipleChoiceField
 from .models import Course, CourseResource, CourseSection, CourseEpisode
 
 
 class CourseCreateForm(forms.ModelForm):
+    allowed_grades = UniqueTitleMultipleChoiceField(queryset=Grade.objects.none(), required=False, widget=forms.CheckboxSelectMultiple)
+    allowed_fields = UniqueTitleMultipleChoiceField(queryset=FieldOfStudy.objects.none(), required=False, widget=forms.CheckboxSelectMultiple)
+    subjects = UniqueTitleMultipleChoiceField(queryset=Subject.objects.none(), required=False, widget=forms.CheckboxSelectMultiple)
     start_date = forms.CharField(
         label="تاریخ و ساعت شروع",
         required=False,
@@ -17,6 +21,8 @@ class CourseCreateForm(forms.ModelForm):
                 "class": "glass-input",
                 "data-jdp": "",
                 "data-jdp-time": "true",
+                "dir": "ltr",
+                "inputmode": "numeric",
                 "autocomplete": "off",
                 "placeholder": "مثلاً ۱۴۰۵/۰۷/۰۷ ۱۸:۳۰",
             }
@@ -30,6 +36,8 @@ class CourseCreateForm(forms.ModelForm):
                 "class": "glass-input",
                 "data-jdp": "",
                 "data-jdp-time": "true",
+                "dir": "ltr",
+                "inputmode": "numeric",
                 "autocomplete": "off",
                 "placeholder": "مثلاً ۱۴۰۵/۰۸/۰۷ ۱۸:۳۰",
             }

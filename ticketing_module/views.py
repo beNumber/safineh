@@ -1,7 +1,8 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -79,6 +80,14 @@ def _set_ticket_after_direct_text_message(ticket, sender):
 @role_required(*ALL_ROLES)
 def ticket_list(request):
     tickets = visible_tickets_for(request.user)
+    totals = tickets.aggregate(
+        total=Count("pk", distinct=True),
+        open=Count("pk", filter=Q(status__in=[TicketStatus.OPEN, TicketStatus.IN_PROGRESS]), distinct=True),
+        resolved=Count("pk", filter=Q(status=TicketStatus.RESOLVED), distinct=True),
+    )
+    query = request.GET.get("q", "").strip()
+    if query:
+        tickets = tickets.filter(title__icontains=query)
 
     status = request.GET.get("status")
     ticket_type = request.GET.get("type")
@@ -89,11 +98,21 @@ def ticket_list(request):
     if ticket_type:
         tickets = tickets.filter(ticket_type=ticket_type)
 
+    page = Paginator(tickets.order_by("-updated_at", "-pk"), 12).get_page(request.GET.get("page"))
+    filters = request.GET.copy()
+    filters.pop("page", None)
     return render(
         request,
         "ticketing_module/ticket_list.html",
         {
-            "tickets": tickets,
+            "tickets": page,
+            "page_obj": page,
+            "filter_query": filters.urlencode(),
+            "query": query,
+            "type_choices": TicketType.choices,
+            "total_count": totals["total"],
+            "open_count": totals["open"],
+            "resolved_count": totals["resolved"],
             "status_choices": TicketStatus.choices,
             "selected_status": status,
             "selected_type": ticket_type,
@@ -260,7 +279,7 @@ def ticket_detail(request, pk):
 
     if request.user.role in STAFF_ROLES or request.user.is_superuser:
         previous_tickets = (
-            Ticket.objects.filter(
+            visible_tickets_for(request.user).filter(
                 student=ticket.student,
                 subject=ticket.subject,
             )

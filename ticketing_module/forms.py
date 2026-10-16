@@ -53,6 +53,14 @@ class TicketCreateForm(forms.ModelForm):
 
 
 class TicketMessageForm(forms.ModelForm):
+    content = forms.CharField(required=False, widget=forms.Textarea(attrs={'class': INPUT_CLASS, 'rows': 5}))
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get('content') and not cleaned.get('attachment'):
+            raise forms.ValidationError('متن پیام یا یک فایل پیوست را وارد کنید.')
+        return cleaned
+
     class Meta:
         model = TicketMessage
         fields = ["content", "attachment"]

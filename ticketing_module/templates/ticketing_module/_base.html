@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% load static %}
+{% block extra_css %}{{ block.super }}<link rel="stylesheet" href="{% static 'css/ticketing-glass.css' %}">{% endblock %}
+{% block content %}
+<div class="ticket-shell">
+  <nav class="ticket-nav" aria-label="بخش‌های تیکت">
+    <a href="{% url 'ticketing:list' %}"><i class="fa-solid fa-comments"></i> همه گفت‌وگوها</a>
+    {% if user.role == "STUDENT" and not user.is_superuser %}<a href="{% url 'ticketing:create' %}"><i class="fa-solid fa-plus"></i> گفت‌وگوی جدید</a>{% endif %}
+    {% if user.is_superuser or user.role == "ADMIN" or user.role == "CONTENT_MODERATOR" %}<a href="{% url 'ticketing:moderation_queue' %}"><i class="fa-solid fa-shield-halved"></i> بررسی پیوست‌ها</a>{% endif %}
+  </nav>
+  {% block ticket_content %}{% endblock %}
+</div>
+{% endblock %}

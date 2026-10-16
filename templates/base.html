@@ -425,7 +425,7 @@
                 <a href="{% url 'quiz_module:quiz_list' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/quizzes/' in request.path %}active{% else %}text-slate-600{% endif %}" title="آزمون‌ها">
                     <span class="sidebar-icon text-indigo-500 bg-indigo-50"><i class="fa-solid fa-file-circle-check"></i></span>
-                    <span>آزمون‌های آنلاین</span>
+                    <span>آزمون‌های آنلاین</span><span id="quiz-live-indicator" class="nav-blink-dot" title="آزمون شما شروع شده است" aria-label="آزمون فعال" {% if not active_exam_count %}hidden{% endif %}></span>
                 </a>
                 {% endif %}
             </div>
@@ -438,7 +438,7 @@
                     برنامه‌ریزی و مشاوره
                 </p>
 
-                {% if user.role == 'STUDENT' %}
+                {% if user.role == 'STUDENT' and not user.is_superuser %}
                 <a href="{% url 'counseling:my_consultant' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/counseling/' in request.path %}active{% else %}text-slate-600{% endif %}" title="مشاور من">
                     <span class="sidebar-icon text-emerald-500 bg-emerald-50"><i class="fa-solid fa-user-shield"></i></span>
@@ -454,7 +454,7 @@
                 </a>
                 {% endif %}
 
-                {% if user.role == 'PROVINCE_TRUSTEE' or user.role == 'ADMIN' %}
+                {% if user.role == 'PROVINCE_TRUSTEE' or user.role == 'ADMIN' or user.is_superuser %}
                 <a href="{% url 'counseling:manage' %}"
                    class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold {% if '/counseling/manage' in request.path %}active{% else %}text-slate-600{% endif %}" title="تخصیص مشاور">
                     <span class="sidebar-icon text-emerald-600 bg-emerald-50"><i class="fa-solid fa-people-arrows-left-right"></i></span>
@@ -541,6 +541,7 @@
                     <span class="sidebar-icon text-emerald-600 bg-emerald-50"><i class="fa-solid fa-file-import"></i></span>
                     <span>ورود و ثبت اعضا</span>
                 </a>
+                <a href="{% url 'users_module:curriculum_import' %}" class="sidebar-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-600" title="ورود اکسل اطلاعات آموزشی"><span class="sidebar-icon text-violet-600 bg-violet-50"><i class="fa-solid fa-file-excel"></i></span><span>ورود پایه، رشته و درس</span></a>
             </div>
             {% endif %}
 
@@ -658,6 +659,7 @@
                     <div class="relative">
                         <button id="notification-toggle" type="button"
                                 data-read-url="{% url 'notifications_read' %}"
+                                data-read-token="{{ fanous_notification_token }}"
                                 data-csrf="{{ csrf_token }}"
                                 class="fanous-notification-button"
                                 aria-label="اعلان‌های تازه">
@@ -923,12 +925,6 @@
             profileToggle.setAttribute('aria-expanded', String(!profileMenu.classList.contains('hidden')));
         });
 
-        notificationToggle?.addEventListener('click', function (event) {
-            event.stopPropagation();
-            profileMenu?.classList.add('hidden');
-            notificationPanel?.classList.toggle('hidden');
-        });
-
         document.addEventListener('click', function (event) {
             if (profileMenu && !profileMenu.contains(event.target) && !profileToggle.contains(event.target)) {
                 profileMenu.classList.add('hidden');
@@ -971,6 +967,7 @@
 
 <script src="{% static 'js/persian-utils.js' %}"></script>
 <script src="{% static 'js/app.js' %}"></script>
+{{ fanous_quiz_windows|json_script:"quiz-live-windows" }}
 <script src="{% static 'js/fanous-shell.js' %}"></script>
 
 {% block extra_js %}{% endblock %}

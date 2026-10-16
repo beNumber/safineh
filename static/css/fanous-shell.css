@@ -156,3 +156,7 @@ body{background:radial-gradient(circle at 16% 8%,rgba(14,165,233,.07),transparen
 @keyframes fanous-float{50%{transform:translate3d(18px,12px,0) scale(1.08)}}@keyframes fanous-beacon{50%{transform:scale(1.16);opacity:.05}}@keyframes fanous-pulse{50%{box-shadow:0 0 0 8px rgba(34,197,94,0)}}
 @media(max-width:1023px){.app-sidebar{transform:translateX(105%)!important}.app-sidebar.is-open{transform:none!important}.main-wrapper{margin-right:0!important}}
 @media(prefers-reduced-motion:reduce){.fanous-brand::before,.fanous-logo::after,.fanous-status i{animation:none}.sidebar-link,.sidebar-icon,.fanous-notification-button{transition:none}}
+.nav-blink-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#f43f5e;margin-inline-start:6px;box-shadow:0 0 0 4px #f43f5e20;animation:quizLivePulse 1.2s ease-in-out infinite}
+.nav-blink-dot[hidden]{display:none}
+@keyframes quizLivePulse{50%{opacity:.35;box-shadow:0 0 0 7px #f43f5e08}}
+@media(prefers-reduced-motion:reduce){.nav-blink-dot{animation:none}}

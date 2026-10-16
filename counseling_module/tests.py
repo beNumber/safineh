@@ -1,4 +1,7 @@
-from django.test import TestCase
+from tempfile import TemporaryDirectory
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from auth_module.models import ProvinceTrustee, Student, User, UserRole
@@ -13,8 +16,8 @@ from .services import manageable_students_for
 class CounselingFlowTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.province = Province.objects.create(name="hormozgan")
-        cls.other_province = Province.objects.create(name="kerman")
+        cls.province = Province.objects.get_or_create(name="hormozgan")[0]
+        cls.other_province = Province.objects.get_or_create(name="kerman")[0]
         school = School.objects.create(name="مدرسه هرمزگان", province=cls.province)
         other_school = School.objects.create(name="مدرسه کرمان", province=cls.other_province)
         grade = Grade.objects.create(title="دهم", school=school)
@@ -133,6 +136,8 @@ class CounselingFlowTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 404)
 
     def test_private_ticket_is_moderated_then_sent_only_to_assigned_consultant(self):
+        media_root = self.enterContext(TemporaryDirectory())
+        self.enterContext(override_settings(MEDIA_ROOT=media_root))
         StudentConsultantAssignment.objects.create(
             student=self.student, consultant=self.consultant, assigned_by=self.admin_user
         )
@@ -141,7 +146,7 @@ class CounselingFlowTests(TestCase):
         self.assertContains(consultant_page, "سارا مشاور")
         response = self.client.post(
             reverse("counseling:private_ticket"),
-            {"title": "برنامه آزمون", "content": "برای آزمون بعدی چه کار کنم؟"},
+            {"title": "برنامه آزمون", "content": "برای آزمون بعدی چه کار کنم؟", "attachment": SimpleUploadedFile('question.txt', b'private question')},
         )
         ticket = Ticket.objects.get()
         self.assertRedirects(response, reverse("ticketing:detail", args=[ticket.pk]))
@@ -154,7 +159,9 @@ class CounselingFlowTests(TestCase):
         self.client.force_login(self.other_consultant)
         self.assertEqual(self.client.get(reverse("ticketing:detail", args=[ticket.pk])).status_code, 403)
         self.client.force_login(self.consultant)
-        self.assertEqual(self.client.get(reverse("ticketing:detail", args=[ticket.pk])).status_code, 403)
+        response = self.client.get(reverse("ticketing:detail", args=[ticket.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'برای آزمون بعدی چه کار کنم؟')
 
         self.client.force_login(self.moderator)
         self.assertEqual(self.client.get(reverse("ticketing:detail", args=[ticket.pk])).status_code, 200)
@@ -174,7 +181,7 @@ class CounselingFlowTests(TestCase):
         self.assertEqual(self.client.get(reverse("ticketing:detail", args=[ticket.pk])).status_code, 200)
         self.client.post(
             reverse("ticketing:add_message", args=[ticket.pk]),
-            {"content": "پاسخ خصوصی مشاور"},
+            {"content": "پاسخ خصوصی مشاور", "attachment": SimpleUploadedFile('answer.txt', b'private answer')},
         )
         answer = ticket.messages.get(sender=self.consultant)
         self.assertEqual(answer.moderation_status, ModerationStatus.PENDING)

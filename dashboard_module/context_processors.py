@@ -1,4 +1,5 @@
 from datetime import timedelta
+from django.core import signing
 
 from django.urls import reverse
 from django.utils import timezone
@@ -8,6 +9,8 @@ from auth_module.models import UserRole
 from blog_module.models import Post
 from news_module.models import Article
 from classroom_module.models import OnlineClass
+from quiz_module.permissions import available_student_quizzes
+from .models import NotificationReceipt
 
 
 ROLE_COPY = {
@@ -35,6 +38,7 @@ def fanous_shell(request):
         return {}
 
     now = timezone.now()
+    receipts = NotificationReceipt.objects.filter(user=request.user)
     raw_last_seen = request.session.get("fanous_content_seen_at")
     last_seen = parse_datetime(raw_last_seen) if raw_last_seen else None
     if last_seen is None:
@@ -43,18 +47,20 @@ def fanous_shell(request):
         last_seen = timezone.make_aware(last_seen)
 
     posts = list(
-        Post.published.filter(published_at__gt=last_seen)
+        Post.published.filter(published_at__gt=last_seen).exclude(pk__in=receipts.filter(kind='blog').values('object_id'))
         .only("title", "slug", "published_at")[:6]
     )
     articles = list(
         Article.objects.published()
         .visible_to(request.user)
         .filter(published_at__gt=last_seen)
+        .exclude(pk__in=receipts.filter(kind='news').values('object_id'))
         .only("title", "slug", "published_at")[:6]
     )
     items = [
         {
             "kind": "blog",
+            "object_id": item.pk,
             "title": item.title,
             "published_at": item.published_at,
             "url": reverse("blog:post_detail", kwargs={"slug": item.slug}),
@@ -63,6 +69,7 @@ def fanous_shell(request):
     ] + [
         {
             "kind": "news",
+            "object_id": item.pk,
             "title": item.title,
             "published_at": item.published_at,
             "url": reverse("news_module:article_detail", kwargs={"slug": item.slug}),
@@ -76,9 +83,9 @@ def fanous_shell(request):
     if request.user.role in (UserRole.STUDENT, UserRole.CONSULTANT) or request.user.is_superuser or request.user.role == UserRole.ADMIN:
         local_now = timezone.localtime(now)
         tomorrow = now + timedelta(hours=24)
-        upcoming_classes = OnlineClass.objects.filter(is_active=True, starts_at__lte=tomorrow, ends_at__gte=now).order_by("starts_at")[:4]
+        upcoming_classes = OnlineClass.objects.filter(is_active=True, starts_at__lte=tomorrow, ends_at__gte=now).exclude(pk__in=receipts.filter(kind='classroom').values('object_id')).order_by("starts_at")[:4]
         has_class_indicator = OnlineClass.objects.filter(is_active=True, starts_at__date=local_now.date()).exists()
-        class_items = [{"kind": "classroom", "title": f"کلاس: {item.title}", "published_at": item.starts_at, "url": reverse("classroom_module:list")} for item in upcoming_classes]
+        class_items = [{"kind": "classroom", "object_id": item.pk, "title": f"کلاس: {item.title}", "published_at": item.starts_at, "url": reverse("classroom_module:list")} for item in upcoming_classes]
         items = class_items + items
 
     role_title, role_message = ROLE_COPY.get(
@@ -88,13 +95,23 @@ def fanous_shell(request):
     if request.user.is_superuser:
         role_title, role_message = ROLE_COPY[UserRole.ADMIN]
 
+    quiz_windows = []
+    active_quiz_count = 0
+    if request.user.role == UserRole.STUDENT and not request.user.is_superuser:
+        for quiz in available_student_quizzes(request.user, now).only("opens_at", "closes_at"):
+            quiz_windows.append({"opens": quiz.opens_at.isoformat(), "closes": quiz.closes_at.isoformat()})
+            active_quiz_count += quiz.opens_at <= now < quiz.closes_at
+
     return {
         "fanous_day_greeting": _day_greeting(),
         "fanous_role_title": role_title,
         "fanous_role_message": role_message,
         "fanous_notifications": items[:6],
-        "fanous_unread_count": len(items),
+        "fanous_notification_token": signing.dumps({'user': request.user.pk, 'items': [(item['kind'], item['object_id']) for item in items[:6]]}, salt='notifications'),
+        "fanous_unread_count": len(items[:6]),
         "fanous_has_class": has_class_indicator,
+        "fanous_quiz_windows": quiz_windows,
+        "active_exam_count": active_quiz_count,
     }
 from .models import ModuleAvailability
 

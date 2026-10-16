@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Avg, Count, Exists, FloatField, OuterRef, Q, Value
+from django.db.models import Avg, Count, Exists, F, FloatField, OuterRef, Q, Value
 from django.db.models.functions import Coalesce
 from django.http import FileResponse, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
@@ -14,7 +14,7 @@ from django.utils.text import slugify
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
-from auth_module.models import Student, UserRole
+from auth_module.models import ProvinceTrustee, Student, UserRole
 from dashboard_module.location_filters import location_options
 
 from .forms import (
@@ -60,6 +60,14 @@ def courses_for_student(queryset, user):
     ).distinct()
 
 
+def courses_for_review(user):
+    queryset = Course.objects.all()
+    if user.role == UserRole.PROVINCE_TRUSTEE and not user.is_superuser:
+        provinces = ProvinceTrustee.objects.filter(user=user).values('province_id')
+        queryset = queryset.filter(Q(all_provinces_allowed=True) | Q(allowed_provinces__in=provinces)).distinct()
+    return queryset
+
+
 class RoleRequiredMixin(LoginRequiredMixin):
     allowed_roles = ()
     allow_superuser = False
@@ -85,6 +93,10 @@ def user_can_manage_course(user, course):
     if course.author_id == user.id:
         return True
     return False
+
+
+def user_can_preview_course(user, course):
+    return user_can_manage_course(user, course) or user.role in (UserRole.PROVINCE_TRUSTEE, UserRole.CONSULTANT, UserRole.CONTENT_MODERATOR)
 
 
 class CourseListView(LoginRequiredMixin, ListView):
@@ -142,7 +154,7 @@ class MyCoursesView(RoleRequiredMixin, ListView):
             location = location_options(self.request)
             return courses_for_region(queryset, location["selected_province"], location["selected_school"])
         if user_role == UserRole.PROVINCE_TRUSTEE:
-            return Course.objects.filter(approval_status=ApprovalStatus.PENDING).select_related(
+            return courses_for_review(self.request.user).filter(approval_status=ApprovalStatus.PENDING).select_related(
                 "author").prefetch_related(
                 "subjects", "allowed_grades", "allowed_fields"
             )
@@ -183,7 +195,7 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
         user_role = getattr(user, "role", None)
         if user.is_superuser or user_role in (UserRole.PROVINCE_TRUSTEE, UserRole.ADMIN):
             return Course.objects.all()
-        if user_role == UserRole.CONSULTANT:
+        if user_role in (UserRole.CONSULTANT, UserRole.CONTENT_MODERATOR):
             return Course.objects.filter(Q(author=user) | Q(pk__in=Course.published.all()))
         return courses_for_student(Course.published.all(), user)
 
@@ -204,17 +216,23 @@ class CourseDetailView(LoginRequiredMixin, DetailView):
         context["rating_count"] = course.ratings.count()
         enrollment = course.enrollments.filter(student=user).first()
         context["is_enrolled"] = enrollment is not None
+        context["can_access_content"] = enrollment is not None or user_can_preview_course(user, course)
         if enrollment and getattr(user, "role", None) == UserRole.STUDENT:
             viewed_at = timezone.now()
             if enrollment.first_viewed_at is None:
                 enrollment.first_viewed_at = viewed_at
             enrollment.last_viewed_at = viewed_at
-            enrollment.view_count += 1
+            enrollment.view_count = F('view_count') + 1
             enrollment.save(update_fields=["first_viewed_at", "last_viewed_at", "view_count"])
         rating = course.ratings.filter(student=user).first()
         context["user_rating"] = rating.value if rating else 0
 
         context["can_manage"] = can_manage
+        context['can_review'] = course.approval_status == ApprovalStatus.PENDING and (
+            user.is_superuser or user.role == UserRole.ADMIN or (
+                user.role == UserRole.PROVINCE_TRUSTEE and courses_for_review(user).filter(pk=course.pk).exists()
+            )
+        )
         context["can_delete"] = can_manage
         if user.is_superuser or getattr(user, "role", None) == UserRole.ADMIN:
             context["view_status_enrollments"] = course.enrollments.select_related("student").order_by("student__last_name", "student__first_name")
@@ -329,7 +347,7 @@ class CourseDeleteView(LoginRequiredMixin, View):
 
 
 class EnrollCourseView(RoleRequiredMixin, View):
-    allowed_roles = (UserRole.STUDENT, UserRole.ADMIN)
+    allowed_roles = tuple(UserRole.values)
     allow_superuser = True
 
     def post(self, request, slug):
@@ -337,12 +355,16 @@ class EnrollCourseView(RoleRequiredMixin, View):
         is_admin_or_super = request.user.is_superuser or getattr(request.user, "role", None) == UserRole.ADMIN
 
         with transaction.atomic():
-            if is_admin_or_super:
+            Course.objects.filter(slug=decoded_slug).update(updated_at=F('updated_at'))
+            if is_admin_or_super or request.user.role != UserRole.STUDENT:
                 course = get_object_or_404(Course.objects.select_for_update(), slug=decoded_slug)
             else:
                 course = get_object_or_404(
-                    courses_for_student(Course.published.select_for_update(), request.user), slug=decoded_slug
+                    Course.objects.select_for_update().filter(pk__in=courses_for_student(Course.published.all(), request.user).values('pk')), slug=decoded_slug
                 )
+
+            if user_can_preview_course(request.user, course):
+                return redirect('courses_module:course_detail', slug=course.slug)
 
             if CourseEnrollment.objects.filter(course=course, student=request.user).exists():
                 messages.info(request, "این دوره از قبل در دوره‌های من قرار دارد.")
@@ -352,7 +374,7 @@ class EnrollCourseView(RoleRequiredMixin, View):
                 messages.error(request, "ظرفیت این دوره تکمیل شده است.")
                 return redirect("courses_module:course_detail", slug=course.slug)
 
-            CourseEnrollment.objects.create(course=course, student=request.user)
+            CourseEnrollment.objects.get_or_create(course=course, student=request.user)
 
         messages.success(request, "دوره با موفقیت به «دوره‌های من» اضافه شد.")
         return redirect("courses_module:course_detail", slug=course.slug)
@@ -387,7 +409,7 @@ class CourseReviewListView(RoleRequiredMixin, ListView):
     context_object_name = "courses"
 
     def get_queryset(self):
-        return Course.objects.filter(approval_status=ApprovalStatus.PENDING).select_related("author").prefetch_related(
+        return courses_for_review(self.request.user).filter(approval_status=ApprovalStatus.PENDING).select_related("author").prefetch_related(
             "subjects", "allowed_grades", "allowed_fields"
         )
 
@@ -396,11 +418,14 @@ class CourseReviewView(RoleRequiredMixin, View):
     allowed_roles = (UserRole.PROVINCE_TRUSTEE, UserRole.ADMIN)
     allow_superuser = True
 
+    @transaction.atomic
     def post(self, request, pk):
-        course = get_object_or_404(Course, pk=pk, approval_status=ApprovalStatus.PENDING)
+        Course.objects.filter(pk=pk).update(updated_at=F('updated_at'))
+        course = get_object_or_404(Course.objects.select_for_update().filter(pk__in=courses_for_review(request.user).values('pk')), pk=pk, approval_status=ApprovalStatus.PENDING)
         action = request.POST.get("action")
         if action == "approve":
             course.approval_status = ApprovalStatus.APPROVED
+            course.is_active = True
             course.rejection_reason = ""
             message = "دوره تأیید و منتشر شد."
         elif action == "reject":
@@ -411,7 +436,7 @@ class CourseReviewView(RoleRequiredMixin, View):
             return HttpResponseBadRequest("عملیات نامعتبر است.")
         course.reviewed_by = request.user
         course.reviewed_at = timezone.now()
-        course.save(update_fields=["approval_status", "rejection_reason", "reviewed_by", "reviewed_at"])
+        course.save(update_fields=["approval_status", "is_active", "rejection_reason", "reviewed_by", "reviewed_at"])
         messages.success(request, message)
         return redirect("courses_module:review_list")
 
@@ -579,7 +604,15 @@ class EpisodeDownloadView(LoginRequiredMixin, View):
         is_enrolled = course.enrollments.filter(student=request.user).exists()
         can_manage = user_can_manage_course(request.user, course)
 
-        if not (is_enrolled or can_manage):
+        if not can_manage and request.user.role != UserRole.PROVINCE_TRUSTEE:
+            visible_courses = Course.published.all()
+            if request.user.role == UserRole.STUDENT:
+                visible_courses = courses_for_student(visible_courses, request.user)
+            get_object_or_404(visible_courses, pk=course.pk)
+        if not can_manage and not (episode.is_active and episode.section.is_active):
+            raise Http404
+
+        if not (is_enrolled or user_can_preview_course(request.user, course)):
             messages.error(request, "برای دانلود فایل ابتدا باید در این دوره ثبت‌نام کنید.")
             return redirect("courses_module:course_detail", slug=course.slug)
 

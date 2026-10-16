@@ -21,7 +21,7 @@ class QuizFeatureTests(TestCase):
         self.admin = self.User.objects.create_user(username="admin-q", password="x", role=UserRole.ADMIN)
         self.consultant = self.User.objects.create_user(username="consultant-q", password="x", role=UserRole.CONSULTANT)
         self.student = self.User.objects.create_user(username="student-q", password="x", role=UserRole.STUDENT)
-        self.province = Province.objects.create(name="kerman")
+        self.province = Province.objects.get_or_create(name="kerman")[0]
         self.school = School.objects.create(name="مدرسه آزمون", province=self.province)
         self.grade = Grade.objects.create(title="دهم", school=self.school)
         self.field = FieldOfStudy.objects.create(title="ریاضی", grade=self.grade)

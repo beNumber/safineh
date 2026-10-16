@@ -32,7 +32,7 @@ urlpatterns = [
     path("episodes/<int:pk>/download/", views.EpisodeDownloadView.as_view(), name="episode_download"),
 
     # تعاملات دوره و صفحه جزئیات
-    path("<path:slug>/enroll/", views.EnrollCourseView.as_view(), name="course_enroll"),
-    path("<path:slug>/rate/", views.RateCourseView.as_view(), name="course_rate"),
-    path("<path:slug>/", views.CourseDetailView.as_view(), name="course_detail"),
+    path("<str:slug>/enroll/", views.EnrollCourseView.as_view(), name="course_enroll"),
+    path("<str:slug>/rate/", views.RateCourseView.as_view(), name="course_rate"),
+    path("<str:slug>/", views.CourseDetailView.as_view(), name="course_detail"),
 ]

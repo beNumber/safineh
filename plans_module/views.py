@@ -200,7 +200,7 @@ def plan_board(request):
             request.POST or None,
             actor=request.user,
             subjects=available_subjects,
-            initial={"scheduled_date": jdatetime.date.fromgregorian(date=selected_week).strftime("%Y/%m/%d").translate(PERSIAN_DIGITS), "color": "blue"},
+            initial={"scheduled_date": jdatetime.date.fromgregorian(date=timezone.localdate()).strftime("%Y/%m/%d").translate(PERSIAN_DIGITS), "color": "blue"},
         )
     else:
         all_visible_students = visible_students_for(request.user)
@@ -220,7 +220,7 @@ def plan_board(request):
             actor=request.user,
             subjects=available_subjects,
             students=all_visible_students,
-            initial={"target_students": initial_targets, "scheduled_date": jdatetime.date.fromgregorian(date=selected_week).strftime("%Y/%m/%d").translate(PERSIAN_DIGITS), "color": "violet"},
+            initial={"target_students": initial_targets, "scheduled_date": jdatetime.date.fromgregorian(date=timezone.localdate()).strftime("%Y/%m/%d").translate(PERSIAN_DIGITS), "color": "violet"},
         )
 
     if request.method == "POST" and form.is_valid():
