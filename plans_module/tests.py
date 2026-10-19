@@ -17,7 +17,7 @@ from .services import current_week_start, visible_students_for
 class PlansModuleTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        province = Province.objects.create(name="hormozgan")
+        province = Province.objects.get_or_create(name="hormozgan")[0]
         school = School.objects.create(name="مدرسه برنامه", province=province)
         grade = Grade.objects.create(title="دهم", school=school)
         cls.math_field = FieldOfStudy.objects.create(title="ریاضی", grade=grade)

@@ -4,6 +4,8 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
 from django.utils.translation import gettext_lazy as _
+from users_module.import_forms import AcademicDefaultsForm
+from .models import UserRole
 
 class LoginForm(AuthenticationForm):
     username = forms.CharField(
@@ -207,7 +209,9 @@ class SetNewPasswordForm(forms.Form):
         return cleaned_data
 
 
-class UserSpreadsheetForm(forms.Form):
+class UserSpreadsheetForm(AcademicDefaultsForm):
+    default_role = forms.ChoiceField(label="نقش پیش‌فرض", choices=[("", "دانش‌آموز")] + list(UserRole.choices), required=False)
+    default_password = forms.CharField(label="رمز پیش‌فرض (فقط برای ردیف بدون رمز)", required=False, min_length=8, widget=forms.PasswordInput())
     file = forms.FileField(label="فایل کاربران", widget=forms.FileInput(attrs={"accept": ".xlsx,.csv", "class": "hidden", "data-user-file": ""}))
 
     def clean_file(self):

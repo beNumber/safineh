@@ -61,7 +61,7 @@ class CourseWorkflowTests(TestCase):
         self.assertTrue(course.all_grades_allowed)
 
     def test_admin_can_restrict_and_restore_course_audience_when_editing(self):
-        province = Province.objects.create(name="edit-province")
+        province = Province.objects.get_or_create(name="edit-province")[0]
         school = School.objects.create(province=province, name="edit-school")
         grade = Grade.objects.create(school=school, title="دهم")
         field = FieldOfStudy.objects.create(grade=grade, title="ریاضی")
@@ -79,8 +79,8 @@ class CourseWorkflowTests(TestCase):
             self.assertEqual(self.course.all_fields_allowed, expected)
 
     def test_course_is_visible_only_in_selected_provinces_and_cities(self):
-        first_province = Province.objects.create(name="hormozgan")
-        second_province = Province.objects.create(name="kerman")
+        first_province = Province.objects.get_or_create(name="hormozgan")[0]
+        second_province = Province.objects.get_or_create(name="kerman")[0]
         first_city = School.objects.create(province=first_province, name="شهر اول")
         excluded_city = School.objects.create(province=first_province, name="شهر دوم")
         second_city = School.objects.create(province=second_province, name="شهر سوم")
@@ -115,8 +115,8 @@ class CourseWorkflowTests(TestCase):
                 self.assertEqual(enrollment.status_code, 404)
 
     def test_city_must_belong_to_selected_province(self):
-        first_province = Province.objects.create(name="hormozgan")
-        other_province = Province.objects.create(name="kerman")
+        first_province = Province.objects.get_or_create(name="hormozgan")[0]
+        other_province = Province.objects.get_or_create(name="kerman")[0]
         other_city = School.objects.create(province=other_province, name="شهر خارج استان")
         admin = User.objects.create_user(username="region-validator", password="Pass123!", role=UserRole.ADMIN)
         self.client.force_login(admin)
@@ -251,12 +251,12 @@ class CourseWorkflowTests(TestCase):
         response = self.client.post(reverse("auth_module:login"), {"username": "consultant", "password": "Pass123!"})
         self.assertRedirects(response, reverse("dashboard"))
 
-    def test_non_student_cannot_enroll(self):
+    def test_non_student_previews_without_enrollment(self):
         self.course.approval_status = ApprovalStatus.APPROVED
         self.course.save(update_fields=["approval_status"])
         self.client.force_login(self.consultant)
         response = self.client.post(reverse("courses_module:course_enroll", args=[self.course.slug]))
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 302)
         self.assertFalse(CourseEnrollment.objects.filter(course=self.course, student=self.consultant).exists())
 
     def test_only_admin_can_close_or_delete_course(self):

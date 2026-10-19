@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static shamsi %}
 
 {% block title %}داشبورد | فانوس{% endblock %}
 {% block page_title %}داشبورد فانوس{% endblock %}
@@ -249,6 +249,8 @@
       align-self: flex-end;
     }
   }
+  .forward-tasks { background:linear-gradient(135deg,rgba(79,70,229,.96),rgba(14,165,233,.92)); color:#fff; border-radius:2rem; padding:1.25rem; box-shadow:0 22px 55px rgba(37,99,235,.2); }
+  .forward-task { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22); border-radius:1rem; padding:.75rem; backdrop-filter:blur(14px); }
 </style>
 {% if user.role == 'ADMIN' or user.is_superuser %}
 {% include 'dashboard_module/_presence_styles.html' %}
@@ -280,6 +282,17 @@
       </div>
     </div>
   </section>
+
+  {% if user.role == 'STUDENT' and not user.is_superuser %}
+  <section class="forward-tasks mb-6" data-aos="fade-up">
+    <div class="mb-4 flex items-center justify-between"><div><span class="text-[10px] font-bold text-blue-100">برنامه‌ریزی هوشمند</span><h2 class="mt-1 text-lg font-black">کارهای روبه‌رو</h2></div><i class="fa-solid fa-bolt text-2xl text-amber-300"></i></div>
+    <div class="grid gap-3 md:grid-cols-3">
+      <div class="forward-task"><b class="text-xs">برنامه روز بعد</b><div class="mt-2 space-y-1 text-[11px]">{% for item in tomorrow_plans %}<div>{{ item.display_title }} · {{ item.start_hour }}:۰۰</div>{% empty %}<span class="text-blue-100">برنامه‌ای ثبت نشده</span>{% endfor %}</div></div>
+      <div class="forward-task"><b class="text-xs"><i class="fa-solid fa-video text-cyan-200"></i> کلاس‌های پیش‌رو</b><div class="mt-3 space-y-3 text-xs">{% for item in upcoming_classes %}<a class="block rounded-xl bg-white/10 p-3 hover:bg-white/20" href="{% url 'classroom_module:list' %}"><strong class="block">{{ item.title }}</strong><span class="mt-1 block text-cyan-100">{{ item.starts_at|shamsi:"%m/%d · %H:%M" }}</span></a>{% empty %}<p class="text-blue-100">کلاس پیش‌رو ندارید؛ فرصت خوبی برای مرور درس‌هاست.</p>{% endfor %}</div></div>
+      <div class="forward-task"><b class="text-xs"><i class="fa-solid fa-clipboard-check text-fuchsia-200"></i> آزمون‌های پیش‌رو</b><div class="mt-3 space-y-3 text-xs">{% for item in scheduled_exams %}<a class="block rounded-xl bg-white/10 p-3 hover:bg-white/20" href="{% url 'quiz_module:quiz_list' %}"><strong class="block">{{ item.title }}</strong><span class="mt-1 block text-fuchsia-100">{{ item.opens_at|shamsi:"%m/%d · %H:%M" }}{% if item.is_open %} · شروع شده{% endif %}</span></a>{% empty %}<p class="text-blue-100">فعلاً آزمونی برای شما برنامه‌ریزی نشده است.</p>{% endfor %}</div></div>
+    </div>
+  </section>
+  {% endif %}
 
   {% if user.role == 'ADMIN' or user.is_superuser %}
   <section class="dash-section presence-glass-panel" id="live-presence" data-presence-url="{{ presence_api_url }}" data-aos="fade-up" aria-labelledby="presence-heading">

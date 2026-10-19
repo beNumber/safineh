@@ -2,7 +2,7 @@ from django import forms
 from django.forms import inlineformset_factory
 from ckeditor_uploader.widgets import CKEditorUploadingWidget
 
-from users_module.models import Access, FieldOfStudy, Grade, Subject
+from users_module.models import Access, FieldOfStudy, Grade, School, Subject
 
 from .models import Chapter, Choice, Question, Topic
 
@@ -15,6 +15,7 @@ class QuestionForm(forms.ModelForm):
     """فرم سؤال با مسیر پایه ← رشته ← درس ← فصل ← مبحث."""
 
     grade = forms.ModelChoiceField(label="پایه", queryset=Grade.objects.none(), widget=forms.Select(attrs=FORM_SELECT))
+    school = forms.ModelChoiceField(label="مدرسه", queryset=School.objects.none(), required=False, widget=forms.Select(attrs=FORM_SELECT))
     field = forms.ModelChoiceField(label="رشته", queryset=FieldOfStudy.objects.none(), widget=forms.Select(attrs=FORM_SELECT))
     subject = forms.ModelChoiceField(label="درس", queryset=Subject.objects.none(), widget=forms.Select(attrs=FORM_SELECT))
     chapter = forms.ModelChoiceField(label="فصل", queryset=Chapter.objects.none(), widget=forms.Select(attrs=FORM_SELECT))
@@ -38,7 +39,7 @@ class QuestionForm(forms.ModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         subjects = Subject.objects.filter(is_active=True).select_related("field__grade")
-        if user is not None and not user.is_superuser and user.role != "ADMIN":
+        if user is not None and not user.is_superuser and user.role not in {"ADMIN", "CONSULTANT"}:
             accesses = user.accesses.filter(name=Access.Code.BANK)
             if not accesses.filter(subject__isnull=True).exists():
                 subjects = subjects.filter(pk__in=accesses.values_list("subject_id", flat=True))
@@ -48,6 +49,12 @@ class QuestionForm(forms.ModelForm):
         chapters = Chapter.objects.filter(subject_id__in=subject_ids).select_related("subject")
         topics = Topic.objects.filter(is_active=True, chapter__subject_id__in=subject_ids).select_related("chapter__subject")
         self.fields["grade"].queryset = grades.order_by("title")
+        self.fields["school"].queryset = School.objects.filter(grades__in=grades).select_related("province").distinct().order_by("name")
+        self.fields["school"].label_from_instance = lambda school: f"{school.name} · {school.province}"
+        self.fields["grade"].queryset = self.fields["grade"].queryset.select_related("school__province")
+        self.fields["grade"].label_from_instance = lambda grade: (
+            f"{grade.title} — {grade.school.name} ({grade.school.province})"
+        )
         self.fields["field"].queryset = fields.order_by("title")
         self.fields["subject"].queryset = subjects.order_by("title")
         self.fields["chapter"].queryset = chapters.order_by("name")
@@ -61,6 +68,9 @@ class QuestionForm(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         grade, field = cleaned.get("grade"), cleaned.get("field")
+        school = cleaned.get("school")
+        if school and grade and grade.school_id != school.pk:
+            self.add_error("grade", "پایه متعلق به مدرسه انتخاب‌شده نیست.")
         subject, chapter, topic = cleaned.get("subject"), cleaned.get("chapter"), cleaned.get("topic")
         if field and grade and field.grade_id != grade.pk:
             self.add_error("field", "رشته انتخاب‌شده متعلق به این پایه نیست.")
@@ -97,6 +107,18 @@ class TopicForm(forms.ModelForm):
 
 
 class SubjectForm(forms.ModelForm):
+    school = forms.ModelChoiceField(label="مدرسه", queryset=School.objects.all(), required=False, widget=forms.Select(attrs=FORM_SELECT))
+    grade = forms.ModelChoiceField(label="پایه", queryset=Grade.objects.filter(is_active=True), required=False, widget=forms.Select(attrs=FORM_SELECT))
+
+    def clean(self):
+        data = super().clean()
+        field, grade, school = data.get("field"), data.get("grade"), data.get("school")
+        if field and grade and field.grade_id != grade.pk:
+            self.add_error("field", "رشته متعلق به پایه انتخاب‌شده نیست.")
+        if field and school and field.grade.school_id != school.pk:
+            self.add_error("field", "رشته متعلق به مدرسه انتخاب‌شده نیست.")
+        return data
+
     class Meta:
         model = Subject
         fields = ("title", "field", "is_active")
@@ -104,6 +126,14 @@ class SubjectForm(forms.ModelForm):
 
 
 class FieldForm(forms.ModelForm):
+    school = forms.ModelChoiceField(label="مدرسه", queryset=School.objects.all(), required=False, widget=forms.Select(attrs=FORM_SELECT))
+
+    def clean(self):
+        data = super().clean()
+        grade, school = data.get("grade"), data.get("school")
+        if grade and school and grade.school_id != school.pk:
+            self.add_error("grade", "پایه متعلق به مدرسه انتخاب‌شده نیست.")
+        return data
     class Meta:
         model = FieldOfStudy
         fields = ("title", "grade", "is_active")

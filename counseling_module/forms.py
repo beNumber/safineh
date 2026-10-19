@@ -33,6 +33,14 @@ class AssignmentForm(forms.ModelForm):
         )
 
 
+class BulkAssignmentForm(AssignmentForm):
+    students = forms.ModelMultipleChoiceField(queryset=None, label="دانش‌آموزان")
+
+    def __init__(self, *args, students, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["students"].queryset = students
+
+
 class PrivateCounselingTicketForm(forms.Form):
     title = forms.CharField(
         label="موضوع گفت‌وگو",

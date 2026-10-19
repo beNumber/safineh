@@ -24,6 +24,7 @@ from .decorators import staff_admin_required
 from .models import Student, UserRole
 from .user_management import build_user_template_xlsx, import_users, shift_student_grade
 from users_module.models import FieldOfStudy, Grade, Province, School
+from users_module.choices import title_representatives
 
 
 User = get_user_model()
@@ -56,9 +57,11 @@ def _filtered_users(request):
     if request.GET.get("city"):
         users = users.filter(student_profiles__field__grade__school_id=request.GET["city"])
     if request.GET.get("grade"):
-        users = users.filter(student_profiles__field__grade_id=request.GET["grade"])
+        title = Grade.objects.filter(pk=request.GET["grade"]).values("title")[:1]
+        users = users.filter(student_profiles__field__grade__title__in=title)
     if request.GET.get("field"):
-        users = users.filter(student_profiles__field_id=request.GET["field"])
+        title = FieldOfStudy.objects.filter(pk=request.GET["field"]).values("title")[:1]
+        users = users.filter(student_profiles__field__title__in=title)
     return users.distinct()
 
 
@@ -76,8 +79,8 @@ def user_management(request):
         "staff_count": User.objects.exclude(role=UserRole.STUDENT).count(),
         "roles": UserRole.choices,
         "provinces": Province.objects.all(), "cities": School.objects.select_related("province"),
-        "grades": Grade.objects.filter(is_active=True).select_related("school"),
-        "fields": FieldOfStudy.objects.filter(is_active=True).select_related("grade"),
+        "grades": title_representatives(Grade.objects.filter(is_active=True)).select_related("school"),
+        "fields": title_representatives(FieldOfStudy.objects.filter(is_active=True)).select_related("grade"),
         "upload_form": UserSpreadsheetForm(), "import_results": import_results,
     })
 
@@ -88,7 +91,7 @@ def user_import(request):
         return redirect("auth_module:user-management")
     form = UserSpreadsheetForm(request.POST, request.FILES)
     if form.is_valid():
-        results = import_users(form.cleaned_data["file"])
+        results = import_users(form.cleaned_data["file"], defaults=form.cleaned_data)
         request.session["user_import_results"] = results[:200]
         success = sum(item["ok"] for item in results)
         messages.success(request, f"پردازش فایل تمام شد: {success} کاربر ساخته شد و {len(results) - success} ردیف خطا داشت.")

@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Exists, F, OuterRef, Q
 from django.utils import timezone
 
 from auth_module.models import Consultant, ProvinceTrustee, UserRole
@@ -77,8 +77,7 @@ def can_access_ticket(user, ticket):
             return ticket.student.user_id == user.id
         if user.role == UserRole.CONSULTANT:
             return (
-                ticket.current_queue == TicketQueue.CONSULTANT
-                and ticket.current_assignee_user_id == user.id
+                ticket.current_assignee_user_id == user.id
                 and consultant_matches_ticket_gender(user, ticket.student)
             )
         return False
@@ -113,23 +112,23 @@ def visible_tickets_for(user):
             is_private_consultation=False,
         )
     if user.role == UserRole.CONSULTANT:
-        private_ids = [
-            ticket.pk
-            for ticket in queryset.filter(
-                is_private_consultation=True,
-                current_queue=TicketQueue.CONSULTANT,
-                current_assignee_user=user,
-            )
-            if can_access_ticket(user, ticket)
-        ]
-        candidate_ids = []
-        for ticket in queryset.filter(
-            Q(current_queue=TicketQueue.CONSULTANT) | Q(current_assignee_user=user),
-            is_private_consultation=False,
-        ):
-            if consultant_can_access(user, ticket):
-                candidate_ids.append(ticket.pk)
-        return queryset.filter(Q(pk__in=candidate_ids) | Q(pk__in=private_ids))
+        scopes = Consultant.objects.filter(consultant=user)
+        matching_scopes = scopes.filter(
+            Q(ticket_student_gender=Consultant.TicketStudentGender.BOTH)
+            | Q(ticket_student_gender=OuterRef('student__user__gender'))
+        )
+        queryset = queryset.alias(
+            gender_allowed=Exists(matching_scopes),
+            has_scopes=Exists(scopes),
+            lesson_allowed=Exists(matching_scopes.filter(accesses__name='ticket', accesses__subject_id=OuterRef('subject_id'))),
+            psychology_allowed=Exists(matching_scopes.filter(can_answer_psychology=True)),
+        )
+        assigned = Q(current_assignee_user=user) & (Q(has_scopes=False) | Q(gender_allowed=True))
+        shared = Q(is_private_consultation=False, current_queue=TicketQueue.CONSULTANT) & (
+            Q(ticket_type=TicketType.PSYCHOLOGY, psychology_allowed=True)
+            | (~Q(ticket_type=TicketType.PSYCHOLOGY) & Q(lesson_allowed=True, subject__field_id=F('student__field_id')))
+        )
+        return queryset.filter(assigned | shared)
     return queryset.none()
 
 

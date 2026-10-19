@@ -182,7 +182,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function refreshStudents() {
         if (!studentBox || allStudents?.checked) return;
-        const params = new URLSearchParams({
+          const params = new URLSearchParams({
+              province: document.getElementById('id_province')?.value || '',
             school: document.getElementById('id_school')?.value || '',
             grade: document.getElementById('id_grade')?.value || '',
             field: document.getElementById('id_field')?.value || ''

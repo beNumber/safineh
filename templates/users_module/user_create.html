@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% load static %}
 {% block title %}ایجاد کاربر | مدیریت سامانه{% endblock %}
 {% block page_title %}ایجاد کاربران{% endblock %}
 {% block extra_css %}
@@ -12,6 +12,7 @@
     @keyframes floatOrb { 0%,100%{transform:translate3d(0,0,0)} 50%{transform:translate3d(0,14px,0)} }
 </style>
 {% endblock %}
+{% block extra_js %}{{ academic_hierarchy|json_script:"academic-hierarchy" }}<script src="{% static 'js/academic-selects.js' %}"></script>{% endblock %}
 {% block content %}
 <div class="user-shell -mx-4 min-h-[calc(100vh-76px)] px-4 py-6 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
     <div class="mx-auto max-w-6xl space-y-6">

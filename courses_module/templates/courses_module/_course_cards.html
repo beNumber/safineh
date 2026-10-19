@@ -23,7 +23,7 @@
                     <span><i class="fa-solid fa-signal"></i> {{ course.get_level_display }}</span>
                 </div>
                 <div class="rating-line" aria-label="میانگین امتیاز {{ course.rating_average|floatformat:1 }} از ۵">
-                    <span class="stars">★★★★★</span>
+                    {% include 'courses_module/_rating_stars.html' with average=course.rating_average %}
                     <strong>{{ course.rating_average|floatformat:1 }}</strong>
                     <small>({{ course.rating_count }} رأی)</small>
                 </div>

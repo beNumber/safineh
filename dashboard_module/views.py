@@ -13,6 +13,8 @@ from plans_module.models import PlanCompletion, PlanEntry
 from plans_module.services import current_week_start, student_profile_for
 from counseling_module.models import StudentConsultantAssignment
 from counseling_module.services import manageable_students_for
+from classroom_module.models import OnlineClass
+from quiz_module.permissions import available_student_quizzes
 from .models import ModuleAvailability, UserPresence
 
 # ایمپورت مدل اخبار
@@ -46,7 +48,12 @@ def dash_view(request):
         .order_by("-published_at", "-created_at")[:4]
     )
 
-    if request.user.role == UserRole.STUDENT:
+    if request.user.role == UserRole.STUDENT and not request.user.is_superuser:
+        today = timezone.localdate()
+        context["upcoming_classes"] = OnlineClass.objects.filter(
+            is_active=True, ends_at__gt=now, starts_at__lte=now + timezone.timedelta(days=7)
+        ).order_by("starts_at")[:4]
+        context["scheduled_exams"] = available_student_quizzes(request.user, now)[:4]
         context["my_course_enrollments"] = CourseEnrollment.objects.filter(
             student=request.user,
             course__approval_status=ApprovalStatus.APPROVED,
@@ -55,12 +62,13 @@ def dash_view(request):
         context["my_courses_count"] = CourseEnrollment.objects.filter(student=request.user).count()
         student = student_profile_for(request.user)
         if student:
+            tomorrow = timezone.localdate() + timezone.timedelta(days=1)
+            context["tomorrow_plans"] = PlanEntry.objects.filter(student=student, scheduled_date=tomorrow, is_active=True).select_related("subject")[:6]
             context["consultant_assignment"] = StudentConsultantAssignment.objects.filter(
                 student=student
             ).select_related("consultant").first()
-            today_index = (timezone.localdate().weekday() + 2) % 7
             today_plans = PlanEntry.objects.filter(
-                student=student, weekday=today_index, is_active=True
+                student=student, scheduled_date=today, is_active=True
             ).select_related("subject", "assigned_by")
             completed_ids = set(
                 PlanCompletion.objects.filter(
@@ -137,6 +145,23 @@ def toggle_module(request, code):
 @login_required
 @require_POST
 def mark_content_notifications_read(request):
-    request.session["fanous_content_seen_at"] = timezone.now().isoformat()
-    request.session.modified = True
+    from django.core import signing
+    from .context_processors import fanous_shell
+    from .models import NotificationReceipt
+
+    token = request.POST.get('token')
+    if token:
+        try:
+            payload = signing.loads(token, salt='notifications', max_age=86400)
+        except signing.BadSignature:
+            return JsonResponse({'ok': False}, status=400)
+        if payload['user'] != request.user.pk:
+            raise PermissionDenied
+        items = [{'kind': kind, 'object_id': object_id} for kind, object_id in payload['items']]
+    else:
+        items = fanous_shell(request)['fanous_notifications']
+    NotificationReceipt.objects.bulk_create([
+        NotificationReceipt(user=request.user, kind=item['kind'], object_id=item['object_id'])
+        for item in items
+    ], ignore_conflicts=True)
     return JsonResponse({"ok": True})

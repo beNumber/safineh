@@ -6,14 +6,16 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_POST
 from auth_module.models import UserRole
 from auth_module.models import ProvinceTrustee
-from users_module.models import Access, FieldOfStudy, Grade, Subject
+from users_module.models import Access, FieldOfStudy, Grade, School, Subject
+from users_module.choices import title_representatives
+from users_module.hierarchy import academic_hierarchy
 
 from .models import (
     Chapter,
@@ -223,11 +225,13 @@ def _can_manage_questions(user):
         return False
     if user.is_superuser or user.role == UserRole.ADMIN:
         return True
-    return user.role in {UserRole.CONSULTANT, UserRole.PROVINCE_TRUSTEE} and user.has_project_access(Access.Code.BANK)
+    return user.role == UserRole.CONSULTANT or (
+        user.role == UserRole.PROVINCE_TRUSTEE and user.has_project_access(Access.Code.BANK)
+    )
 
 
 def _can_manage_subject(user, subject_id):
-    return user.is_superuser or user.role == UserRole.ADMIN or user.has_project_access(Access.Code.BANK, subject_id)
+    return user.is_superuser or user.role in {UserRole.ADMIN, UserRole.CONSULTANT} or user.has_project_access(Access.Code.BANK, subject_id)
 
 
 def _is_curriculum_admin(user):
@@ -259,10 +263,7 @@ def _question_overview(user=None):
     questions = base_qs.select_related(
         'creator', 'chapter__subject', 'topic', 'approved_by'
     ).order_by('-created_at', '-pk')
-    counts = {
-        status: base_qs.filter(approval_status=status).count()
-        for status, _label in Question.ApprovalStatus.choices
-    }
+    counts = dict(base_qs.order_by().values('approval_status').annotate(total=Count('pk')).values_list('approval_status', 'total'))
     return {
         'questions': questions[:100],
         'total': sum(counts.values()),
@@ -301,20 +302,21 @@ def _performance_data(user, course_ids=None):
     if course_ids:
         courses = courses.filter(id__in=course_ids)
 
+    totals = {}
+    for answer_model, done_status in ((PracticeAnswer, PracticeSession.Status.DONE), (ExamAnswer, ExamSession.Status.DONE)):
+        rows = answer_model.objects.filter(
+            session__user=user, session__status=done_status,
+            question__chapter__subject__in=courses,
+        ).order_by().values('question__chapter__subject_id').annotate(
+            total=Count('pk'), correct=Count('pk', filter=Q(is_correct=True)),
+        )
+        for row in rows:
+            subject_id = row['question__chapter__subject_id']
+            total, correct = totals.get(subject_id, (0, 0))
+            totals[subject_id] = (total + row['total'], correct + row['correct'])
     result = []
-    for course in courses.order_by("title"):
-        practice = PracticeAnswer.objects.filter(
-            session__user=user,
-            session__status=PracticeSession.Status.DONE,
-            question__chapter__subject=course,
-        ).aggregate(total=Count("id"), correct=Sum("is_correct"))
-        exam = ExamAnswer.objects.filter(
-            session__user=user,
-            session__status=ExamSession.Status.DONE,
-            question__chapter__subject=course,
-        ).aggregate(total=Count("id"), correct=Sum("is_correct"))
-        total = (practice["total"] or 0) + (exam["total"] or 0)
-        correct = (practice["correct"] or 0) + (exam["correct"] or 0)
+    for course in courses.filter(pk__in=totals).order_by('title'):
+        total, correct = totals[course.pk]
         if total:
             result.append({"name": course.title, "percent": round(correct * 100 / total, 1), "total": total})
     return result
@@ -397,7 +399,8 @@ def _previous_answer_map(user, question_ids, *, practice_session_id=None, exam_s
 def _question_form_context(form, formset, editing, question):
     """داده‌های لازم برای فیلتر زنجیره‌ای ساختار آموزشی در فرم سؤال."""
     hierarchy = {
-        "fields": [{"id": item.pk, "title": item.title, "grade": item.grade_id} for item in form.fields["field"].queryset],
+        "grades": [{"id": item.pk, "title": item.title, "school_id": item.school_id} for item in form.fields["grade"].queryset],
+        "fields": [{"id": item.pk, "title": item.title, "grade_id": item.grade_id} for item in form.fields["field"].queryset],
         "subjects": [{"id": item.pk, "title": item.title, "field": item.field_id} for item in form.fields["subject"].queryset],
         "chapters": [{"id": item.pk, "title": item.name, "subject": item.subject_id} for item in form.fields["chapter"].queryset],
         "topics": [{"id": item.pk, "title": item.name, "chapter": item.chapter_id} for item in form.fields["topic"].queryset],
@@ -446,6 +449,7 @@ def question_create(request):
             question.question_type = requested_type
             if _question_requires_approval(request.user):
                 question.approval_status = Question.ApprovalStatus.PENDING
+                question.is_active = False
                 question.approved_by = None
                 question.approved_at = None
                 question.approval_note = ''
@@ -491,6 +495,7 @@ def question_edit(request, pk):
             question = form.save(commit=False)
             if _question_requires_approval(request.user):
                 question.approval_status = Question.ApprovalStatus.PENDING
+                question.is_active = False
                 question.approved_by = None
                 question.approved_at = None
             question.save()
@@ -599,10 +604,25 @@ def curriculum_manage(request):
     if not _is_curriculum_admin(request.user):
         messages.error(request, "مدیریت ساختار آموزشی فقط برای مدیر سیستم مجاز است.")
         return redirect(f"{APP_NS}:choose_mode")
+    grades = Grade.objects.select_related("school")
+    fields = FieldOfStudy.objects.select_related("grade__school")
+    subjects = Subject.objects.select_related("field__grade")
+    selected_school = request.GET.get("school", "")
+    if selected_school.isdigit():
+        grades = grades.filter(school_id=selected_school)
+        fields = fields.filter(grade__school_id=selected_school)
+        subjects = subjects.filter(field__grade__school_id=selected_school)
+    if request.GET.get("grade"):
+        fields = fields.filter(grade__title=request.GET["grade"])
+        subjects = subjects.filter(field__grade__title=request.GET["grade"])
     return render(request, "questions_module/curriculum_manage.html", {
-        "grades": Grade.objects.select_related("school").order_by("school__name", "title"),
-        "fields": FieldOfStudy.objects.select_related("grade__school").order_by("grade__title", "title"),
-        "subjects": Subject.objects.select_related("field__grade").order_by("field__grade__title", "field__title", "title"),
+        "grades": title_representatives(grades),
+        "fields": title_representatives(fields),
+        "subjects": subjects.order_by("field__grade__title", "field__title", "title"),
+        "schools": School.objects.select_related("province").order_by("name"),
+        "selected_school": selected_school,
+        "grade_titles": Grade.objects.filter(is_active=True).order_by("title").values_list("title", flat=True).distinct(),
+        "selected_grade": request.GET.get("grade", ""),
         "chapters": Chapter.objects.select_related("subject__field__grade").order_by("subject__title", "name"),
         "topics": Topic.objects.select_related("chapter__subject").order_by("chapter__subject__title", "chapter__name", "name"),
     })
@@ -620,7 +640,7 @@ def curriculum_entity_create(request, kind):
         form.save()
         messages.success(request, f"{label} با موفقیت ایجاد شد.")
         return redirect(f"{APP_NS}:curriculum_manage")
-    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": f"ایجاد {label}"})
+    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": f"ایجاد {label}", "academic_hierarchy": academic_hierarchy()})
 
 
 @login_required
@@ -636,7 +656,7 @@ def curriculum_entity_edit(request, kind, pk):
         form.save()
         messages.success(request, f"{label} با موفقیت ویرایش شد.")
         return redirect(f"{APP_NS}:curriculum_manage")
-    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": f"ویرایش {label}"})
+    return render(request, "questions_module/entity_form.html", {"form": form, "entity_title": f"ویرایش {label}", "academic_hierarchy": academic_hierarchy()})
 
 
 @login_required

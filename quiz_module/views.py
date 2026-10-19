@@ -13,32 +13,19 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from auth_module.models import UserRole
+from users_module.models import FieldOfStudy, Grade
 from questions_module.models import Question
 
 from .forms import BankImportForm, ManualGradeForm, QuizChoiceFormSet, QuizForm, QuizQuestionForm
 from .models import Quiz, QuizAnswer, QuizAttempt, QuizChoice, QuizQuestion
-from .permissions import can_create_quiz, can_edit_quiz_questions, can_manage_quiz, can_review_quiz, can_view_results, is_quiz_admin, trustee_province_ids
+from .permissions import can_create_quiz, can_edit_quiz_questions, can_manage_quiz, can_review_quiz, can_view_results, is_quiz_admin, student_quizzes, trustee_province_ids
 from .services import create_attempt, enqueue_quiz_questions, finalize_attempt, log_tab_event, recalculate_attempt
 
 
 def _student_can_take(user, quiz):
     if user.role != UserRole.STUDENT or quiz.status != Quiz.Status.APPROVED or quiz.is_paused:
         return False
-    if quiz.all_students:
-        return True
-    assigned = quiz.assigned_students.exists()
-    if assigned:
-        return quiz.assigned_students.filter(pk=user.pk).exists()
-    profiles = user.student_profiles.select_related("field__grade__school__province")
-    if quiz.field_id:
-        profiles = profiles.filter(field_id=quiz.field_id)
-    if quiz.grade_id:
-        profiles = profiles.filter(field__grade_id=quiz.grade_id)
-    if quiz.school_id:
-        profiles = profiles.filter(field__grade__school_id=quiz.school_id)
-    if quiz.province_id:
-        profiles = profiles.filter(field__grade__school__province_id=quiz.province_id)
-    return profiles.exists()
+    return student_quizzes(user).filter(pk=quiz.pk).exists()
 
 
 def _quiz_queryset_for(user):
@@ -50,18 +37,7 @@ def _quiz_queryset_for(user):
     if user.role == UserRole.PROVINCE_TRUSTEE:
         return qs.filter(province_id__in=trustee_province_ids(user))
     if user.role == UserRole.STUDENT:
-        profile_fields = user.student_profiles.values_list("field_id", flat=True)
-        profile_grades = user.student_profiles.values_list("field__grade_id", flat=True)
-        profile_schools = user.student_profiles.values_list("field__grade__school_id", flat=True)
-        profile_provinces = user.student_profiles.values_list("field__grade__school__province_id", flat=True)
-        return qs.filter(status=Quiz.Status.APPROVED).filter(
-            Q(all_students=True) | Q(assigned_students=user) |
-            (Q(assigned_students__isnull=True) &
-             (Q(field__isnull=True) | Q(field_id__in=profile_fields)) &
-             (Q(grade__isnull=True) | Q(grade_id__in=profile_grades)) &
-             (Q(school__isnull=True) | Q(school_id__in=profile_schools)) &
-             (Q(province__isnull=True) | Q(province_id__in=profile_provinces)))
-        ).distinct()
+        return student_quizzes(user, qs)
     return qs.none()
 
 
@@ -122,7 +98,7 @@ def quiz_create(request):
     if not can_create_quiz(request.user):
         messages.error(request, "برای ساخت آزمون باید دسترسی آزمون از طرف مدیر برای شما فعال شود.")
         return redirect("quiz_module:quiz_list")
-    form = QuizForm(request.POST or None)
+    form = QuizForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         quiz = form.save(commit=False)
         quiz.creator = request.user
@@ -140,7 +116,7 @@ def quiz_edit(request, pk):
     quiz = get_object_or_404(Quiz, pk=pk)
     if not can_manage_quiz(request.user, quiz):
         raise Http404
-    form = QuizForm(request.POST or None, instance=quiz)
+    form = QuizForm(request.POST or None, instance=quiz, user=request.user)
     if request.method == "POST" and form.is_valid():
         form.save()
         _mark_consultant_quiz_changed(request.user, quiz)
@@ -489,12 +465,14 @@ def grade_attempt(request, attempt_id):
 def filter_students(request):
     if not can_create_quiz(request.user):
         return JsonResponse({"results": []}, status=403)
-    from django.contrib.auth import get_user_model
-    qs = get_user_model().objects.filter(role=UserRole.STUDENT, is_active=True)
+    from .permissions import quiz_students_for
+    qs = quiz_students_for(request.user)
+    if request.GET.get('province'):
+        qs = qs.filter(student_profiles__field__grade__school__province_id=request.GET['province'])
     if request.GET.get("school"):
         qs = qs.filter(student_profiles__field__grade__school_id=request.GET["school"])
     if request.GET.get("grade"):
-        qs = qs.filter(student_profiles__field__grade_id=request.GET["grade"])
+        qs = qs.filter(student_profiles__field__grade__title__in=Grade.objects.filter(pk=request.GET["grade"]).values("title"))
     if request.GET.get("field"):
-        qs = qs.filter(student_profiles__field_id=request.GET["field"])
+        qs = qs.filter(student_profiles__field__title__in=FieldOfStudy.objects.filter(pk=request.GET["field"]).values("title"))
     return JsonResponse({"results": [{"id": user.id, "text": user.get_full_name() or user.username} for user in qs.distinct()[:300]]})

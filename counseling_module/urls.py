@@ -6,6 +6,7 @@ app_name = "counseling"
 
 urlpatterns = [
     path("manage/", views.manage_assignments, name="manage"),
+    path("manage/bulk/", views.bulk_assign_students, name="bulk_assign"),
     path("manage/<int:student_id>/assign/", views.assign_student, name="assign"),
     path("manage/<int:student_id>/remove/", views.remove_assignment, name="remove"),
     path("my-students/", views.my_students, name="my_students"),

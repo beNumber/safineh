@@ -13,7 +13,7 @@ from .models import Chapter, ExamAnswer, ExamSession, PracticeAnswer, PracticeSe
 
 class WrittenQuestionFlowTests(TestCase):
     def setUp(self):
-        province = Province.objects.create(name="hormozgan")
+        province = Province.objects.get_or_create(name="hormozgan")[0]
         school = School.objects.create(name="مدرسه آزمون", province=province)
         grade = Grade.objects.create(title="دهم", school=school)
         field = FieldOfStudy.objects.create(title="ریاضی", grade=grade)

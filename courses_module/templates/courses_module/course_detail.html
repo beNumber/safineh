@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load academic_titles %}
 {% block title %}{{ course.title }}{% endblock %}
 {% block page_title %}جزئیات دوره{% endblock %}
 
@@ -129,13 +130,20 @@
             <div class="flex flex-col justify-between rounded-2xl bg-white/10 p-6 backdrop-blur-sm border border-white/10">
                 <div class="text-center">
                     <div class="text-4xl font-black text-white">{{ rating_average|floatformat:1 }}</div>
+                    {% include 'courses_module/_rating_stars.html' with average=rating_average %}
                     <div class="text-[11px] text-blue-200 mt-1">از بین {{ rating_count }} رأی ثبت‌شده</div>
                 </div>
 
                 <div class="mt-8 space-y-3">
-                    {% if is_enrolled %}
+                    {% if can_review %}
+                    <form method="post" action="{% url 'courses_module:course_review' course.pk %}">
+                        {% csrf_token %}<input type="hidden" name="action" value="approve">
+                        <button type="submit" class="block w-full rounded-xl bg-emerald-400 py-3 text-center text-xs font-black text-emerald-950">تأیید و انتشار دوره</button>
+                    </form>
+                    {% endif %}
+                    {% if can_access_content %}
                         <a href="#syllabus" class="block w-full rounded-xl bg-emerald-400 py-3 text-center text-xs font-black text-emerald-950 shadow-md transition hover:bg-emerald-300">
-                            <i class="fa-solid fa-circle-check ml-1.5"></i>شما در این دوره شرکت کرده‌اید
+                            <i class="fa-solid fa-circle-check ml-1.5"></i>{% if is_enrolled %}شما در این دوره شرکت کرده‌اید{% else %}مشاهده محتوای دوره{% endif %}
                         </a>
                     {% else %}
                         {% if user.is_authenticated %}
@@ -246,7 +254,7 @@
 
                                     <div class="flex items-center gap-2">
                                         {% if episode.file or episode.url %}
-                                            {% if is_enrolled or can_manage %}
+                                            {% if can_access_content %}
                                                 {% if episode.file %}
                                                     {% with media_link=episode.file.url %}
                                                         {% if episode.file_type == 'pdf' or '.pdf' in media_link|lower %}
@@ -345,13 +353,13 @@
                     <div>
                         <b class="text-slate-800 block text-[11px]">پایه‌های تحصیلی:</b>
                         <span>
-                            {% if course.all_grades_allowed %}همه پایه‌ها{% else %}{% for g in course.allowed_grades.all %}{{ g.title }}{% if not forloop.last %}, {% endif %}{% empty %}عمومی{% endfor %}{% endif %}
+                            {% if course.all_grades_allowed %}همه پایه‌ها{% else %}{% for g in course.allowed_grades.all|unique_titles %}{{ g.title }}{% if not forloop.last %}, {% endif %}{% empty %}عمومی{% endfor %}{% endif %}
                         </span>
                     </div>
                     <div>
                         <b class="text-slate-800 block text-[11px]">رشته‌های مجاز:</b>
                         <span>
-                            {% if course.all_fields_allowed %}همه رشته‌ها{% else %}{% for f in course.allowed_fields.all %}{{ f.title }}{% if not forloop.last %}, {% endif %}{% empty %}عمومی{% endfor %}{% endif %}
+                            {% if course.all_fields_allowed %}همه رشته‌ها{% else %}{% for f in course.allowed_fields.all|unique_titles %}{{ f.title }}{% if not forloop.last %}, {% endif %}{% empty %}عمومی{% endfor %}{% endif %}
                         </span>
                     </div>
                     {% if course.prerequisites %}

@@ -15,6 +15,7 @@
     <section class="mb-7 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
       <h2 class="mb-4 font-black text-slate-800">جایگاه آموزشی سؤال</h2>
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div>{{ form.school.label_tag }}{{ form.school }}{{ form.school.errors }}</div>
         <div>{{ form.grade.label_tag }}{{ form.grade }}{{ form.grade.errors }}</div>
         <div>{{ form.field.label_tag }}{{ form.field }}{{ form.field.errors }}</div>
         <div>{{ form.subject.label_tag }}{{ form.subject }}{{ form.subject.errors }}</div>
@@ -22,7 +23,7 @@
         <div>{{ form.topic.label_tag }}{{ form.topic }}{{ form.topic.errors }}</div>
       </div>
     </section>
-    <div class="grid gap-5 sm:grid-cols-2"><div>{{ form.difficulty.label_tag }}{{ form.difficulty }}{{ form.difficulty.errors }}</div><div class="flex items-end pb-3"><label class="flex items-center gap-2">{{ form.is_active }} {{ form.is_active.label }}</label></div></div>
+    <div class="grid gap-5 sm:grid-cols-2"><div>{{ form.difficulty.label_tag }}{{ form.difficulty }}{{ form.difficulty.errors }}</div><div class="flex items-end pb-3">{% if user.role == "CONSULTANT" and not user.is_superuser %}<p class="text-xs font-bold text-amber-700">سؤال پس از تأیید مسئول منطقه در بانک سؤال فعال می‌شود.</p>{% else %}<label class="flex items-center gap-2">{{ form.is_active }} {{ form.is_active.label }}</label>{% endif %}</div></div>
     <div class="mt-5">{{ form.text.label_tag }}{{ form.text }}{{ form.text.errors }}</div>
     <div class="mt-5">{{ form.image.label_tag }}{{ form.image }}{{ form.image.errors }}</div>
     <div class="mt-5">{{ form.explanation.label_tag }}{{ form.explanation }}{{ form.explanation.errors }}{% if is_descriptive %}<small class="mt-2 block text-violet-600">این پاسخ پس از پایان تمرین یا آزمون به کاربر نمایش داده می‌شود.</small>{% endif %}</div>
@@ -38,6 +39,4 @@
 </div>
 {{ hierarchy|json_script:"question-hierarchy" }}
 {% endblock %}
-{% block extra_js %}<script>
-document.addEventListener('DOMContentLoaded',()=>{const data=JSON.parse(document.getElementById('question-hierarchy').textContent);const selects={grade:document.getElementById('id_grade'),field:document.getElementById('id_field'),subject:document.getElementById('id_subject'),chapter:document.getElementById('id_chapter'),topic:document.getElementById('id_topic')};const source={field:data.fields,subject:data.subjects,chapter:data.chapters,topic:data.topics};function fill(name,parent,keep){const el=selects[name],items=source[name].filter(x=>String(x[parent])===String(selects[parent].value));el.innerHTML='<option value="">---------</option>'+items.map(x=>`<option value="${x.id}" ${String(x.id)===String(keep)?'selected':''}>${x.title}</option>`).join('')}selects.grade.addEventListener('change',()=>{fill('field','grade');fill('subject','field');fill('chapter','subject');fill('topic','chapter')});selects.field.addEventListener('change',()=>{fill('subject','field');fill('chapter','subject');fill('topic','chapter')});selects.subject.addEventListener('change',()=>{fill('chapter','subject');fill('topic','chapter')});selects.chapter.addEventListener('change',()=>fill('topic','chapter'));const current={field:selects.field.value,subject:selects.subject.value,chapter:selects.chapter.value,topic:selects.topic.value};fill('field','grade',current.field);fill('subject','field',current.subject);fill('chapter','subject',current.chapter);fill('topic','chapter',current.topic)});
-</script>{% endblock %}
+{% block extra_js %}<script src="{% static 'js/academic-selects.js' %}"></script><script src="{% static 'js/question-hierarchy.js' %}"></script>{% endblock %}

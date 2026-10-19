@@ -1,7 +1,7 @@
-import csv
 import io
 import re
 import zipfile
+from decimal import Decimal, InvalidOperation
 from xml.etree import ElementTree
 from xml.sax.saxutils import escape
 
@@ -9,6 +9,8 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from users_module.models import FieldOfStudy, Grade, Province, School
+from users_module.academic_imports import resolve_province, resolve_student_field, row_location
+from users_module.spreadsheets import read_spreadsheet
 from .models import Consultant, ProvinceTrustee, Student, UserRole
 
 
@@ -26,6 +28,9 @@ HEADERS = {
     "کد ملی": "national_code", "کدملی": "national_code", "رمز عبور": "password",
     "نقش": "role", "نام کاربری": "username",
 }
+HEADERS.update({"پایه تحصیلی": "grade", "کلاس": "grade", "نام کلاس": "grade",
+                "رشته تحصیلی": "field", "نام مدرسه": "city", "شماره ملی": "national_code",
+                "گذرواژه": "password", "رمز": "password"})
 TEMPLATE_HEADERS = ["اسم", "فامیل", "استان", "مدرسه", "پایه", "رشته", "کد ملی", "رمز عبور", "نقش", "نام کاربری"]
 
 
@@ -39,71 +44,27 @@ def normalized(value):
 
 def normalize_code(value):
     value = clean_text(value).translate(DIGITS)
-    if value.endswith(".0"):
-        value = value[:-2]
+    if "." in value or "e" in value.lower():
+        try:
+            number = Decimal(value)
+            if not number.is_finite() or number.adjusted() > 9 or number != number.to_integral_value() or number < 0:
+                return value
+            value = str(int(number))
+        except (InvalidOperation, ValueError, OverflowError):
+            return value
     return value.zfill(10) if value.isdigit() and len(value) < 10 else value
 
 
-def _xlsx_rows(upload):
-    with zipfile.ZipFile(upload) as archive:
-        shared = []
-        if "xl/sharedStrings.xml" in archive.namelist():
-            root = ElementTree.fromstring(archive.read("xl/sharedStrings.xml"))
-            shared = ["".join(node.text or "" for node in item.iter() if node.tag.endswith("}t")) for item in root]
-        workbook = ElementTree.fromstring(archive.read("xl/workbook.xml"))
-        rels = ElementTree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
-        targets = {item.attrib["Id"]: item.attrib["Target"] for item in rels}
-        sheet = next(node for node in workbook.iter() if node.tag.endswith("}sheet"))
-        relation_id = next(value for key, value in sheet.attrib.items() if key.endswith("}id"))
-        target = targets[relation_id].lstrip("/")
-        if not target.startswith("xl/"):
-            target = "xl/" + target
-        root = ElementTree.fromstring(archive.read(target))
-        for row in (node for node in root.iter() if node.tag.endswith("}row")):
-            values, current = [], 0
-            for cell in (node for node in row if node.tag.endswith("}c")):
-                ref = cell.attrib.get("r", "A1")
-                letters = re.match(r"[A-Z]+", ref).group()
-                column = 0
-                for letter in letters:
-                    column = column * 26 + ord(letter) - 64
-                while current < column - 1:
-                    values.append(""); current += 1
-                value_node = next((node for node in cell.iter() if node.tag.endswith("}v")), None)
-                inline = next((node for node in cell.iter() if node.tag.endswith("}t")), None)
-                value = inline.text if inline is not None else (value_node.text if value_node is not None else "")
-                if cell.attrib.get("t") == "s" and value != "":
-                    value = shared[int(value)]
-                values.append(value or ""); current += 1
-            yield values
-
-
-def spreadsheet_rows(upload):
-    name = upload.name.lower()
-    if name.endswith(".csv"):
-        text = upload.read().decode("utf-8-sig")
-        rows = list(csv.reader(io.StringIO(text)))
-    elif name.endswith(".xlsx"):
-        rows = list(_xlsx_rows(upload))
-    else:
-        raise ValueError("فقط فایل‌های xlsx و csv قابل قبول هستند.")
-    if not rows:
-        return []
-    headers = [HEADERS.get(clean_text(value), clean_text(value).lower()) for value in rows[0]]
-    required_headers = {"first_name", "last_name", "national_code", "password", "role"}
-    missing_headers = required_headers.difference(headers)
-    if missing_headers:
-        labels = {value: key for key, value in HEADERS.items()}
-        raise ValueError("ستون‌های اصلی فایل ناقص است: " + "، ".join(labels.get(item, item) for item in sorted(missing_headers)))
-    return [{headers[index]: clean_text(value) for index, value in enumerate(row) if index < len(headers)} for row in rows[1:] if any(clean_text(value) for value in row)]
+def spreadsheet_rows(upload, defaults=None):
+    defaults = defaults or {}
+    required = {"first_name", "last_name", "national_code"}
+    if not defaults.get("default_password"):
+        required.add("password")
+    return read_spreadsheet(upload, HEADERS, required)
 
 
 def _province(value):
-    value = normalized(value)
-    for item in Province.objects.all():
-        if value in {normalized(item.name), normalized(item.get_name_display())}:
-            return item
-    raise ValueError("استان در سامانه تعریف نشده است.")
+    return resolve_province(value)
 
 
 def _role(value):
@@ -113,10 +74,11 @@ def _role(value):
     return role
 
 
-def import_users(upload):
+def import_users(upload, defaults=None):
+    defaults = defaults or {}
     try:
-        rows = spreadsheet_rows(upload)
-    except (ValueError, KeyError, zipfile.BadZipFile, ElementTree.ParseError) as error:
+        rows = spreadsheet_rows(upload, defaults)
+    except (ValueError, KeyError, IndexError, OSError, zipfile.BadZipFile, ElementTree.ParseError) as error:
         return [{"row": 1, "ok": False, "message": str(error) or "ساختار فایل Excel معتبر نیست."}]
     if not rows:
         return [{"row": 2, "ok": False, "message": "فایل هیچ عضو تکمیل‌شده‌ای ندارد؛ اطلاعات را از ردیف دوم وارد کنید."}]
@@ -125,6 +87,11 @@ def import_users(upload):
     User = get_user_model()
     for number, row in enumerate(rows, start=2):
         try:
+            number = row.pop("_row_number", number)
+            row["role"] = row.get("role") or defaults.get("default_role") or UserRole.STUDENT
+            row["password"] = row.get("password") or defaults.get("default_password") or ""
+            row["grade"] = row.get("grade") or defaults.get("default_grade") or ""
+            row["field"] = row.get("field") or defaults.get("default_field") or ""
             missing = [key for key in required if not row.get(key)]
             if missing:
                 labels = {"first_name": "اسم", "last_name": "فامیل", "national_code": "کد ملی", "password": "رمز عبور", "role": "نقش"}
@@ -133,19 +100,15 @@ def import_users(upload):
             if not (code.isdigit() and len(code) == 10):
                 raise ValueError("کد ملی باید ۱۰ رقم باشد.")
             role = _role(row["role"])
-            province = None
-            school = None
+            province, school = row_location(row, defaults)
             if role in (UserRole.STUDENT, UserRole.PROVINCE_TRUSTEE):
-                if not row.get("province"):
+                if not province:
                     raise ValueError("استان برای این نقش الزامی است.")
-                province = _province(row["province"])
             if role == UserRole.STUDENT:
-                empty_student_fields = [label for key, label in (("city", "مدرسه"), ("grade", "پایه"), ("field", "رشته")) if not row.get(key)]
-                if empty_student_fields:
-                    raise ValueError("برای دانش‌آموز این موارد الزامی است: " + "، ".join(empty_student_fields))
-                school = next((item for item in School.objects.filter(province=province) if normalized(item.name) == normalized(row["city"])), None)
                 if not school:
-                    raise ValueError("مدرسه واردشده در استان انتخابی داخل users_module تعریف نشده است.")
+                    raise ValueError("مدرسه را در فایل یا پیش‌فرض فرم مشخص کنید.")
+                if not row.get("grade"):
+                    raise ValueError("پایه را در فایل یا پیش‌فرض فرم مشخص کنید.")
             with transaction.atomic():
                 user, created = User.objects.get_or_create(username=code, defaults={"first_name": row["first_name"], "last_name": row["last_name"], "role": role})
                 if not created:
@@ -155,10 +118,7 @@ def import_users(upload):
                 user.set_password(row["password"])
                 user.save()
                 if role == UserRole.STUDENT:
-                    fields = [item for item in FieldOfStudy.objects.select_related("grade").filter(grade__school=school, is_active=True, grade__is_active=True) if normalized(item.title) == normalized(row["field"]) and normalized(item.grade.title) == normalized(row["grade"])]
-                    if len(fields) != 1:
-                        raise ValueError("ترکیب استان، مدرسه، پایه و رشته در users_module پیدا نشد.")
-                    Student.objects.create(user=user, field=fields[0])
+                    Student.objects.create(user=user, field=resolve_student_field(school, row["grade"], row["field"]))
                 elif role == UserRole.CONSULTANT:
                     Consultant.objects.get_or_create(consultant=user)
                 elif role == UserRole.PROVINCE_TRUSTEE:

@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const quizIndicator = document.getElementById('quiz-live-indicator');
+  const quizWindowsNode = document.getElementById('quiz-live-windows');
+  if (quizIndicator && quizWindowsNode) {
+    const quizWindows = JSON.parse(quizWindowsNode.textContent || '[]');
+    const updateQuizIndicator = () => {
+      const now = Date.now();
+      quizIndicator.hidden = !quizWindows.some(window => Date.parse(window.opens) <= now && now < Date.parse(window.closes));
+    };
+    updateQuizIndicator();
+    setInterval(updateQuizIndicator, 15000);
+  }
   const links = [...document.querySelectorAll('.sidebar-link[href]')];
   const current = window.location.pathname.replace(/\/+$/, '/') || '/';
   const candidates = links.map((link, index) => {
@@ -21,11 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (marked || !badge) return;
     marked = true;
     try {
-      await fetch(button.dataset.readUrl, {
+      const response = await fetch(button.dataset.readUrl, {
         method: 'POST',
-        headers: {'X-CSRFToken': csrfToken()},
+        headers: {'X-CSRFToken': csrfToken(), 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({token: button.dataset.readToken || ''}),
         credentials: 'same-origin'
       });
+      if (!response.ok) throw new Error('Notification read failed');
       badge.style.transition = 'opacity .25s, transform .25s';
       badge.style.opacity = '0';
       badge.style.transform = 'scale(.55)';
@@ -35,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
   button?.addEventListener('click', event => {
     event.stopPropagation();
     panel?.classList.toggle('hidden');
+    document.getElementById('profile-menu')?.classList.add('hidden');
+    button.setAttribute('aria-expanded', String(!panel?.classList.contains('hidden')));
     button.classList.toggle('is-open', !panel?.classList.contains('hidden'));
     if (!panel?.classList.contains('hidden')) markRead();
   });

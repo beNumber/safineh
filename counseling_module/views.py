@@ -11,6 +11,7 @@ from dashboard_module.location_filters import location_options
 from questions_module.models import ExamSession
 from quiz_module.models import QuizAttempt
 from ticketing_module.models import (
+    ModerationStatus,
     Ticket,
     TicketAuditLog,
     TicketMessage,
@@ -19,7 +20,7 @@ from ticketing_module.models import (
     TicketType,
 )
 
-from .forms import AssignmentForm, PrivateCounselingTicketForm
+from .forms import AssignmentForm, BulkAssignmentForm, PrivateCounselingTicketForm
 from .models import StudentConsultantAssignment
 from .services import assignments_for_consultant, manageable_students_for, search_students
 
@@ -70,6 +71,26 @@ def manage_assignments(request):
             **location,
         },
     )
+
+
+@role_required(*MANAGER_ROLES)
+def bulk_assign_students(request):
+    if request.method != "POST":
+        raise PermissionDenied
+    form = BulkAssignmentForm(request.POST, students=manageable_students_for(request.user))
+    if not form.is_valid():
+        messages.error(request, "دانش‌آموزان یا مشاور انتخاب‌شده معتبر نیستند؛ تغییری ثبت نشد.")
+        return redirect("counseling:manage")
+    with transaction.atomic():
+        students = list(form.cleaned_data["students"].select_for_update(of=("self",)))
+        for student in students:
+            StudentConsultantAssignment.objects.update_or_create(
+                student=student,
+                defaults={"consultant": form.cleaned_data["consultant"],
+                          "assigned_by": request.user, "note": form.cleaned_data["note"]},
+            )
+    messages.success(request, f"مشاور خصوصی برای {len(students)} دانش‌آموز تخصیص داده شد.")
+    return redirect("counseling:manage")
 
 
 @role_required(*MANAGER_ROLES)
@@ -224,6 +245,8 @@ def student_performance(request, student_id):
 
 @role_required(UserRole.STUDENT)
 def my_consultant(request):
+    if request.user.is_superuser or request.user.role == UserRole.ADMIN:
+        return redirect("counseling:manage")
     student = Student.objects.filter(user=request.user).select_related(
         "field__grade__school__province"
     ).first()
@@ -254,33 +277,37 @@ def create_private_ticket(request):
     )
     form = PrivateCounselingTicketForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
+        attachment = form.cleaned_data.get('attachment')
+        has_attachment = bool(attachment)
         with transaction.atomic():
             ticket = Ticket.objects.create(
                 title=form.cleaned_data["title"],
                 student=student,
                 ticket_type=TicketType.PSYCHOLOGY,
-                current_queue=TicketQueue.MODERATOR,
+                current_queue=TicketQueue.MODERATOR if has_attachment else TicketQueue.CONSULTANT,
                 current_assignee_user=assignment.consultant,
-                status=TicketStatus.PENDING_APPROVAL,
+                status=TicketStatus.PENDING_APPROVAL if has_attachment else TicketStatus.OPEN,
                 is_private_consultation=True,
             )
             TicketMessage.objects.create(
                 ticket=ticket,
                 sender=request.user,
                 content=form.cleaned_data["content"],
-                attachment=form.cleaned_data.get("attachment"),
+                attachment=attachment,
+                moderation_status=ModerationStatus.PENDING if has_attachment else ModerationStatus.APPROVED,
+                is_approved_by_moderator=not has_attachment,
             )
             TicketAuditLog.objects.create(
                 ticket=ticket,
                 actor=request.user,
                 action=TicketAuditLog.Action.CREATED,
-                to_queue=TicketQueue.MODERATOR,
+                to_queue=ticket.current_queue,
                 to_user=assignment.consultant,
-                description="گفت‌وگوی خصوصی در انتظار تأیید ناظر؛ مقصد نهایی مشاور اختصاصی است",
+                description="پیوست در انتظار بررسی ناظر" if has_attachment else "ارسال مستقیم متن به مشاور اختصاصی",
             )
         messages.success(
             request,
-            "پیام ثبت شد و پس از تأیید ناظر فقط برای مشاور اختصاصی شما ارسال می‌شود.",
+            "پیام ثبت شد و پس از تأیید ناظر فقط برای مشاور اختصاصی شما ارسال می‌شود." if has_attachment else "پیام برای مشاور اختصاصی شما ارسال شد.",
         )
         return redirect("ticketing:detail", pk=ticket.pk)
     return render(

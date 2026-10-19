@@ -1,4 +1,7 @@
-from django.test import TestCase
+from tempfile import TemporaryDirectory
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from auth_module.models import Consultant, ProvinceTrustee, Student, User, UserRole
@@ -20,8 +23,8 @@ from .services import can_access_ticket, consultant_can_access, visible_tickets_
 class TicketingFlowTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.province = Province.objects.create(name="hormozgan")
-        cls.other_province = Province.objects.create(name="kerman")
+        cls.province = Province.objects.get_or_create(name="hormozgan")[0]
+        cls.other_province = Province.objects.get_or_create(name="kerman")[0]
         cls.school = School.objects.create(name="مدرسه یک", province=cls.province)
         cls.grade = Grade.objects.create(title="دهم", school=cls.school)
         cls.field = FieldOfStudy.objects.create(title="ریاضی", grade=cls.grade)
@@ -75,6 +78,8 @@ class TicketingFlowTests(TestCase):
         return ticket, message
 
     def test_student_creates_ticket_in_moderator_queue(self):
+        media_root = self.enterContext(TemporaryDirectory())
+        self.enterContext(override_settings(MEDIA_ROOT=media_root))
         self.client.force_login(self.student_user)
         response = self.client.post(
             reverse("ticketing:create"),
@@ -83,6 +88,7 @@ class TicketingFlowTests(TestCase):
                 "ticket_type": TicketType.LESSON,
                 "subject": self.subject.pk,
                 "content": "چطور این مسئله را حل کنم؟",
+                "attachment": SimpleUploadedFile('question.txt', b'question'),
             },
         )
         ticket = Ticket.objects.get(title="سؤال حسابان")
@@ -136,6 +142,8 @@ class TicketingFlowTests(TestCase):
         self.assertNotIn(ticket, visible_tickets_for(self.other_trustee))
 
     def test_consultant_answer_is_hidden_until_moderator_approval(self):
+        media_root = self.enterContext(TemporaryDirectory())
+        self.enterContext(override_settings(MEDIA_ROOT=media_root))
         ticket, first = self.create_ticket()
         first.moderation_status = ModerationStatus.APPROVED
         first.is_approved_by_moderator = True
@@ -146,7 +154,8 @@ class TicketingFlowTests(TestCase):
 
         self.client.force_login(self.consultant_user)
         self.client.post(
-            reverse("ticketing:add_message", args=[ticket.pk]), {"content": "پاسخ مشاور"}
+            reverse("ticketing:add_message", args=[ticket.pk]),
+            {"content": "پاسخ مشاور", "attachment": SimpleUploadedFile('answer.txt', b'answer')}
         )
         answer = ticket.messages.get(sender=self.consultant_user)
         self.assertEqual(answer.moderation_status, ModerationStatus.PENDING)
@@ -237,7 +246,7 @@ class TicketingFlowTests(TestCase):
 class ConsultantTicketGenderTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        province = Province.objects.create(name="hormozgan")
+        province = Province.objects.get_or_create(name="hormozgan")[0]
         school = School.objects.create(name="مدرسه", province=province)
         grade = Grade.objects.create(title="دهم", school=school)
         field = FieldOfStudy.objects.create(title="ریاضی", grade=grade)
@@ -369,7 +378,7 @@ class ConsultantTicketGenderTests(TestCase):
 class ModeratorTicketGenderTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        province = Province.objects.create(name="hormozgan")
+        province = Province.objects.get_or_create(name="hormozgan")[0]
         school = School.objects.create(name="مدرسه", province=province)
         grade = Grade.objects.create(title="دهم", school=school)
         field = FieldOfStudy.objects.create(title="ریاضی", grade=grade)

@@ -8,10 +8,13 @@ from django.forms import inlineformset_factory
 from django.utils import timezone
 
 from auth_module.models import UserRole
+from users_module.models import FieldOfStudy, Grade
+from users_module.choices import UniqueTitleChoiceField
 # خط ۱۱ را به این شکل تغییر بده:
 from questions_module.models import Question, Topic
 
 from .models import Quiz, QuizChoice, QuizQuestion
+from .permissions import has_full_quiz_access, quiz_students_for
 
 
 CONTROL = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
@@ -27,6 +30,8 @@ def _jalali_to_datetime(date_value, time_value):
 
 
 class QuizForm(forms.ModelForm):
+    grade = UniqueTitleChoiceField(label="پایه", queryset=Grade.objects.filter(is_active=True), required=False)
+    field = UniqueTitleChoiceField(label="رشته", queryset=FieldOfStudy.objects.filter(is_active=True), required=False)
     opens_date = forms.CharField(label="تاریخ شروع (شمسی)")
     opens_time = forms.TimeField(label="ساعت شروع", widget=forms.TimeInput(format="%H:%M", attrs={"type": "time", "step": "60"}))
     closes_date = forms.CharField(label="تاریخ پایان (شمسی)")
@@ -44,8 +49,11 @@ class QuizForm(forms.ModelForm):
             "publish_results": forms.CheckboxInput(),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
         super().__init__(*args, **kwargs)
+        self.fields["school"].queryset = self.fields["school"].queryset.select_related("province")
+        self.fields["school"].label_from_instance = lambda school: f"{school.name} — {school.province}"
         for field in self.fields.values():
             if not isinstance(field.widget, (forms.CheckboxInput, CKEditorUploadingWidget)):
                 field.widget.attrs["class"] = CONTROL
@@ -53,6 +61,11 @@ class QuizForm(forms.ModelForm):
             self.fields[name].widget.attrs.update({"data-jdp": "", "autocomplete": "off", "placeholder": "برای انتخاب تاریخ کلیک کنید", "readonly": "readonly"})
         self.fields["assigned_students"].widget.attrs["size"] = "8"
         self.fields["assigned_students"].queryset = get_user_model().objects.filter(role=UserRole.STUDENT, is_active=True).order_by("last_name", "first_name", "username")
+        if user is not None:
+            self.fields['assigned_students'].queryset = quiz_students_for(user).order_by('last_name', 'first_name', 'username')
+            if not has_full_quiz_access(user):
+                self.fields['all_students'].disabled = True
+                self.initial['all_students'] = False
         if self.instance.pk:
             for prefix, value in (("opens", self.instance.opens_at), ("closes", self.instance.closes_at), ("release", self.instance.answer_release_at)):
                 if value:
@@ -78,12 +91,22 @@ class QuizForm(forms.ModelForm):
         school, grade, field = data.get("school"), data.get("grade"), data.get("field")
         if data.get("all_students"):
             data["assigned_students"] = get_user_model().objects.none()
+        if self.user is not None and not has_full_quiz_access(self.user) and not data.get('assigned_students'):
+            self.add_error('assigned_students', 'حداقل یکی از دانش‌آموزان خود را انتخاب کنید.')
         if school and data.get("province") and school.province_id != data["province"].id:
             self.add_error("school", "مدرسه متعلق به استان انتخاب‌شده نیست.")
-        if grade and school and grade.school_id != school.id:
-            self.add_error("grade", "پایه متعلق به مدرسه انتخاب‌شده نیست.")
-        if field and grade and field.grade_id != grade.id:
-            self.add_error("field", "رشته متعلق به پایه انتخاب‌شده نیست.")
+        if grade and school:
+            grade = Grade.objects.filter(title=grade.title, school=school, is_active=True).first()
+            if grade is None:
+                self.add_error("grade", "پایه در مدرسه انتخاب‌شده تعریف نشده است.")
+            else:
+                data["grade"] = grade
+        if field and grade:
+            field = FieldOfStudy.objects.filter(title=field.title, grade=grade, is_active=True).first()
+            if field is None:
+                self.add_error("field", "رشته در پایه انتخاب‌شده تعریف نشده است.")
+            else:
+                data["field"] = field
         return data
 
     def save(self, commit=True):
@@ -110,9 +133,9 @@ class QuizQuestionForm(forms.ModelForm):
         topics = Topic.objects.filter(is_active=True).select_related("chapter__subject")
         if quiz is not None:
             if quiz.field_id:
-                topics = topics.filter(chapter__subject__field_id=quiz.field_id)
+                topics = topics.filter(chapter__subject__field__title=quiz.field.title)
             elif quiz.grade_id:
-                topics = topics.filter(chapter__subject__field__grade_id=quiz.grade_id)
+                topics = topics.filter(chapter__subject__field__grade__title=quiz.grade.title)
         self.fields["bank_topic"].queryset = topics
         self.fields["bank_topic"].label = "مبحث مرتبط"
         self.fields["bank_topic"].help_text = "فقط مباحث پایه و رشته انتخاب‌شده در آزمون نمایش داده می‌شوند."

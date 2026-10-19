@@ -25,7 +25,7 @@ class QuestionWizardTests(TestCase):
         )
         self.client.force_login(self.user)
 
-        province = Province.objects.create(name="hormozgan")
+        province = Province.objects.get_or_create(name="hormozgan")[0]
         school = School.objects.create(province=province, name="مدرسه تست")
         grade = Grade.objects.create(title="دهم", code="G10", school=school)
         field = FieldOfStudy.objects.create(title="ریاضی", code="MATH", grade=grade)

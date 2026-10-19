@@ -3,13 +3,15 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
 from auth_module.models import UserRole
-from .models import Access, FieldOfStudy, Province
+from .models import Access, FieldOfStudy, Grade, Province, School
 
 User = get_user_model()
 INPUT_CLASS = "w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
 
 
 class UserCreateForm(forms.ModelForm):
+    school = forms.ModelChoiceField(label="مدرسه دانش‌آموز", queryset=School.objects.none(), required=False, widget=forms.Select(attrs={"class": INPUT_CLASS}))
+    grade = forms.ModelChoiceField(label="پایه دانش‌آموز", queryset=Grade.objects.none(), required=False, widget=forms.Select(attrs={"class": INPUT_CLASS}))
     password = forms.CharField(label="رمز عبور", min_length=8, widget=forms.PasswordInput(attrs={"class": INPUT_CLASS, "autocomplete": "new-password"}))
     password_confirm = forms.CharField(label="تکرار رمز عبور", min_length=8, widget=forms.PasswordInput(attrs={"class": INPUT_CLASS, "autocomplete": "new-password"}))
     accesses = forms.ModelMultipleChoiceField(label="دسترسی‌های سامانه", queryset=Access.objects.none(), required=False, widget=forms.CheckboxSelectMultiple)
@@ -33,6 +35,9 @@ class UserCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["accesses"].queryset = Access.objects.select_related("subject").order_by("name", "subject__title")
+        self.fields["school"].queryset = School.objects.select_related("province").order_by("name", "pk")
+        self.fields["school"].label_from_instance = lambda school: f"{school.name} · {school.province}"
+        self.fields["grade"].queryset = Grade.objects.filter(is_active=True).order_by("title", "pk")
         self.fields["field"].queryset = FieldOfStudy.objects.filter(is_active=True).select_related("grade", "grade__school", "grade__school__province").order_by("grade__school__province__name", "grade__title", "title")
 
     def clean_phone_number(self):
@@ -43,6 +48,11 @@ class UserCreateForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        school, grade, field = cleaned.get("school"), cleaned.get("grade"), cleaned.get("field")
+        if school and field and field.grade.school_id != school.pk:
+            self.add_error("field", "رشته متعلق به مدرسه انتخاب‌شده نیست.")
+        if grade and field and field.grade_id != grade.pk:
+            self.add_error("field", "رشته متعلق به پایه انتخاب‌شده نیست.")
         if cleaned.get("password") and cleaned.get("password") != cleaned.get("password_confirm"):
             self.add_error("password_confirm", "تکرار رمز عبور با رمز عبور یکسان نیست.")
         if cleaned.get("password"):
